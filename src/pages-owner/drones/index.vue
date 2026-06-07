@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <PageHeader title="设备资质" desc="查看适航、三者险、载荷和设备运行状态。" :role="Role.Owner" />
+    <PageHeader title="资质与保险状态" desc="查看适航、三者险、载荷和设备运行状态。" :role="Role.Owner" />
     <NoticeBar tone="info" message="三者险不足 500 万或适航未通过的设备不会进入在线运力池。" />
 
     <view class="section">

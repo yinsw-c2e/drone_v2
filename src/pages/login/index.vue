@@ -1,7 +1,7 @@
 <template>
   <view class="page">
-    <PageHeader eyebrow="LOW ALTITUDE COMMAND" title="选择角色进入指挥中心" desc="演示账号来自 seed，验证码任意 6 位；切换角色后仍读写同一 repo。" />
-    <NoticeBar tone="info" title="MVP 口径" message="登录仅用于角色切换演示；实名、人脸、短信与 CAAC 真实核验仍是生产化接口预留。" />
+    <PageHeader eyebrow="低空吊运平台" title="选择角色进入系统" desc="当前为演示环境，验证码任意 6 位；切换角色后可体验同一订单的多端协同。" />
+    <NoticeBar tone="info" title="演示环境" message="登录用于角色切换体验；实名、人脸、短信与 CAAC 真实核验待生产环境接入。" />
 
     <view class="roles">
       <button v-for="item in roles" :key="item.role" class="role-card" @click="login(item.role)">

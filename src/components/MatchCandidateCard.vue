@@ -2,7 +2,7 @@
   <view :class="['cand', { selected }]" @click="$emit('select', candidate)">
     <view class="head">
       <view class="who">
-        <text class="name">{{ pilotName || ('飞手 ' + candidate.pilotId.slice(-4)) }}</text>
+        <text class="name">{{ pilotName || '认证飞手' }}</text>
         <view class="credit"><text>信用 {{ candidate.creditScore }}</text></view>
       </view>
       <MoneyText :fen="candidate.quoteCent" size="metric" bold />
@@ -10,7 +10,8 @@
     <view class="chips">
       <view class="chip"><text>{{ candidate.distanceKm }}km</text></view>
       <view class="chip"><text>约{{ candidate.etaMin }}分钟</text></view>
-      <view class="chip"><text>机型 {{ candidate.droneId }}</text></view>
+      <view class="chip"><text>{{ droneLabel || '合规运力' }}</text></view>
+      <view v-if="droneMeta" class="chip"><text>{{ droneMeta }}</text></view>
     </view>
     <view class="reasons">
       <text v-for="(r, i) in candidate.reasons.slice(0, 4)" :key="i" class="reason">{{ r }}</text>
@@ -21,7 +22,7 @@
 <script setup lang="ts">
 import MoneyText from './MoneyText.vue';
 import type { MatchCandidate } from '@/models';
-defineProps<{ candidate: MatchCandidate; pilotName?: string; selected?: boolean }>();
+defineProps<{ candidate: MatchCandidate; pilotName?: string; droneLabel?: string; droneMeta?: string; selected?: boolean }>();
 defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
 </script>
 <style lang="scss" scoped>

@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <PageHeader title="设备与运力" desc="投放会复用合规门：适航通过、三者险不低于 500 万、载荷有效。" :role="Role.Owner" />
+    <PageHeader title="合规设备投放" desc="投放会复用合规门：适航通过、三者险不低于 500 万、载荷有效。" :role="Role.Owner" />
 
     <view class="section">
       <NoticeBar v-if="error" tone="danger" :message="error" />

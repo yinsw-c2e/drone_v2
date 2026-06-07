@@ -1,6 +1,6 @@
 <template>
   <view class="page task-page">
-    <PageHeader title="飞手任务驾驶舱" :desc="subtitle" :role="Role.Pilot" compact />
+    <PageHeader title="任务执行态势" :desc="subtitle" :role="Role.Pilot" compact />
     <MapTrack title="飞手任务地图" :subtitle="subtitle" :frame="latest" />
 
     <view v-if="order" class="card section">
@@ -26,7 +26,7 @@
     </view>
 
     <view class="card section">
-      <SectionHeader title="应急处置" desc="返航/降落为 Mock 指令反馈；应急异常只在状态机允许阶段开启。" />
+      <SectionHeader title="应急处置" desc="返航/降落当前为演示指令反馈；应急异常只在允许阶段开启。" />
       <view class="emergency">
         <button class="secondary-button" @click="mockEmergency('return')">返航</button>
         <button class="secondary-button" @click="mockEmergency('land')">降落</button>
@@ -146,8 +146,8 @@ function lowBattery() {
 
 function mockEmergency(type: 'return' | 'land') {
   feedback.value = type === 'return'
-    ? 'Mock 返航指令已记录；生产环境接入真机 SDK 后执行自动返航。'
-    : 'Mock 降落指令已记录；生产环境接入真机 SDK 后执行就近降落。';
+    ? '返航指令已记录；生产环境接入真机 SDK 后执行自动返航。'
+    : '降落指令已记录；生产环境接入真机 SDK 后执行就近降落。';
 }
 
 function exception() {

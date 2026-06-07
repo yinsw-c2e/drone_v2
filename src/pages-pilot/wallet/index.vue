@@ -1,6 +1,6 @@
 <template>
   <view class="page wallet-page">
-    <PageHeader title="飞手钱包" desc="T+1 入账、提现和流水都从 wallet/ledger 读取。" :role="Role.Pilot" />
+    <PageHeader title="收益与流水" desc="T+1 入账、提现和流水按订单结算同步。" :role="Role.Pilot" />
     <view class="balance-card">
       <text class="label">飞手可提现</text>
       <MoneyText :fen="wallet?.balanceCent ?? 0" size="display" bold />

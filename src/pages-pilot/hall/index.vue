@@ -1,6 +1,6 @@
 <template>
   <view class="page hall-page">
-    <PageHeader title="接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" :role="Role.Pilot" />
+    <PageHeader title="可接订单" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" :role="Role.Pilot" />
     <NoticeBar tone="info" message="接单会锁定匹配运力并通知业主，后续从任务页推进空域、安检和飞行。" />
 
     <view class="section list-stack">

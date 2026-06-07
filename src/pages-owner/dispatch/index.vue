@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <PageHeader title="运力调度" desc="上线运力进入业主匹配池；忙碌运力需订单完成后恢复。" :role="Role.Owner" />
+    <PageHeader title="在线运力控制" desc="上线运力进入业主匹配池；忙碌运力需订单完成后恢复。" :role="Role.Owner" />
 
     <view class="section">
       <NoticeBar v-if="error" tone="danger" :message="error" />

@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <PageHeader title="发单向导" desc="正在进入货物、地点、保险与预算表单。" :role="Role.Client" />
+    <PageHeader title="进入发单表单" desc="正在进入货物、地点、保险与预算表单。" :role="Role.Client" />
     <NoticeBar message="如未自动跳转，请返回业主首页后重新进入发单。" />
   </view>
 </template>

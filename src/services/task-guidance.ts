@@ -18,7 +18,7 @@ export interface TaskActionPlan {
 
 export const TASK_PHASES: TaskPhase[] = [
   { status: OrderStatus.Confirmed, title: '确认运力', desc: '任务已锁定飞手与设备，下一步提交空域申请' },
-  { status: OrderStatus.AirspaceApplying, title: '空域审批', desc: '等待 Mock 空域审批，危险品会进入异常处理' },
+  { status: OrderStatus.AirspaceApplying, title: '空域审批', desc: '等待空域审批，危险品会进入异常处理' },
   { status: OrderStatus.Preparing, title: '飞行准备', desc: '起飞前确认安检、保险与航线围栏' },
   { status: OrderStatus.Loading, title: '装货中', desc: '确认吊框锁具与货物固定后起飞' },
   { status: OrderStatus.InFlight, title: '飞行中', desc: '关注遥测、低电量、偏航和摆度告警' },
@@ -71,7 +71,7 @@ export function taskActionForStatus(order: Order, allChecked: boolean, airspace?
   if (order.status === OrderStatus.AirspaceApplying && airspace?.status !== 'approved') {
     return {
       stage: '待空域审批',
-      next: '等待 Mock 空域审批结果。点击刷新审批结果，通过后进入飞行准备。',
+      next: '等待空域审批结果。点击刷新审批结果，通过后进入飞行准备。',
       primary: '刷新审批结果',
       disabled: false,
       reason: '',
@@ -92,7 +92,7 @@ export function taskActionForStatus(order: Order, allChecked: boolean, airspace?
   const map: Partial<Record<OrderStatus, TaskActionPlan>> = {
     [OrderStatus.Confirmed]: {
       stage: '待空域审批',
-      next: '提交空域申请，Mock 审批通过后进入起飞前准备。',
+      next: '提交空域申请，审批通过后进入起飞前准备。',
       primary: '提交空域申请',
       disabled: false,
       reason: '',

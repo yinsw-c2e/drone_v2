@@ -1,6 +1,6 @@
 <template>
   <view class="page review-page">
-    <PageHeader title="结算与评价" desc="确认分账结果后提交服务评价，信用分会实时重算。" :role="Role.Client" />
+    <PageHeader title="确认分账与服务评价" desc="确认分账结果后提交服务评价，信用分会实时重算。" :role="Role.Client" />
     <view v-if="order" class="card">
       <SectionHeader title="结算分账" desc="平台、飞手、机主、保险与税费来自 settlement 计算。" />
       <StatusTag :status="order.status" />

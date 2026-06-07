@@ -1,13 +1,13 @@
 <template>
   <view class="page">
-    <PageHeader title="飞手驾驶舱" :desc="`${user.nickname} · 在线任务、派单通知与飞行钱包`" :role="Role.Pilot" />
+    <PageHeader title="任务与通知" :desc="`${user.nickname} · 在线任务、派单通知与飞行钱包`" :role="Role.Pilot" />
 
     <view class="metric-grid">
       <MetricCard label="信用分" :value="credit?.total ?? 0" :hint="credit ? credit.level + ' 级' : '实时计算'" />
       <MetricCard label="通知" :value="notifications.length" hint="未读派单" delta="推送" />
     </view>
 
-    <ActionCard tone="pilot" eyebrow="NEXT MISSION" title="进入接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" cta="接单" @action="openHall" />
+    <ActionCard tone="pilot" eyebrow="下一任务" title="进入接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" cta="接单" @action="openHall" />
 
     <view class="section">
       <SectionHeader title="当前任务" desc="有任务时直接进入驾驶舱；无任务时从大厅接单。" action="钱包" @action="openWallet" />

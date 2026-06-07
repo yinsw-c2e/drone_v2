@@ -27,6 +27,8 @@
         :key="candidate.capacityId"
         :candidate="candidate"
         :pilot-name="pilotName(candidate.pilotId)"
+        :drone-label="droneLabel(candidate.droneId)"
+        :drone-meta="droneMeta(candidate.droneId)"
         :selected="selectedId === candidate.capacityId"
         @select="select"
       />
@@ -77,6 +79,17 @@ const strategies = [
 
 function pilotName(id: string) {
   return repo.users.find(id)?.nickname ?? id;
+}
+
+function droneLabel(id: string) {
+  const drone = repo.drones.find(id);
+  return drone ? `${drone.brand} ${drone.model}` : '合规运力';
+}
+
+function droneMeta(id: string) {
+  const drone = repo.drones.find(id);
+  if (!drone) return '';
+  return `载荷${drone.maxPayloadKg}kg · 三者险${Math.round(drone.insured.thirdPartyAmount / 10000)}万`;
 }
 
 function select(candidate: MatchCandidate) {

@@ -1,6 +1,6 @@
 <template>
   <view class="page track-page">
-    <PageHeader title="订单追踪" :desc="subtitle" :role="Role.Client" compact />
+    <PageHeader title="航线与状态总览" :desc="subtitle" :role="Role.Client" compact />
     <NoticeBar v-if="order" :tone="alerts.length ? 'warning' : 'success'" :message="alerts.length ? alerts.join(' · ') : '空域、合规、遥测均处于可控状态'" />
 
     <MapTrack title="实时吊运轨迹" :subtitle="subtitle" :frame="latest" />

@@ -1,6 +1,6 @@
 <template>
   <view class="page">
-    <PageHeader title="信用风控" desc="三方信用维度来自 repo.credits，黑名单会阻断发单与匹配。" :role="role" />
+    <PageHeader title="信用雷达" desc="信用维度用于发单、匹配、接单和风控拦截。" :role="role" />
 
     <view class="card section">
       <view class="between">

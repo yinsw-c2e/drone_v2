@@ -1,7 +1,7 @@
 <template>
   <view class="page form-page">
-    <PageHeader title="发单向导" desc="按货物、地点、时间、保障和预算形成可匹配订单。" :role="Role.Client" compact />
-    <NoticeBar v-if="draft.cargoType === CargoType.Dangerous" tone="warning" message="危险品需特殊审批，Mock 空域会进入驳回/异常演示。" />
+    <PageHeader title="填写吊运需求" desc="按货物、地点、时间、保障和预算形成可匹配订单。" :role="Role.Client" compact />
+    <NoticeBar v-if="draft.cargoType === CargoType.Dangerous" tone="warning" message="危险品需特殊审批，空域审批可能进入人工复核。" />
     <StepFlow :steps="formSteps" />
 
     <view class="card section">
@@ -31,7 +31,7 @@
     </view>
 
     <view class="section route-section">
-      <SectionHeader title="地点与时间" desc="当前为 MVP 地点入口，真实地图选点留作生产化对接。" />
+      <SectionHeader title="地点与时间" desc="当前为演示地点入口，生产环境接入真实地图选点。" />
       <MapTrack title="航线预览" :subtitle="routeText" />
       <view class="field">
         <text class="label">起点</text>
@@ -60,7 +60,7 @@
     </view>
 
     <view class="card section">
-      <SectionHeader title="保障与预算" desc="贵重货物强制投保，支付和发票为 Mock 入口。" />
+      <SectionHeader title="保障与预算" desc="贵重货物强制投保，支付和发票当前为演示入口。" />
       <label class="check">
         <checkbox :checked="draft.insured" :disabled="draft.cargoType === CargoType.Valuable" @click="draft.insured = true" />
         <text>投保货物险{{ draft.cargoType === CargoType.Valuable ? ' · 贵重强制' : '' }}</text>

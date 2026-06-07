@@ -54,7 +54,7 @@ describe('task guidance', () => {
   it('空域申请中且未批准时提示等待审批结果', () => {
     const plan = taskActionForStatus(order(OrderStatus.AirspaceApplying), true, airspace('submitted'));
     expect(plan.primary).toBe('刷新审批结果');
-    expect(plan.next).toContain('等待 Mock 空域审批结果');
+    expect(plan.next).toContain('等待空域审批结果');
   });
 
   it('飞行中引导进入卸货，StepFlow 标记当前阶段', () => {

@@ -151,8 +151,8 @@ export function confirmCandidate(orderId: string, candidate: MatchCandidate): Or
     capacityId: candidate.capacityId,
     priceBreakdown: candidate.priceBreakdown,
   });
-  const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Client, note: '业主确认 Top1 方案' });
-  recordAudit(AuditAction.Payment, order.clientId, Role.Client, 'order', order.id, `${order.paymentMode ?? PaymentMode.Escrow} 模式预支付已由 Mock provider 受理`);
+  const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Client, note: '业主确认推荐方案' });
+  recordAudit(AuditAction.Payment, order.clientId, Role.Client, 'order', order.id, `${order.paymentMode ?? PaymentMode.Escrow} 模式预支付已由演示支付通道受理`);
   notify(candidate.pilotId, NotificationType.Dispatch, '任务已确认', '请进入驾驶舱完成空域与安检', order.id);
   return confirmed;
 }
@@ -201,7 +201,7 @@ export function decideMockAirspace(orderId: string): AirspaceRequest {
   const request = createAirspaceRequest(orderId);
   const status: AirspaceRequest['status'] = order.cargo.type === CargoType.Dangerous ? 'rejected' : 'approved';
   repo.airspace.update(request.id, { status });
-  recordAudit(AuditAction.Airspace, 'mock-uom', Role.Admin, 'airspace', request.id, status === 'approved' ? 'Mock 空域审批通过' : 'Mock 空域审批驳回');
+  recordAudit(AuditAction.Airspace, 'airspace-demo', Role.Admin, 'airspace', request.id, status === 'approved' ? '空域审批通过' : '空域审批驳回');
   notify(order.clientId, NotificationType.Audit, status === 'approved' ? '空域已批准' : '空域被驳回', status === 'approved' ? '可进入起飞前合规检查' : '危险品航线需重新申报', order.id);
   return repo.airspace.find(request.id)!;
 }
@@ -274,16 +274,16 @@ export function submitCertification(role: Role, userId: string, fields: Certific
   }
   if (role === Role.Client) repo.users.update(userId, { realNameVerified: false });
   recordAudit(AuditAction.Certification, userId, role, 'certification', app.id, '提交三方认证材料');
-  notify(userId, NotificationType.Audit, '认证已提交', 'Mock 审核进入 pending 状态', app.id);
+  notify(userId, NotificationType.Audit, '认证已提交', '材料已进入审核中状态', app.id);
   return app;
 }
 
 function ownerDeviceFields(fields: CertificationApplication['fields']) {
   return {
-    model: String(fields.droneModel || 'MVP Device'),
+    model: String(fields.droneModel || '演示设备'),
     sn: String(fields.droneSn || `SN-${genId('dev')}`),
     insuranceAmount: Number(fields.insuranceAmount || 0),
-    maintenance: String(fields.maintenance || 'Mock 维护记录'),
+    maintenance: String(fields.maintenance || '演示维护记录'),
     maxPayloadKg: Number(fields.maxPayloadKg || 30),
   };
 }
@@ -405,7 +405,7 @@ export function advanceClaim(claimId: string): Claim {
   const next = claim.status === 'reported' ? 'investigating' : claim.status === 'investigating' ? 'assessed' : claim.status === 'assessed' ? 'paid' : claim.status;
   const patch: Partial<Claim> = { status: next };
   if (next === 'assessed') {
-    patch.liability = '平台仲裁 + Mock 保险定损';
+    patch.liability = '平台仲裁 + 演示保险定损';
     patch.payoutCent = Math.round(repo.orders.find(claim.orderId)!.cargo.valueCent * 0.8);
   }
   repo.claims.update(claim.id, patch);

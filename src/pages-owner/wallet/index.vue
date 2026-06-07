@@ -1,6 +1,6 @@
 <template>
   <view class="page wallet-page">
-    <PageHeader title="机主钱包" desc="设备使用费按 T+7 周期释放，流水来自 wallet/ledger。" :role="Role.Owner" />
+    <PageHeader title="分账与流水" desc="设备使用费按 T+7 周期释放，流水随订单结算同步。" :role="Role.Owner" />
     <view class="balance-card">
       <text class="label">机主待结算</text>
       <MoneyText :fen="wallet?.pendingCent ?? 0" size="display" bold />

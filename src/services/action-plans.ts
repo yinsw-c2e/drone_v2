@@ -72,10 +72,10 @@ export function adminOrderAction(order: Order, airspace?: AirspaceRequest): Admi
     return { label: '异常中', disabled: true, reason: '订单已进入异常处理，不能继续流转', description: '请处理风控、理赔或后台仲裁。', terminal: true };
   }
   if (order.status === OrderStatus.Confirmed) {
-    return { label: '提交空域', disabled: false, reason: '', description: '提交 Mock 空域申请。', terminal: false };
+    return { label: '提交空域', disabled: false, reason: '', description: '提交空域申请。', terminal: false };
   }
   if (order.status === OrderStatus.AirspaceApplying && airspace?.status !== 'approved') {
-    return { label: '通过审批', disabled: false, reason: '', description: '刷新 Mock 空域审批，通过后进入准备。', terminal: false };
+    return { label: '通过审批', disabled: false, reason: '', description: '刷新空域审批，通过后进入准备。', terminal: false };
   }
   if (order.status === OrderStatus.AirspaceApplying) {
     return { label: '进入准备', disabled: false, reason: '', description: '空域已通过，推进到合规准备。', terminal: false };

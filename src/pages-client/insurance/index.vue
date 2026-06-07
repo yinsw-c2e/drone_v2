@@ -1,7 +1,7 @@
 <template>
   <view class="page">
-    <PageHeader title="保险理赔" desc="保单与理赔记录来自 repo，外部保险公司 API 仍为 Mock provider 预留。" :role="Role.Client" />
-    <NoticeBar tone="warning" message="真实投保、定损、赔付和仲裁接口不在 MVP 内；当前展示完整前端流程和 repo 状态流转。" />
+    <PageHeader title="投保与理赔进度" desc="查看投保方案、当前保单和理赔处理状态。" :role="Role.Client" />
+    <NoticeBar tone="warning" message="真实投保、定损、赔付和仲裁接口待生产环境接入；当前展示业务流程和状态流转。" />
 
     <view class="card section">
       <SectionHeader title="投保方案" desc="按货物类型展示强制/可选保障范围。" />
@@ -29,7 +29,7 @@
 
     <view v-if="policy" class="card section">
       <view class="between">
-        <SectionHeader title="理赔流程" desc="报案、调查、定责、赔付或仲裁均写入 repo。" />
+        <SectionHeader title="理赔流程" desc="报案、调查、定责、赔付或仲裁均会同步到订单记录。" />
         <button class="link" @click="report">报案</button>
       </view>
       <view v-for="claim in claims" :key="claim.id" class="claim-line">

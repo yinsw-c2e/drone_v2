@@ -1,7 +1,7 @@
 <template>
   <view class="page">
-    <PageHeader title="认证中心" desc="材料写入 repo，后台可通过或驳回，端侧实时读取最新状态。" :role="role" />
-    <NoticeBar tone="warning" message="当前为 MVP Mock 审核闭环；真实实名、人脸、无犯罪、健康、UOM 和保险平台对接保留在生产化路线。" />
+    <PageHeader title="提交资质材料" desc="材料提交后进入运营审核，审核结果会同步到对应角色端。" :role="role" />
+    <NoticeBar tone="warning" message="当前为演示审核流程；真实实名、人脸、无犯罪、健康、UOM 和保险平台对接待生产环境接入。" />
 
     <view class="card section">
       <view class="between">
@@ -59,11 +59,11 @@ const form = reactive({
   trainingCerts: '应急处置,特殊场景作业',
   droneModel: 'DJI FlyCart 30',
   droneSn: 'SN-NEW',
-  uomNo: 'UOM-MOCK-2026',
+  uomNo: 'UOM-2026-演示',
   insuranceAmount: '8000000',
   maintenance: '月度例检正常',
   realName: userStore.user.nickname,
-  creditConsent: '已授权 Mock 征信评估',
+  creditConsent: '已授权信用评估',
   cargoDeclaration: '普通货物,贵重货物,危险品',
 });
 const latest = computed(() => latestCertification(role.value, userStore.user.id));
@@ -71,7 +71,7 @@ const statusText = computed(() => latest.value?.status ?? '未提交');
 const statusTone = computed(() => latest.value?.status ?? 'draft');
 const steps = computed(() => [
   { title: '填写材料', state: latest.value ? 'done' as const : 'current' as const },
-  { title: 'Mock 审核', state: latest.value?.status === AuditStatus.Pending ? 'current' as const : latest.value ? 'done' as const : 'todo' as const },
+  { title: '运营审核', state: latest.value?.status === AuditStatus.Pending ? 'current' as const : latest.value ? 'done' as const : 'todo' as const },
   { title: '结果同步', state: latest.value?.status === AuditStatus.Approved || latest.value?.status === AuditStatus.Rejected ? 'done' as const : 'todo' as const },
 ]);
 
