@@ -1,5 +1,5 @@
 import { beforeEach, expect, it } from 'vitest';
-import { CargoType, NotificationType, OrderStatus } from '@/models';
+import { AuditStatus, CargoType, NotificationType, OrderStatus, PaymentMode } from '@/models';
 import { resetDB } from '@/utils/db';
 import { repo } from '@/utils/repo';
 import { computeCredit } from '@/utils/credit';
@@ -7,10 +7,15 @@ import {
   advanceOrder,
   candidatesForOrder,
   confirmCandidate,
+  advanceClaim,
   decideMockAirspace,
+  approveCertification,
+  createClaim,
   matchingOrdersForPilot,
   pilotAcceptOrder,
   rejectPilotQualification,
+  setUserBlacklist,
+  submitCertification,
   submitOrderDraft,
 } from '@/services/app-flow';
 import { Role } from '@/models';
@@ -60,6 +65,33 @@ it('发单会保存用户选择的起终点，而不是固定默认线路', () =
   expect(order.to).toEqual(to);
 });
 
+it('发单会保存体积、预约、时效、照片、支付模式与发票字段', () => {
+  const order = submitOrderDraft({
+    clientId: repo.clients.all()[0].userId,
+    cargoType: CargoType.Agricultural,
+    weightKg: 6,
+    valueCent: 80000,
+    budgetCent: 200000,
+    insured: false,
+    shockProof: true,
+    tempControl: true,
+    special: '温控避震',
+    volume: '60x40x20cm',
+    photos: ['photo-entry'],
+    timeMode: 'scheduled',
+    scheduledAt: '2031-12-31T09:00:00.000Z',
+    timeRequirement: '90分钟内送达',
+    paymentMode: PaymentMode.Credit,
+    invoiceTitle: '验收测试公司',
+  });
+  expect(order.cargo.volume).toBe('60x40x20cm');
+  expect(order.cargo.photos).toEqual(['photo-entry']);
+  expect(order.needs.tempControl).toBe(true);
+  expect(order.needs.special).toBe('温控避震');
+  expect(order.paymentMode).toBe(PaymentMode.Credit);
+  expect(order.invoiceTitle).toBe('验收测试公司');
+});
+
 it('空域先 submitted，未经 Mock provider 审批不得进入 Preparing', () => {
   const order = draft();
   const confirmed = confirmCandidate(order.id, candidatesForOrder(order.id)[0]);
@@ -90,6 +122,16 @@ it('后台驳回飞手资质会更新 repo 并通知飞手', () => {
   expect(repo.notifications.where((n) => n.userId === 'u_p1' && n.type === NotificationType.Audit)[0].title).toBe('认证驳回');
 });
 
+it('三方认证申请写入 repo，后台通过后端侧状态可见并写审计', () => {
+  const app = submitCertification(Role.Owner, 'u_o1', { droneModel: 'DJI FlyCart 30', uomNo: 'UOM-MOCK', insuranceAmount: 8000000 });
+  expect(app.status).toBe(AuditStatus.Pending);
+  expect(repo.owners.find('u_o1')!.uomVerified).toBe(false);
+  const approved = approveCertification(app.id);
+  expect(approved.status).toBe(AuditStatus.Approved);
+  expect(repo.owners.find('u_o1')!.uomVerified).toBe(true);
+  expect(repo.auditLogs.where((log) => log.targetId === app.id).length).toBeGreaterThan(1);
+});
+
 it('投诉率上升后重算信用，匹配综合分同步下降', () => {
   const order = draft();
   computeCredit('u_p1', Role.Pilot);
@@ -100,4 +142,30 @@ it('投诉率上升后重算信用，匹配综合分同步下降', () => {
   const after = candidatesForOrder(order.id).find((c) => c.pilotId === 'u_p1')!;
   expect(after.creditScore).toBeLessThan(before.creditScore);
   expect(after.score).toBeLessThan(before.score);
+});
+
+it('黑名单会阻断业主发单，并从匹配候选中过滤飞手', () => {
+  setUserBlacklist('u_c1', true);
+  expect(() => draft(CargoType.Normal)).toThrow('风控黑名单');
+  setUserBlacklist('u_c1', false);
+  const order = draft(CargoType.Normal);
+  expect(candidatesForOrder(order.id).some((c) => c.pilotId === 'u_p1')).toBe(true);
+  setUserBlacklist('u_p1', true);
+  expect(candidatesForOrder(order.id).some((c) => c.pilotId === 'u_p1')).toBe(false);
+});
+
+it('保险理赔按 reported→investigating→assessed→paid 流转并关闭保单', () => {
+  const order = draft();
+  const confirmed = confirmCandidate(order.id, candidatesForOrder(order.id)[0]);
+  expect(confirmed.policyId).toBeTruthy();
+  let claim = createClaim(confirmed.id, ['现场照片', '飞行数据']);
+  expect(claim.status).toBe('reported');
+  claim = advanceClaim(claim.id);
+  expect(claim.status).toBe('investigating');
+  claim = advanceClaim(claim.id);
+  expect(claim.status).toBe('assessed');
+  expect(claim.payoutCent).toBeGreaterThan(0);
+  claim = advanceClaim(claim.id);
+  expect(claim.status).toBe('paid');
+  expect(repo.policies.find(claim.policyId)!.status).toBe('closed');
 });

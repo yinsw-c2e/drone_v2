@@ -18,6 +18,15 @@
         <text class="label">货值 元</text>
         <input v-model="draft.valueYuan" class="input" type="number" />
       </view>
+      <view class="field">
+        <text class="label">体积</text>
+        <input v-model="draft.volume" class="input" />
+      </view>
+      <view class="field">
+        <text class="label">货物照片入口</text>
+        <input v-model="draft.photoName" class="input" />
+      </view>
+      <text v-if="draft.cargoType === CargoType.Dangerous" class="warning">危险品需特殊审批，Mock 空域会进入驳回/异常演示。</text>
     </view>
 
     <view class="section route-section">
@@ -35,6 +44,18 @@
           <button v-for="point in routePoints" :key="point.id" :class="['location-option', draft.toId === point.id ? 'active' : '']" @click="draft.toId = point.id">{{ point.address }}</button>
         </view>
       </view>
+      <view class="field">
+        <text class="label">时间模式</text>
+        <view class="segmented two">
+          <button :class="['seg', draft.timeMode === 'instant' ? 'active' : '']" @click="draft.timeMode = 'instant'">即时</button>
+          <button :class="['seg', draft.timeMode === 'scheduled' ? 'active' : '']" @click="draft.timeMode = 'scheduled'">预约</button>
+        </view>
+      </view>
+      <view class="field">
+        <text class="label">预约时间/时效要求</text>
+        <input v-model="draft.scheduledAt" class="input" />
+        <input v-model="draft.timeRequirement" class="input sub-input" />
+      </view>
     </view>
 
     <view class="card section">
@@ -47,6 +68,24 @@
         <checkbox :checked="draft.shockProof" @click="draft.shockProof = !draft.shockProof" />
         <text>防震吊框</text>
       </label>
+      <label class="check">
+        <checkbox :checked="draft.tempControl" @click="draft.tempControl = !draft.tempControl" />
+        <text>温控需求</text>
+      </label>
+      <view class="field">
+        <text class="label">特殊需求</text>
+        <input v-model="draft.special" class="input" />
+      </view>
+      <view class="field">
+        <text class="label">支付模式</text>
+        <view class="segmented two">
+          <button v-for="mode in paymentModes" :key="mode.value" :class="['seg', draft.paymentMode === mode.value ? 'active' : '']" @click="draft.paymentMode = mode.value">{{ mode.label }}</button>
+        </view>
+      </view>
+      <view class="field">
+        <text class="label">发票抬头</text>
+        <input v-model="draft.invoiceTitle" class="input" />
+      </view>
       <view class="field">
         <text class="label">预算 元</text>
         <input v-model="draft.budgetYuan" class="input" type="number" />
@@ -64,7 +103,7 @@ import BottomActionBar from '@/components/BottomActionBar.vue';
 import MapTrack from '@/components/MapTrack.vue';
 import StepFlow from '@/components/StepFlow.vue';
 import type { GeoPoint } from '@/models';
-import { CargoType, Role } from '@/models';
+import { CargoType, PaymentMode, Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 
@@ -75,9 +114,18 @@ const draft = reactive({
   cargoType: CargoType.Valuable,
   weightKg: '8',
   valueYuan: '3000',
+  volume: '40x30x20cm',
+  photoName: 'cargo-photo-entry',
   budgetYuan: '2600',
   insured: true,
   shockProof: true,
+  tempControl: false,
+  special: '低摆度吊运',
+  timeMode: 'instant' as 'instant' | 'scheduled',
+  scheduledAt: '2026-06-08 09:00',
+  timeRequirement: '2小时内送达',
+  paymentMode: PaymentMode.Escrow,
+  invoiceTitle: '北京低空服务有限公司',
   fromId: 'beijing-hub',
   toId: 'shunyi-airport',
 });
@@ -91,6 +139,12 @@ const cargoTypes = [
   { label: '贵重', value: CargoType.Valuable },
   { label: '农资', value: CargoType.Agricultural },
   { label: '危险', value: CargoType.Dangerous },
+];
+const paymentModes = [
+  { label: '预付', value: PaymentMode.Prepay },
+  { label: '担保', value: PaymentMode.Escrow },
+  { label: '信用', value: PaymentMode.Credit },
+  { label: '分期', value: PaymentMode.Installment },
 ];
 const selectedFrom = computed(() => routePoints.find((p) => p.id === draft.fromId) ?? routePoints[0]);
 const selectedTo = computed(() => routePoints.find((p) => p.id === draft.toId) ?? routePoints[1]);
@@ -113,10 +167,19 @@ function submit() {
       clientId: user.id,
       cargoType: draft.cargoType,
       weightKg: Number(draft.weightKg || 0),
+      volume: draft.volume,
       valueCent: Math.max(0, Number(draft.valueYuan || 0) * 100),
       budgetCent: Math.max(0, Number(draft.budgetYuan || 0) * 100),
       insured: draft.insured,
       shockProof: draft.shockProof,
+      tempControl: draft.tempControl,
+      special: draft.special,
+      photos: [draft.photoName].filter(Boolean),
+      timeMode: draft.timeMode,
+      scheduledAt: draft.timeMode === 'scheduled' ? draft.scheduledAt : undefined,
+      timeRequirement: draft.timeRequirement,
+      paymentMode: draft.paymentMode,
+      invoiceTitle: draft.invoiceTitle,
       from: selectedFrom.value,
       to: selectedTo.value,
       remark: '精密设备吊运',
@@ -162,6 +225,10 @@ function back() {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: $sp-2;
+}
+
+.segmented.two {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .seg {
@@ -213,6 +280,21 @@ function back() {
   gap: $sp-2;
   font-size: $fs-body;
   color: $ink-700;
+}
+
+.sub-input {
+  margin-top: $sp-2;
+}
+
+.warning {
+  display: block;
+  margin-top: $sp-3;
+  color: $warning-ink;
+  background: $warning-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
+  font-size: $fs-sm;
+  line-height: 1.45;
 }
 
 .error {

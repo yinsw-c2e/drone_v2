@@ -1,5 +1,5 @@
-import { AuditStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, Role } from '@/models';
-import type { AirspaceRequest, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
+import { AuditAction, AuditStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role } from '@/models';
+import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
 import { createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
 import { INSURANCE_PLANS } from '@/stores/config-data';
@@ -38,6 +38,10 @@ export function defaultUserForRole(role: Role) {
     : repo.users.all()[0];
 }
 
+export function recordAudit(action: AuditAction, actorId: string, actorRole: Role, targetType: string, targetId: string | undefined, detail: string): AuditLog {
+  return repo.auditLogs.insert({ id: genId('aud'), at: new Date().toISOString(), action, actorId, actorRole, targetType, targetId, detail });
+}
+
 export function getLatestOrder(): Order | undefined {
   const orders = repo.orders.all();
   return orders[orders.length - 1];
@@ -63,25 +67,34 @@ export function submitDemoOrder(): Order {
   });
 }
 
-export function submitOrderDraft(input: { clientId: string; cargoType: CargoType; weightKg: number; valueCent: number; budgetCent: number; insured: boolean; shockProof: boolean; tempControl?: boolean; remark?: string; from?: GeoPoint; to?: GeoPoint }): Order {
+export function submitOrderDraft(input: { clientId: string; cargoType: CargoType; weightKg: number; valueCent: number; budgetCent: number; insured: boolean; shockProof: boolean; tempControl?: boolean; special?: string; remark?: string; volume?: string; photos?: string[]; timeMode?: Order['timeMode']; scheduledAt?: string; timeRequirement?: string; paymentMode?: PaymentMode; invoiceTitle?: string; from?: GeoPoint; to?: GeoPoint }): Order {
+  const client = repo.users.find(input.clientId);
+  if (client?.blacklisted) throw new Error('当前业主处于风控黑名单，暂不可发单');
   const order = createOrder({
     clientId: input.clientId,
     from: input.from ?? routeStart,
     to: input.to ?? routeEnd,
     budgetCent: input.budgetCent,
+    timeMode: input.timeMode,
+    scheduledAt: input.scheduledAt,
     cargo: {
       type: input.cargoType,
       weightKg: input.weightKg,
+      volume: input.volume,
       valueCent: input.valueCent,
-      photos: ['cargo-demo'],
+      photos: input.photos?.length ? input.photos : ['cargo-demo'],
       remark: input.remark,
     },
-    needs: { insurance: input.insured, shockProof: input.shockProof, tempControl: input.tempControl },
+    needs: { insurance: input.insured, shockProof: input.shockProof, tempControl: input.tempControl, special: input.special },
   });
+  order.timeRequirement = input.timeRequirement;
+  order.paymentMode = input.paymentMode ?? PaymentMode.Escrow;
+  order.invoiceTitle = input.invoiceTitle;
   const errors = validateOrder(order);
   if (errors.length) throw new Error(errors.join('、'));
   const saved = repo.orders.insert(order);
   transition(saved.id, OrderStatus.Matching, { actor: Role.Client, note: '发单进入智能匹配' });
+  recordAudit(AuditAction.Order, input.clientId, Role.Client, 'order', saved.id, `发布${input.cargoType}吊运订单`);
   repo.pilots.all().forEach((p) => notify(p.userId, NotificationType.Dispatch, '新吊运任务', '业主发布了精密设备吊运单', saved.id));
   return saved;
 }
@@ -90,7 +103,11 @@ export function candidatesForOrder(orderId: string, strategy: DispatchStrategy =
   ensureDemoCredit();
   const order = repo.orders.find(orderId);
   if (!order) throw new Error('订单不存在');
-  return match(order, strategy);
+  if (repo.users.find(order.clientId)?.blacklisted) throw new Error('当前业主处于风控黑名单，暂不可匹配');
+  return match(order, strategy).filter((c) => {
+    const ownerId = repo.capacity.find(c.capacityId)?.ownerId;
+    return !repo.users.find(c.pilotId)?.blacklisted && !repo.users.find(ownerId ?? '')?.blacklisted;
+  });
 }
 
 export function matchingOrdersForPilot(pilotId: string): Array<{ order: Order; candidate: MatchCandidate }> {
@@ -135,6 +152,7 @@ export function confirmCandidate(orderId: string, candidate: MatchCandidate): Or
     priceBreakdown: candidate.priceBreakdown,
   });
   const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Client, note: '业主确认 Top1 方案' });
+  recordAudit(AuditAction.Payment, order.clientId, Role.Client, 'order', order.id, `${order.paymentMode ?? PaymentMode.Escrow} 模式预支付已由 Mock provider 受理`);
   notify(candidate.pilotId, NotificationType.Dispatch, '任务已确认', '请进入驾驶舱完成空域与安检', order.id);
   return confirmed;
 }
@@ -154,6 +172,7 @@ export function pilotAcceptOrder(orderId: string, pilotId: string): Order {
     priceBreakdown: candidate.priceBreakdown,
   });
   const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Pilot, note: '飞手响应派单并确认运力' });
+  recordAudit(AuditAction.Order, pilotId, Role.Pilot, 'order', order.id, '飞手接单并锁定运力');
   notify(order.clientId, NotificationType.Dispatch, '飞手已接单', '飞手已确认运力，订单进入空域申请', order.id);
   return confirmed;
 }
@@ -182,6 +201,7 @@ export function decideMockAirspace(orderId: string): AirspaceRequest {
   const request = createAirspaceRequest(orderId);
   const status: AirspaceRequest['status'] = order.cargo.type === CargoType.Dangerous ? 'rejected' : 'approved';
   repo.airspace.update(request.id, { status });
+  recordAudit(AuditAction.Airspace, 'mock-uom', Role.Admin, 'airspace', request.id, status === 'approved' ? 'Mock 空域审批通过' : 'Mock 空域审批驳回');
   notify(order.clientId, NotificationType.Audit, status === 'approved' ? '空域已批准' : '空域被驳回', status === 'approved' ? '可进入起飞前合规检查' : '危险品航线需重新申报', order.id);
   return repo.airspace.find(request.id)!;
 }
@@ -245,13 +265,119 @@ export function dashboardMetrics() {
   };
 }
 
+export function submitCertification(role: Role, userId: string, fields: CertificationApplication['fields']): CertificationApplication {
+  const app = repo.authApplications.insert({ id: genId('cert'), userId, role, status: AuditStatus.Pending, submittedAt: new Date().toISOString(), fields });
+  if (role === Role.Pilot) repo.pilots.update(userId, { noCrimeProof: AuditStatus.Pending, healthProof: AuditStatus.Pending, trainingCerts: Array.isArray(fields.trainingCerts) ? fields.trainingCerts as string[] : [] });
+  if (role === Role.Owner) repo.owners.update(userId, { uomVerified: false });
+  if (role === Role.Client) repo.users.update(userId, { realNameVerified: false });
+  recordAudit(AuditAction.Certification, userId, role, 'certification', app.id, '提交三方认证材料');
+  notify(userId, NotificationType.Audit, '认证已提交', 'Mock 审核进入 pending 状态', app.id);
+  return app;
+}
+
+export function latestCertification(role: Role, userId: string): CertificationApplication | undefined {
+  const items = repo.authApplications.where((a) => a.role === role && a.userId === userId);
+  return items[items.length - 1];
+}
+
+export function approveCertification(appId: string): CertificationApplication {
+  const app = repo.authApplications.find(appId);
+  if (!app) throw new Error('认证申请不存在');
+  repo.authApplications.update(app.id, { status: AuditStatus.Approved, reviewedAt: new Date().toISOString() });
+  if (app.role === Role.Pilot) repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
+  if (app.role === Role.Owner) repo.owners.update(app.userId, { uomVerified: true });
+  if (app.role === Role.Client) repo.users.update(app.userId, { realNameVerified: true });
+  recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'certification', app.id, '后台通过认证');
+  notify(app.userId, NotificationType.Audit, '认证通过', '后台已通过认证申请', app.id);
+  return repo.authApplications.find(app.id)!;
+}
+
+export function rejectCertification(appId: string): CertificationApplication {
+  const app = repo.authApplications.find(appId);
+  if (!app) throw new Error('认证申请不存在');
+  repo.authApplications.update(app.id, { status: AuditStatus.Rejected, reviewedAt: new Date().toISOString() });
+  if (app.role === Role.Pilot) repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Rejected });
+  recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'certification', app.id, '后台驳回认证');
+  notify(app.userId, NotificationType.Audit, '认证驳回', '请补充认证材料后重新提交', app.id);
+  return repo.authApplications.find(app.id)!;
+}
+
+export function setUserBlacklist(userId: string, blacklisted: boolean) {
+  const user = repo.users.update(userId, { blacklisted });
+  recordAudit(AuditAction.Risk, 'admin', Role.Admin, 'user', userId, blacklisted ? '加入风控黑名单' : '移出风控黑名单');
+  return user;
+}
+
+export function createClaim(orderId: string, evidence: string[]): Claim {
+  const order = repo.orders.find(orderId);
+  if (!order?.policyId) throw new Error('订单暂无保单，不能报案');
+  const claim = repo.claims.insert({ id: genId('clm'), policyId: order.policyId, orderId, reportedAt: new Date().toISOString(), evidence, status: 'reported' });
+  repo.policies.update(order.policyId, { status: 'claiming' });
+  recordAudit(AuditAction.Insurance, order.clientId, Role.Client, 'claim', claim.id, '提交事故报案与证据');
+  return claim;
+}
+
+export function advanceClaim(claimId: string): Claim {
+  const claim = repo.claims.find(claimId);
+  if (!claim) throw new Error('理赔不存在');
+  const next = claim.status === 'reported' ? 'investigating' : claim.status === 'investigating' ? 'assessed' : claim.status === 'assessed' ? 'paid' : claim.status;
+  const patch: Partial<Claim> = { status: next };
+  if (next === 'assessed') {
+    patch.liability = '平台仲裁 + Mock 保险定损';
+    patch.payoutCent = Math.round(repo.orders.find(claim.orderId)!.cargo.valueCent * 0.8);
+  }
+  repo.claims.update(claim.id, patch);
+  recordAudit(AuditAction.Insurance, 'mock-insurance', Role.Admin, 'claim', claim.id, `理赔流转到 ${next}`);
+  if (next === 'paid') repo.policies.update(claim.policyId, { status: 'closed' });
+  return repo.claims.find(claim.id)!;
+}
+
+export function arbitrationClaim(claimId: string): Claim {
+  const claim = repo.claims.update(claimId, { status: 'arbitration' });
+  recordAudit(AuditAction.Insurance, 'admin', Role.Admin, 'claim', claim.id, '理赔进入仲裁');
+  return claim;
+}
+
+export function analyticsReport() {
+  const orders = repo.orders.all();
+  const settled = orders.filter((o) => o.status === OrderStatus.Settled);
+  const completed = orders.filter((o) => o.status === OrderStatus.Completed || o.status === OrderStatus.Settled);
+  const revenue = orders.reduce((sum, o) => sum + (o.settlement?.totalCent ?? 0), 0);
+  const disputes = repo.claims.all().length + orders.filter((o) => o.status === OrderStatus.Exception).length;
+  const periods = ['日报', '周报', '月报'].map((period, index) => ({
+    period,
+    orders: Math.max(orders.length - index, 0),
+    completed: Math.max(completed.length - index, 0),
+    incomeCent: Math.max(revenue - index * 5000, 0),
+  }));
+  const heatmap = repo.capacity.all().map((c) => ({ id: c.id, lng: c.location.lng, lat: c.location.lat, status: c.status }));
+  const suggestions = [
+    orders.length === 0 ? '冷启动阶段：优先生成示范订单校验三端链路' : '',
+    repo.capacity.where((c) => c.status === 'online').length < 2 ? '在线运力不足：建议机主投放更多合规设备' : '',
+    disputes > 0 ? '存在投诉或异常：建议运营复核理赔与订单事件' : '',
+    settled.length > 0 ? '已有结算订单：可按周/月报复盘平台收入结构' : '',
+  ].filter(Boolean);
+  return {
+    completionRate: orders.length ? completed.length / orders.length : 0,
+    cancelRate: orders.length ? orders.filter((o) => o.status === OrderStatus.Cancelled).length / orders.length : 0,
+    revenue,
+    activeUsers: new Set(orders.flatMap((o) => [o.clientId, o.pilotId, repo.capacity.find(o.capacityId ?? '')?.ownerId].filter(Boolean))).size,
+    disputes,
+    periods,
+    heatmap,
+    suggestions,
+  };
+}
+
 export function approvePilotQualification(userId: string) {
   repo.pilots.update(userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
+  recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'pilot', userId, '后台通过飞手资质');
   notify(userId, NotificationType.Audit, '认证通过', '后台已通过飞手资质审核', userId);
 }
 
 export function rejectPilotQualification(userId: string) {
   repo.pilots.update(userId, { noCrimeProof: AuditStatus.Rejected });
+  recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'pilot', userId, '后台驳回飞手资质');
   notify(userId, NotificationType.Audit, '认证驳回', '请补充飞手资质材料', userId);
 }
 

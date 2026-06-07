@@ -49,6 +49,24 @@
       }
     },
     {
+      "path": "pages-client/insurance/index",
+      "style": {
+        "navigationBarTitleText": "保险理赔"
+      }
+    },
+    {
+      "path": "pages/credit/index",
+      "style": {
+        "navigationBarTitleText": "信用风控"
+      }
+    },
+    {
+      "path": "pages/auth/index",
+      "style": {
+        "navigationBarTitleText": "认证中心"
+      }
+    },
+    {
       "path": "pages-pilot/home/index",
       "style": {
         "navigationBarTitleText": "飞手驾驶舱"

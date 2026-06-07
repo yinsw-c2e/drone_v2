@@ -21,6 +21,12 @@
       <text class="publish-action">发单</text>
     </button>
 
+    <view class="quick-actions section">
+      <button class="secondary-button" @click="goAuth">认证</button>
+      <button class="secondary-button" @click="goCredit">信用</button>
+      <button class="secondary-button" @click="goInsurance">保险</button>
+    </view>
+
     <view class="section">
       <view class="between">
         <text class="section-title">进行中订单</text>
@@ -77,6 +83,18 @@ function goOrder() {
 function goMatch() {
   orderStore.ensureOrder();
   uni.navigateTo({ url: '/pages-client/match/index' });
+}
+
+function goAuth() {
+  uni.navigateTo({ url: '/pages/auth/index' });
+}
+
+function goCredit() {
+  uni.navigateTo({ url: '/pages/credit/index' });
+}
+
+function goInsurance() {
+  uni.navigateTo({ url: '/pages-client/insurance/index' });
 }
 </script>
 
@@ -172,5 +190,11 @@ function goMatch() {
 .summary {
   padding-top: $sp-3;
   border-top: 2rpx solid $line;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $sp-2;
 }
 </style>

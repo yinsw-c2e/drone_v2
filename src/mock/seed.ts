@@ -9,7 +9,7 @@ export function buildSeed(): DBShape {
   const ownerIds = ['u_o1', 'u_o2'];
   const clientIds = ['u_c1', 'u_c2'];
 
-  const mkUser = (id: string, role: Role, nick: string): User => ({ id, phone: '138' + id, nickname: nick, roles: [role], currentRole: role, realNameVerified: true });
+  const mkUser = (id: string, role: Role, nick: string): User => ({ id, phone: '138' + id, nickname: nick, roles: [role], currentRole: role, realNameVerified: true, blacklisted: false });
   const users: User[] = [
     ...pilotIds.map((id, i) => mkUser(id, Role.Pilot, `飞手${i + 1}`)),
     ...ownerIds.map((id, i) => mkUser(id, Role.Owner, `机主${i + 1}`)),
@@ -42,5 +42,5 @@ export function buildSeed(): DBShape {
     { id: 'cap4', pilotId: 'u_p1', droneId: 'd4', ownerId: 'u_o2', location: capLoc[3], status: CapacityStatus.Online },
   ];
 
-  return { users, pilots, owners, clients, drones, capacity, orders: [], credits: [], policies: [], claims: [], airspace: [], reviews: [], wallets: [], ledger: [], notifications: [], _seededAt: new Date().toISOString() };
+  return { users, pilots, owners, clients, drones, capacity, orders: [], credits: [], policies: [], claims: [], airspace: [], reviews: [], wallets: [], ledger: [], notifications: [], authApplications: [], auditLogs: [], _seededAt: new Date().toISOString() };
 }

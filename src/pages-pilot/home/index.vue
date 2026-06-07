@@ -35,6 +35,10 @@
     <view class="section">
       <button class="secondary-button" @click="openWallet">查看钱包</button>
     </view>
+    <view class="quick-actions section">
+      <button class="secondary-button" @click="openAuth">认证</button>
+      <button class="secondary-button" @click="openCredit">信用</button>
+    </view>
   </view>
 </template>
 
@@ -66,6 +70,14 @@ function openTask() {
 
 function openWallet() {
   uni.navigateTo({ url: '/pages-pilot/wallet/index' });
+}
+
+function openAuth() {
+  uni.navigateTo({ url: '/pages/auth/index' });
+}
+
+function openCredit() {
+  uni.navigateTo({ url: '/pages/credit/index' });
 }
 </script>
 
@@ -125,5 +137,11 @@ function openWallet() {
 
 .open {
   margin-top: $sp-3;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $sp-2;
 }
 </style>

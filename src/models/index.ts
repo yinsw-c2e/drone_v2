@@ -7,10 +7,12 @@ export enum CapacityStatus { Online='online', Busy='busy', Offline='offline' }
 export enum LedgerType { SettleIn='settle_in', Withdraw='withdraw', Refund='refund', Bonus='bonus' }
 export enum LedgerStatus { Pending='pending', Available='available', Paid='paid' }
 export enum NotificationType { Dispatch='dispatch', Audit='audit', Settlement='settlement', Alert='alert', System='system' }
+export enum PaymentMode { Prepay='prepay', Escrow='escrow', Credit='credit', Installment='installment' }
+export enum AuditAction { Login='login', Certification='certification', Payment='payment', Airspace='airspace', Insurance='insurance', Order='order', Withdraw='withdraw', Risk='risk' }
 
 export interface GeoPoint { lng: number; lat: number; address?: string }
 
-export interface User { id: string; phone: string; nickname: string; avatar?: string; roles: Role[]; currentRole: Role; realNameVerified: boolean }
+export interface User { id: string; phone: string; nickname: string; avatar?: string; roles: Role[]; currentRole: Role; realNameVerified: boolean; blacklisted?: boolean }
 export interface PilotStats { orders: number; completed: number; cancelled: number; onTimeRate: number; complaintRate: number; accidentRate: number; violationCount: number; flightHours: number; onlineHours: number; avgRespSec: number; avgStar: number }
 export interface PilotProfile { userId: string; caacLevel: 'VLOS'|'BVLOS'|'instructor'; caacExpire: string; noCrimeProof: AuditStatus; healthProof: AuditStatus; trainingCerts: string[]; online: boolean; location: GeoPoint; stats: PilotStats }
 export interface OwnerStats { deviceUptime: number; faultRate: number; maintainTimely: number; completeRate: number; cancelRate: number; respSec: number; cooperation: number }
@@ -23,7 +25,7 @@ export interface CapacityUnit { id: string; pilotId: string; droneId: string; ow
 
 export interface PriceBreakdown { baseCent: number; mileageCent: number; durationCent: number; weightCent: number; difficultyFactor: number; insuranceCent: number; extraCent: number; totalCent: number }
 export interface OrderEvent { at: string; status: OrderStatus; note?: string; actor?: Role }
-export interface Order { id: string; clientId: string; cargo: { type: CargoType; weightKg: number; volume?: string; valueCent: number; photos: string[]; remark?: string }; from: GeoPoint; to: GeoPoint; distanceKm?: number; timeMode: 'instant'|'scheduled'; scheduledAt?: string; needs: { tempControl?: boolean; shockProof?: boolean; insurance?: boolean }; budgetCent: number; status: OrderStatus; pilotId?: string; droneId?: string; capacityId?: string; policyId?: string; priceBreakdown?: PriceBreakdown; settlement?: Settlement; events: OrderEvent[]; createdAt: string }
+export interface Order { id: string; clientId: string; cargo: { type: CargoType; weightKg: number; volume?: string; valueCent: number; photos: string[]; remark?: string }; from: GeoPoint; to: GeoPoint; distanceKm?: number; timeMode: 'instant'|'scheduled'; scheduledAt?: string; timeRequirement?: string; needs: { tempControl?: boolean; shockProof?: boolean; insurance?: boolean; special?: string }; budgetCent: number; paymentMode?: PaymentMode; invoiceTitle?: string; status: OrderStatus; pilotId?: string; droneId?: string; capacityId?: string; policyId?: string; priceBreakdown?: PriceBreakdown; settlement?: Settlement; events: OrderEvent[]; createdAt: string }
 export interface MatchCandidate { pilotId: string; droneId: string; capacityId: string; distanceKm: number; etaMin: number; creditScore: number; quoteCent: number; score: number; reasons: string[]; priceBreakdown: PriceBreakdown }
 
 export interface Settlement { orderId: string; totalCent: number; items: { party: 'platform'|'pilot'|'owner'|'insurance'|'tax'; ratio: number; amountCent: number; cycle: 'realtime'|'T+1'|'T+7'|'-'; note: string }[] }
@@ -38,3 +40,5 @@ export interface AirspaceRequest { id: string; orderId: string; area: GeoPoint[]
 export interface Telemetry { ts: string; pos: GeoPoint; altM: number; speedMs: number; batteryPct: number; heading: number; swingDeg: number }
 export interface Review { id: string; orderId: string; byRole: Role; targetUserId: string; star: 1|2|3|4|5; tags: string[]; text?: string }
 export interface Notification { id: string; userId: string; type: NotificationType; title: string; body: string; read: boolean; createdAt: string; ref?: string }
+export interface CertificationApplication { id: string; userId: string; role: Role; status: AuditStatus; submittedAt: string; reviewedAt?: string; fields: Record<string, string | number | boolean | string[]> }
+export interface AuditLog { id: string; at: string; action: AuditAction; actorId: string; actorRole: Role; targetType: string; targetId?: string; detail: string }
