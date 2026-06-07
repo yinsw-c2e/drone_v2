@@ -20,6 +20,23 @@
       </view>
     </view>
 
+    <view class="section route-section">
+      <text class="section-title">地点与时间</text>
+      <MapTrack title="航线预览" :subtitle="routeText" />
+      <view class="field">
+        <text class="label">起点</text>
+        <view class="location-list">
+          <button v-for="point in routePoints" :key="point.id" :class="['location-option', draft.fromId === point.id ? 'active' : '']" @click="draft.fromId = point.id">{{ point.address }}</button>
+        </view>
+      </view>
+      <view class="field">
+        <text class="label">终点</text>
+        <view class="location-list">
+          <button v-for="point in routePoints" :key="point.id" :class="['location-option', draft.toId === point.id ? 'active' : '']" @click="draft.toId = point.id">{{ point.address }}</button>
+        </view>
+      </view>
+    </view>
+
     <view class="card section">
       <text class="section-title">保障与预算</text>
       <label class="check">
@@ -42,9 +59,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
+import MapTrack from '@/components/MapTrack.vue';
 import StepFlow from '@/components/StepFlow.vue';
+import type { GeoPoint } from '@/models';
 import { CargoType, Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
@@ -59,19 +78,29 @@ const draft = reactive({
   budgetYuan: '2600',
   insured: true,
   shockProof: true,
+  fromId: 'beijing-hub',
+  toId: 'shunyi-airport',
 });
+const routePoints: Array<GeoPoint & { id: string; address: string }> = [
+  { id: 'beijing-hub', lng: 116.397, lat: 39.908, address: '北京低空货运中心' },
+  { id: 'shunyi-airport', lng: 116.45, lat: 39.95, address: '顺义临空交付点' },
+  { id: 'daxing-park', lng: 116.401, lat: 39.72, address: '大兴航空物流园' },
+];
 const cargoTypes = [
   { label: '普货', value: CargoType.Normal },
   { label: '贵重', value: CargoType.Valuable },
   { label: '农资', value: CargoType.Agricultural },
   { label: '危险', value: CargoType.Dangerous },
 ];
-const formSteps = [
+const selectedFrom = computed(() => routePoints.find((p) => p.id === draft.fromId) ?? routePoints[0]);
+const selectedTo = computed(() => routePoints.find((p) => p.id === draft.toId) ?? routePoints[1]);
+const routeText = computed(() => `${selectedFrom.value.address} → ${selectedTo.value.address}`);
+const formSteps = computed(() => [
   { title: '货物', state: 'done' as const },
-  { title: '地点', state: 'done' as const, time: '北京低空中心 → 顺义临空点' },
+  { title: '地点', state: 'done' as const, time: routeText.value },
   { title: '保险', state: 'current' as const },
   { title: '预算', state: 'todo' as const },
-];
+]);
 watch(() => draft.cargoType, (type) => {
   if (type === CargoType.Valuable) draft.insured = true;
 });
@@ -88,6 +117,8 @@ function submit() {
       budgetCent: Math.max(0, Number(draft.budgetYuan || 0) * 100),
       insured: draft.insured,
       shockProof: draft.shockProof,
+      from: selectedFrom.value,
+      to: selectedTo.value,
       remark: '精密设备吊运',
     });
     uni.navigateTo({ url: '/pages-client/match/index' });
@@ -144,6 +175,35 @@ function back() {
 .seg.active {
   color: $on-primary;
   background: $color-primary;
+}
+
+.route-section {
+  display: grid;
+  gap: $sp-3;
+}
+
+.location-list {
+  display: grid;
+  gap: $sp-2;
+}
+
+.location-option {
+  min-height: 88rpx;
+  border-radius: $r-sm;
+  background: $bg-sunken;
+  color: $ink-700;
+  font-size: $fs-body;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 $sp-3;
+}
+
+.location-option.active {
+  background: $color-primary-weak;
+  color: $color-primary;
+  font-weight: $fw-semibold;
 }
 
 .check {

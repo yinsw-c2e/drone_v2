@@ -57,13 +57,11 @@ import EmptyState from '@/components/EmptyState.vue';
 import MetricCard from '@/components/MetricCard.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
 import StatusTag from '@/components/StatusTag.vue';
-import { AuditStatus, Role } from '@/models';
+import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
-import { dashboardMetrics } from '@/services/app-flow';
+import { approvePilotQualification, dashboardMetrics, rejectPilotQualification } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
-import { notify } from '@/utils/notify';
-import { NotificationType } from '@/models';
 
 const userStore = useUserStore();
 userStore.loginAs(Role.Admin);
@@ -78,13 +76,11 @@ function userName(id: string) {
 }
 
 function approvePilot(userId: string) {
-  repo.pilots.update(userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
-  notify(userId, NotificationType.Audit, '认证通过', '后台已通过飞手资质审核', userId);
+  approvePilotQualification(userId);
 }
 
 function rejectPilot(userId: string) {
-  repo.pilots.update(userId, { noCrimeProof: AuditStatus.Rejected });
-  notify(userId, NotificationType.Audit, '认证驳回', '请补充飞手资质材料', userId);
+  rejectPilotQualification(userId);
 }
 
 async function runFlow() {
@@ -92,7 +88,7 @@ async function runFlow() {
   if (!order.pilotId) {
     await orderStore.confirmSelected();
   }
-  orderStore.finish();
+  await orderStore.finish();
 }
 </script>
 

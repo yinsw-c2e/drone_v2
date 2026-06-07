@@ -1,4 +1,4 @@
-import { createAirspaceRequest } from '@/services/app-flow';
+import { decideMockAirspace } from '@/services/app-flow';
 import { genId } from '@/utils/id';
 import type { Providers } from './index';
 
@@ -12,7 +12,7 @@ export const providers: Providers = {
   },
   airspace: {
     async apply(orderId) {
-      const request = createAirspaceRequest(orderId);
+      const request = decideMockAirspace(orderId);
       return wait({ requestId: request.id, status: request.status === 'approved' ? 'approved' : 'rejected' });
     },
   },

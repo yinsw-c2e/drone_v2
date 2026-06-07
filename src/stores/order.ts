@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { DispatchStrategy, OrderStatus } from '@/models';
 import type { MatchCandidate, Order } from '@/models';
-import { advanceOrder, candidatesForOrder, confirmCandidate, ensureActiveOrder, finishOrder, getLatestOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
+import { advanceOrder, candidatesForOrder, confirmCandidate, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 import { providers } from '@/api/providers';
 
@@ -79,17 +79,33 @@ export const useOrderStore = defineStore('order', {
       await providers.airspace.apply(order.id);
       return order;
     },
-    advance() {
+    acceptForPilot(orderId: string, pilotId: string) {
+      const accepted = pilotAcceptOrder(orderId, pilotId);
+      this.activeOrderId = accepted.id;
+      this.selectedCapacityId = accepted.capacityId ?? '';
+      return accepted;
+    },
+    async advance() {
       const order = this.activeOrder ?? this.ensureOrder();
+      if (order.status === OrderStatus.AirspaceApplying) {
+        await providers.airspace.apply(order.id);
+      }
       const next = advanceOrder(order.id);
       this.activeOrderId = next.id;
       return next;
     },
-    finish() {
-      const order = this.activeOrder ?? this.ensureOrder();
-      const done = finishOrder(order.id);
-      this.activeOrderId = done.id;
-      return done;
+    async finish() {
+      let order = this.activeOrder ?? this.ensureOrder();
+      while (order.status !== OrderStatus.Settled && order.status !== OrderStatus.Exception) {
+        if (order.status === OrderStatus.AirspaceApplying) {
+          await providers.airspace.apply(order.id);
+        }
+        const next = advanceOrder(order.id);
+        if (next.status === order.status) break;
+        this.activeOrderId = next.id;
+        order = next;
+      }
+      return order;
     },
     review(star: 1 | 2 | 3 | 4 | 5, text: string) {
       const order = this.activeOrder ?? this.ensureOrder();

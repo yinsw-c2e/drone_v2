@@ -68,8 +68,8 @@ function startTelemetry() {
   if (order.value) telemetryStore.start(order.value.id);
 }
 
-function advance() {
-  const next = orderStore.advance();
+async function advance() {
+  const next = await orderStore.advance();
   if (next.status === OrderStatus.InFlight) telemetryStore.start(next.id);
   if (next.status === OrderStatus.Settled) uni.navigateTo({ url: '/pages-client/review/index' });
 }

@@ -41,13 +41,13 @@ const star = ref<1 | 2 | 3 | 4 | 5>(5);
 const text = ref('准时响应，吊运稳定');
 const message = ref('');
 
-function finish() {
-  orderStore.finish();
+async function finish() {
+  await orderStore.finish();
   message.value = '结算已生成，钱包与看板同步更新';
 }
 
-function review() {
-  if (!order.value?.settlement) finish();
+async function review() {
+  if (!order.value?.settlement) await finish();
   orderStore.review(star.value, text.value);
   message.value = '评价已提交，飞手信用分已重算';
 }

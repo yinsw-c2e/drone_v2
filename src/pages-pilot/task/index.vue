@@ -51,11 +51,11 @@ const latest = computed(() => telemetryStore.latest);
 const allChecked = computed(() => checklist.every((item) => item.done));
 const subtitle = computed(() => order.value ? `${order.value.from.address} → ${order.value.to.address}` : '任务航线');
 
-function advance() {
+async function advance() {
   try {
     error.value = '';
     if (!allChecked.value) throw new Error('安检未完成，不能放行');
-    const next = orderStore.advance();
+    const next = await orderStore.advance();
     if (next.status === OrderStatus.InFlight) telemetryStore.start(next.id);
   } catch (e) {
     error.value = e instanceof Error ? e.message : '流程推进失败';

@@ -1,4 +1,4 @@
-import { CargoType, DispatchStrategy, NotificationType, OrderStatus, Role } from '@/models';
+import { AuditStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, Role } from '@/models';
 import type { AirspaceRequest, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
 import { createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
@@ -63,11 +63,11 @@ export function submitDemoOrder(): Order {
   });
 }
 
-export function submitOrderDraft(input: { clientId: string; cargoType: CargoType; weightKg: number; valueCent: number; budgetCent: number; insured: boolean; shockProof: boolean; tempControl?: boolean; remark?: string }): Order {
+export function submitOrderDraft(input: { clientId: string; cargoType: CargoType; weightKg: number; valueCent: number; budgetCent: number; insured: boolean; shockProof: boolean; tempControl?: boolean; remark?: string; from?: GeoPoint; to?: GeoPoint }): Order {
   const order = createOrder({
     clientId: input.clientId,
-    from: routeStart,
-    to: routeEnd,
+    from: input.from ?? routeStart,
+    to: input.to ?? routeEnd,
     budgetCent: input.budgetCent,
     cargo: {
       type: input.cargoType,
@@ -91,6 +91,17 @@ export function candidatesForOrder(orderId: string, strategy: DispatchStrategy =
   const order = repo.orders.find(orderId);
   if (!order) throw new Error('订单不存在');
   return match(order, strategy);
+}
+
+export function matchingOrdersForPilot(pilotId: string): Array<{ order: Order; candidate: MatchCandidate }> {
+  ensureDemoCredit();
+  return repo.orders
+    .where((o) => o.status === OrderStatus.Matching)
+    .map((order) => {
+      const candidate = candidatesForOrder(order.id).find((c) => c.pilotId === pilotId);
+      return candidate ? { order, candidate } : null;
+    })
+    .filter((item): item is { order: Order; candidate: MatchCandidate } => Boolean(item));
 }
 
 export function bindInsurance(order: Order, premiumCent: number): InsurancePolicy {
@@ -128,7 +139,26 @@ export function confirmCandidate(orderId: string, candidate: MatchCandidate): Or
   return confirmed;
 }
 
-export function createAirspaceRequest(orderId: string): AirspaceRequest {
+export function pilotAcceptOrder(orderId: string, pilotId: string): Order {
+  const candidate = candidatesForOrder(orderId).find((c) => c.pilotId === pilotId);
+  if (!candidate) throw new Error('该飞手暂无满足条件的运力');
+  const order = repo.orders.find(orderId);
+  if (!order) throw new Error('订单不存在');
+  if (order.cargo.type === CargoType.Valuable || order.needs.insurance) {
+    bindInsurance(order, candidate.priceBreakdown.insuranceCent);
+  }
+  repo.orders.update(order.id, {
+    pilotId: candidate.pilotId,
+    droneId: candidate.droneId,
+    capacityId: candidate.capacityId,
+    priceBreakdown: candidate.priceBreakdown,
+  });
+  const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Pilot, note: '飞手响应派单并确认运力' });
+  notify(order.clientId, NotificationType.Dispatch, '飞手已接单', '飞手已确认运力，订单进入空域申请', order.id);
+  return confirmed;
+}
+
+export function createAirspaceRequest(orderId: string, status: AirspaceRequest['status'] = 'submitted'): AirspaceRequest {
   const order = repo.orders.find(orderId);
   if (!order) throw new Error('订单不存在');
   const existing = repo.airspace.where((a) => a.orderId === orderId)[0];
@@ -140,10 +170,20 @@ export function createAirspaceRequest(orderId: string): AirspaceRequest {
     area: [order.from, { lng: order.from.lng, lat: order.to.lat }, order.to, { lng: order.to.lng, lat: order.from.lat }],
     altitudeM: 120,
     window: { start: now.toISOString(), end: new Date(now.getTime() + 90 * 60 * 1000).toISOString() },
-    status: 'approved',
+    status,
   };
   repo.airspace.insert(request);
   return request;
+}
+
+export function decideMockAirspace(orderId: string): AirspaceRequest {
+  const order = repo.orders.find(orderId);
+  if (!order) throw new Error('订单不存在');
+  const request = createAirspaceRequest(orderId);
+  const status: AirspaceRequest['status'] = order.cargo.type === CargoType.Dangerous ? 'rejected' : 'approved';
+  repo.airspace.update(request.id, { status });
+  notify(order.clientId, NotificationType.Audit, status === 'approved' ? '空域已批准' : '空域被驳回', status === 'approved' ? '可进入起飞前合规检查' : '危险品航线需重新申报', order.id);
+  return repo.airspace.find(request.id)!;
 }
 
 export function advanceOrder(orderId: string): Order {
@@ -155,6 +195,9 @@ export function advanceOrder(orderId: string): Order {
     return transition(order.id, OrderStatus.AirspaceApplying, { actor: Role.Client, note: '提交空域申请' });
   }
   if (order.status === OrderStatus.AirspaceApplying) {
+    const airspace = repo.airspace.where((a) => a.orderId === order.id)[0];
+    if (airspace?.status === 'rejected') return transition(order.id, OrderStatus.Exception, { actor: Role.Admin, note: '空域审批驳回' });
+    if (airspace?.status !== 'approved') throw new Error('空域尚未批准');
     return transition(order.id, OrderStatus.Preparing, { actor: Role.Pilot, note: '空域通过，合规门校验通过' });
   }
   const next: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -173,17 +216,6 @@ export function advanceOrder(orderId: string): Order {
     notify(order.clientId, NotificationType.Settlement, '订单已结算', '分账明细已生成，可发起评价', order.id);
   }
   return nextOrder;
-}
-
-export function finishOrder(orderId: string): Order {
-  let order = repo.orders.find(orderId);
-  if (!order) throw new Error('订单不存在');
-  while (order.status !== OrderStatus.Settled) {
-    const nextOrder = advanceOrder(order.id);
-    if (nextOrder.status === order.status) break;
-    order = nextOrder;
-  }
-  return order;
 }
 
 export function recordClientReview(orderId: string, star: 1 | 2 | 3 | 4 | 5, text: string): Review {
@@ -211,6 +243,16 @@ export function dashboardMetrics() {
     platformIncome,
     onlineCapacity: repo.capacity.where((c) => c.status === 'online').length,
   };
+}
+
+export function approvePilotQualification(userId: string) {
+  repo.pilots.update(userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
+  notify(userId, NotificationType.Audit, '认证通过', '后台已通过飞手资质审核', userId);
+}
+
+export function rejectPilotQualification(userId: string) {
+  repo.pilots.update(userId, { noCrimeProof: AuditStatus.Rejected });
+  notify(userId, NotificationType.Audit, '认证驳回', '请补充飞手资质材料', userId);
 }
 
 export const demoRoute = [routeStart, routeEnd];

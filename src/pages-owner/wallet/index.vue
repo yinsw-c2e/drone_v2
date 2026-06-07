@@ -39,8 +39,8 @@ const wallet = computed(() => repo.wallets.find(user.value.id));
 const ledger = computed(() => repo.ledger.where((item) => item.userId === user.value.id).reverse());
 const balanceText = computed(() => `¥${((wallet.value?.balanceCent ?? 0) / 100).toFixed(2)}`);
 
-function finish() {
-  orderStore.finish();
+async function finish() {
+  await orderStore.finish();
 }
 
 function release() {

@@ -16,7 +16,7 @@
     <view class="section">
       <view class="between">
         <text class="section-title">任务大厅</text>
-        <button class="link" @click="ensureOrder">拉取</button>
+        <button class="link" @click="openHall">接单</button>
       </view>
       <view v-if="order" class="card task-card">
         <view class="between">
@@ -29,7 +29,7 @@
         </view>
         <button class="primary-button open" @click="openTask">进入任务</button>
       </view>
-      <EmptyState v-else title="暂无任务" desc="业主发单并确认后将在这里出现" action="生成演示订单" @action="ensureOrder" />
+      <EmptyState v-else title="暂无任务" desc="进入接单大厅响应 Matching 订单" action="去接单" @action="openHall" />
     </view>
 
     <view class="section">
@@ -56,8 +56,8 @@ const credit = computed(() => repo.credits.find(user.value.id));
 const notifications = computed(() => repo.notifications.where((n) => n.userId === user.value.id && !n.read));
 const order = computed(() => orderStore.activeOrder ?? repo.orders.where((o) => o.pilotId === user.value.id)[0]);
 
-function ensureOrder() {
-  orderStore.ensureOrder();
+function openHall() {
+  uni.navigateTo({ url: '/pages-pilot/hall/index' });
 }
 
 function openTask() {

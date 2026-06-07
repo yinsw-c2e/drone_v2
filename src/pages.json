@@ -117,8 +117,6 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "低空吊运",
-    "navigationBarBackgroundColor": "#F4F6FA",
-    "backgroundColor": "#F4F6FA"
+    "navigationBarTitleText": "低空吊运"
   }
 }
