@@ -1,0 +1,85 @@
+import { describe, expect, it } from 'vitest';
+import { AuditStatus, CapacityStatus, CargoType, OrderStatus, Role } from '@/models';
+import type { Claim, Drone } from '@/models';
+import { createOrder } from '@/models/factory';
+import {
+  adminOrderAction,
+  canTriggerEmergency,
+  claimAction,
+  emergencyClosedReason,
+  ownerCapacityAction,
+  ownerDroneAction,
+  reviewSettlementAction,
+} from '@/services/action-plans';
+
+function order(status: OrderStatus) {
+  return {
+    ...createOrder({
+      clientId: 'u_c1',
+      from: { lng: 116.397, lat: 39.908, address: '起点' },
+      to: { lng: 116.45, lat: 39.95, address: '终点' },
+      budgetCent: 200000,
+      cargo: { type: CargoType.Normal, weightKg: 3, valueCent: 10000, photos: [] },
+    }),
+    status,
+    events: [{ at: new Date().toISOString(), status, actor: Role.Pilot }],
+  };
+}
+
+function claim(status: Claim['status']): Claim {
+  return { id: 'clm-1', policyId: 'pol-1', orderId: 'ord-1', reportedAt: '2026-06-07T00:00:00.000Z', evidence: [], status };
+}
+
+function drone(status: Drone['status'] = 'idle'): Drone {
+  return {
+    id: 'd-test',
+    brand: 'DJI',
+    model: 'FC30',
+    sn: 'SN-TEST',
+    maxPayloadKg: 30,
+    airworthiness: AuditStatus.Approved,
+    insured: { hull: true, thirdParty: true, thirdPartyAmount: 8000000 },
+    maintenanceLog: [],
+    ownerId: 'u_o1',
+    status,
+  };
+}
+
+describe('action plans', () => {
+  it('飞手终态关闭应急处置并显示业务解释', () => {
+    expect(canTriggerEmergency(OrderStatus.Settled)).toBe(false);
+    expect(emergencyClosedReason(OrderStatus.Settled)).toContain('应急处置已关闭');
+    expect(canTriggerEmergency(OrderStatus.InFlight)).toBe(true);
+  });
+
+  it('评价页已结算订单不再显示完成结算动作', () => {
+    const settled = { ...order(OrderStatus.Settled), settlement: { orderId: 'ord-1', totalCent: 10000, items: [] } };
+    const action = reviewSettlementAction(settled);
+    expect(action.canFinish).toBe(false);
+    expect(action.secondaryLabel).toBe('');
+    expect(action.description).toContain('可直接提交评价');
+  });
+
+  it('后台已结算订单不显示可点击流转', () => {
+    const action = adminOrderAction(order(OrderStatus.Settled));
+    expect(action.disabled).toBe(true);
+    expect(action.label).toBe('已完成');
+    expect(action.reason).toContain('不能继续流转');
+  });
+
+  it('paid 理赔是终态，不再重复推进', () => {
+    const action = claimAction(claim('paid'));
+    expect(action.disabled).toBe(true);
+    expect(action.label).toBe('赔付完成');
+    expect(action.description).toContain('不能重复推进');
+  });
+
+  it('机主设备和运力只暴露当前可用动作', () => {
+    expect(ownerDroneAction(drone(), false).primaryLabel).toBe('投放');
+    expect(ownerDroneAction(drone(), true).secondaryLabel).toBe('撤回');
+    expect(ownerDroneAction(drone('busy'), true).primaryLabel).toBe('');
+    expect(ownerCapacityAction(CapacityStatus.Offline).primaryLabel).toBe('投放');
+    expect(ownerCapacityAction(CapacityStatus.Online).secondaryLabel).toBe('撤回');
+    expect(ownerCapacityAction(CapacityStatus.Busy).description).toContain('忙碌');
+  });
+});

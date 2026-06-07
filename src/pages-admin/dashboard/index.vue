@@ -49,14 +49,16 @@
 
     <view class="section card">
       <text class="section-title">订单管理</text>
+      <text v-if="message" class="message">{{ message }}</text>
       <view v-for="item in orders" :key="item.id" class="order-line">
         <view>
           <text class="name">{{ item.cargo.remark || item.id }}</text>
           <text class="muted">{{ item.from.address }} → {{ item.to.address }}</text>
+          <text class="muted">{{ orderAction(item).description }}</text>
         </view>
         <view class="order-actions">
           <StatusTag :status="item.status" />
-          <button class="secondary-button small" @click="moveOrder(item.id)">流转</button>
+          <button class="secondary-button small" :disabled="orderAction(item).disabled" @click="moveOrder(item.id)">{{ orderAction(item).label }}</button>
         </view>
       </view>
       <EmptyState v-if="!orders.length" title="暂无订单" desc="点击跑通生成端到端订单" />
@@ -74,9 +76,13 @@
       <view v-for="claim in claims" :key="claim.id" class="audit-line">
         <view>
           <text class="name">理赔 {{ claim.status }}</text>
+          <text class="muted">{{ claimActionPlan(claim).description }}</text>
           <text class="muted">{{ claim.liability || claim.orderId }}</text>
         </view>
-        <button class="primary-button small" @click="nextClaim(claim.id)">推进</button>
+        <view class="audit-actions">
+          <button v-if="claimActionPlan(claim).secondaryLabel" class="secondary-button small" :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrateClaim(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</button>
+          <button class="primary-button small" :disabled="claimActionPlan(claim).disabled" @click="nextClaim(claim.id)">{{ claimActionPlan(claim).label }}</button>
+        </view>
       </view>
     </view>
 
@@ -109,20 +115,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MetricCard from '@/components/MetricCard.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
+import type { Claim, Order } from '@/models';
+import { adminOrderAction, claimAction } from '@/services/action-plans';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
-import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';
+import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, arbitrationClaim, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 
 const userStore = useUserStore();
 userStore.loginAs(Role.Admin);
 const orderStore = useOrderStore();
+const message = ref('');
 const metrics = computed(() => dashboardMetrics());
 const income = computed(() => `¥${(metrics.value.platformIncome / 100).toFixed(2)}`);
 const pilots = computed(() => repo.pilots.all());
@@ -163,21 +172,64 @@ function rejectApp(id: string) {
 
 function toggleRisk(id: string) {
   const user = repo.users.find(id);
-  if (user) setUserBlacklist(id, !user.blacklisted);
+  if (user) {
+    setUserBlacklist(id, !user.blacklisted);
+    message.value = user.blacklisted ? '已解除风控黑名单' : '已加入风控黑名单';
+  }
+}
+
+function orderAirspace(id: string) {
+  return repo.airspace.where((item) => item.orderId === id)[0];
+}
+
+function orderAction(order: Order) {
+  return adminOrderAction(order, orderAirspace(order.id));
+}
+
+function claimActionPlan(claim: Claim) {
+  return claimAction(claim);
 }
 
 function moveOrder(id: string) {
   const order = repo.orders.find(id);
-  if (order?.status === 'airspace') decideMockAirspace(id);
+  if (!order) return;
+  const action = orderAction(order);
+  if (action.disabled) {
+    message.value = action.reason;
+    return;
+  }
+  if (order.status === 'airspace') decideMockAirspace(id);
   try {
-    advanceOrder(id);
+    const next = advanceOrder(id);
+    message.value = `订单已进入 ${orderAction(next).label === '已完成' ? '已结算' : orderAction(next).description}`;
   } catch (e) {
-    console.warn(e instanceof Error ? e.message : '订单流转失败');
+    message.value = e instanceof Error ? e.message : '订单流转失败';
   }
 }
 
 function nextClaim(id: string) {
-  advanceClaim(id);
+  const claim = repo.claims.find(id);
+  if (!claim) return;
+  const action = claimActionPlan(claim);
+  if (action.disabled) {
+    message.value = action.description;
+    return;
+  }
+  const nextClaimState = advanceClaim(id);
+  const nextAction = claimActionPlan(nextClaimState);
+  message.value = nextAction.terminal ? nextAction.description : '理赔状态已更新';
+}
+
+function arbitrateClaim(id: string) {
+  const claim = repo.claims.find(id);
+  if (!claim) return;
+  const action = claimActionPlan(claim);
+  if (action.secondaryDisabled) {
+    message.value = action.description;
+    return;
+  }
+  arbitrationClaim(id);
+  message.value = '理赔已进入仲裁';
 }
 
 function rate(value: number) {
@@ -190,6 +242,7 @@ async function runFlow() {
     await orderStore.confirmSelected();
   }
   await orderStore.finish();
+  message.value = '端到端流程已跑通，结算与分账已生成';
 }
 </script>
 
@@ -248,6 +301,17 @@ async function runFlow() {
   display: flex;
   align-items: center;
   gap: $sp-2;
+}
+
+.message {
+  display: block;
+  margin: $sp-3 0;
+  padding: $sp-2;
+  border-radius: $r-sm;
+  background: $info-bg;
+  color: $info-ink;
+  font-size: $fs-sm;
+  line-height: 1.45;
 }
 
 .name {

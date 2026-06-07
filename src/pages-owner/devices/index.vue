@@ -7,17 +7,19 @@
 
     <view class="section">
       <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="feedback" class="feedback">{{ feedback }}</text>
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
         <view class="between">
           <view>
             <text class="drone-title">{{ drone.brand }} {{ drone.model }}</text>
             <text class="muted">载荷 {{ drone.maxPayloadKg }}kg · 三者险 {{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
+            <text class="muted">{{ droneAction(drone).description }}</text>
           </view>
           <text :class="['state', drone.status]">{{ drone.status }}</text>
         </view>
         <view class="actions">
-          <button class="secondary-button" @click="withdraw(drone.id)">撤回</button>
-          <button class="primary-button" @click="deploy(drone.id)">投放</button>
+          <button v-if="droneAction(drone).secondaryLabel" class="secondary-button" @click="withdraw(drone.id)">{{ droneAction(drone).secondaryLabel }}</button>
+          <button v-if="droneAction(drone).primaryLabel" class="primary-button" @click="deploy(drone.id)">{{ droneAction(drone).primaryLabel }}</button>
         </view>
       </view>
     </view>
@@ -28,6 +30,8 @@
 import { computed, ref } from 'vue';
 import RoleBadge from '@/components/RoleBadge.vue';
 import { Role } from '@/models';
+import type { Drone } from '@/models';
+import { ownerDroneAction } from '@/services/action-plans';
 import { deployOwnerDrone, withdrawOwnerDrone } from '@/services/app-flow';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
@@ -36,11 +40,22 @@ const userStore = useUserStore();
 const user = computed(() => userStore.user.currentRole === Role.Owner ? userStore.user : userStore.loginAs(Role.Owner));
 const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));
 const error = ref('');
+const feedback = ref('');
+
+function isOnline(droneId: string) {
+  return repo.capacity.where((item) => item.droneId === droneId && item.status === 'online').length > 0;
+}
+
+function droneAction(drone: Drone) {
+  return ownerDroneAction(drone, isOnline(drone.id));
+}
 
 function deploy(droneId: string) {
   try {
     error.value = '';
+    feedback.value = '';
     deployOwnerDrone(user.value.id, droneId);
+    feedback.value = '设备已上线，已进入匹配候选池。';
   } catch (e) {
     error.value = e instanceof Error ? e.message : '投放失败';
   }
@@ -48,7 +63,9 @@ function deploy(droneId: string) {
 
 function withdraw(droneId: string) {
   error.value = '';
+  feedback.value = '';
   withdrawOwnerDrone(user.value.id, droneId);
+  feedback.value = '设备已撤回，不会继续进入新的匹配候选。';
 }
 </script>
 
@@ -101,9 +118,19 @@ function withdraw(droneId: string) {
   font-size: $fs-sm;
 }
 
+.feedback {
+  display: block;
+  margin-bottom: $sp-3;
+  color: $info-ink;
+  background: $info-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
+  font-size: $fs-sm;
+}
+
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: $sp-3;
   margin-top: $sp-3;
 }

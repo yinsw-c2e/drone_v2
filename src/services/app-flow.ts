@@ -401,6 +401,7 @@ export function createClaim(orderId: string, evidence: string[]): Claim {
 export function advanceClaim(claimId: string): Claim {
   const claim = repo.claims.find(claimId);
   if (!claim) throw new Error('理赔不存在');
+  if (claim.status === 'paid' || claim.status === 'arbitration') return claim;
   const next = claim.status === 'reported' ? 'investigating' : claim.status === 'investigating' ? 'assessed' : claim.status === 'assessed' ? 'paid' : claim.status;
   const patch: Partial<Claim> = { status: next };
   if (next === 'assessed') {

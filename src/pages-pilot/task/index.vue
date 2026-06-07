@@ -32,8 +32,9 @@
       <view class="emergency">
         <button class="secondary-button" @click="mockEmergency('return')">返航</button>
         <button class="secondary-button" @click="mockEmergency('land')">降落</button>
-        <button class="danger-button" @click="exception">应急</button>
+        <button class="danger-button" :disabled="!emergencyAvailable" @click="exception">应急</button>
       </view>
+      <text v-if="emergencyReason" class="notice">{{ emergencyReason }}</text>
       <text v-if="feedback" class="feedback">{{ feedback }}</text>
     </view>
 
@@ -55,6 +56,7 @@ import MapTrack from '@/components/MapTrack.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import StepFlow from '@/components/StepFlow.vue';
 import { OrderStatus, Role } from '@/models';
+import { canTriggerEmergency, emergencyClosedReason } from '@/services/action-plans';
 import { taskActionForStatus, taskSteps } from '@/services/task-guidance';
 import { useOrderStore } from '@/stores/order';
 import { useTelemetryStore } from '@/stores/telemetry';
@@ -85,6 +87,8 @@ const action = computed(() => order.value ? taskActionForStatus(order.value, all
   terminal: true,
 });
 const steps = computed(() => taskSteps(order.value?.status ?? OrderStatus.Confirmed));
+const emergencyAvailable = computed(() => order.value ? canTriggerEmergency(order.value.status) : false);
+const emergencyReason = computed(() => order.value ? emergencyClosedReason(order.value.status) : '');
 const subtitle = computed(() => order.value ? `${order.value.from.address} → ${order.value.to.address}` : '任务航线');
 
 async function advance() {
@@ -141,6 +145,10 @@ function mockEmergency(type: 'return' | 'land') {
 function exception() {
   const current = order.value;
   if (!current) return;
+  if (!emergencyAvailable.value) {
+    feedback.value = emergencyReason.value || '当前状态不能发起应急处置。';
+    return;
+  }
   try {
     transition(current.id, OrderStatus.Exception, { actor: Role.Pilot, note: '飞手触发应急' });
     feedback.value = '订单已进入异常状态，后台和业主端可同步看到。';

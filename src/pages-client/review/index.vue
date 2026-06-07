@@ -12,6 +12,7 @@
         </view>
       </view>
       <EmptyState v-else title="订单尚未结算" desc="可一键完成剩余流程并生成分账" />
+      <text class="settlement-tip">{{ settlementAction.description }}</text>
     </view>
 
     <view class="card section">
@@ -23,7 +24,7 @@
       <text v-if="message" class="message">{{ message }}</text>
     </view>
 
-    <BottomActionBar primary="提交评价" secondary="完成结算" @secondary="finish" @primary="review" />
+    <BottomActionBar primary="提交评价" :secondary="settlementAction.secondaryLabel" @secondary="finish" @primary="review" />
   </view>
 </template>
 
@@ -34,6 +35,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { OrderStatus } from '@/models';
+import { reviewSettlementAction } from '@/services/action-plans';
 import { useOrderStore } from '@/stores/order';
 import { repo } from '@/utils/repo';
 
@@ -46,8 +48,13 @@ const order = computed(() => {
 const star = ref<1 | 2 | 3 | 4 | 5>(5);
 const text = ref('准时响应，吊运稳定');
 const message = ref('');
+const settlementAction = computed(() => reviewSettlementAction(order.value));
 
 async function finish() {
+  if (!settlementAction.value.canFinish) {
+    message.value = '结算已完成，可直接提交评价';
+    return;
+  }
   await orderStore.finish();
   message.value = '结算已生成，钱包与看板同步更新';
 }
@@ -75,6 +82,17 @@ function partyLabel(party: string) {
 
 .settlement {
   margin-top: $sp-3;
+}
+
+.settlement-tip {
+  display: block;
+  margin-top: $sp-3;
+  color: $info-ink;
+  background: $info-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
+  font-size: $fs-sm;
+  line-height: 1.45;
 }
 
 .line {

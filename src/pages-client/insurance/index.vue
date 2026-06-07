@@ -40,24 +40,28 @@
       <view v-for="claim in claims" :key="claim.id" class="claim-line">
         <view>
           <text class="name">{{ claim.status }}</text>
+          <text class="muted">{{ claimActionPlan(claim).description }}</text>
           <text class="muted">{{ claim.liability || '等待责任认定' }}</text>
         </view>
         <view class="claim-actions">
-          <button class="secondary-button small" @click="arbitrate(claim.id)">仲裁</button>
-          <button class="primary-button small" @click="next(claim.id)">推进</button>
+          <button v-if="claimActionPlan(claim).secondaryLabel" class="secondary-button small" :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrate(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</button>
+          <button class="primary-button small" :disabled="claimActionPlan(claim).disabled" @click="next(claim.id)">{{ claimActionPlan(claim).label }}</button>
         </view>
       </view>
+      <text v-if="message" class="message">{{ message }}</text>
       <EmptyState v-if="!claims.length" title="暂无理赔" desc="事故后可提交照片与飞行数据证据" />
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
 import { Role } from '@/models';
+import type { Claim } from '@/models';
+import { claimAction } from '@/services/action-plans';
 import { INSURANCE_PLANS } from '@/stores/config-data';
 import { useOrderStore } from '@/stores/order';
 import { advanceClaim, arbitrationClaim, createClaim } from '@/services/app-flow';
@@ -68,17 +72,42 @@ const order = computed(() => orderStore.activeOrder);
 const policy = computed(() => order.value?.policyId ? repo.policies.find(order.value.policyId) : undefined);
 const claims = computed(() => order.value ? repo.claims.where((c) => c.orderId === order.value!.id) : []);
 const planRows = computed(() => Object.entries(INSURANCE_PLANS).map(([name, plan]) => ({ name, ...plan })));
+const message = ref('');
+
+function claimActionPlan(claim: Claim) {
+  return claimAction(claim);
+}
 
 function report() {
-  if (order.value) createClaim(order.value.id, ['现场照片入口', '飞行数据入口']);
+  if (order.value) {
+    createClaim(order.value.id, ['现场照片入口', '飞行数据入口']);
+    message.value = '报案已提交，理赔流程进入待调查。';
+  }
 }
 
 function next(id: string) {
-  advanceClaim(id);
+  const claim = repo.claims.find(id);
+  if (!claim) return;
+  const action = claimActionPlan(claim);
+  if (action.disabled) {
+    message.value = action.description;
+    return;
+  }
+  const nextClaimState = advanceClaim(id);
+  const nextAction = claimActionPlan(nextClaimState);
+  message.value = nextAction.terminal ? nextAction.description : '理赔状态已更新。';
 }
 
 function arbitrate(id: string) {
+  const claim = repo.claims.find(id);
+  if (!claim) return;
+  const action = claimActionPlan(claim);
+  if (action.secondaryDisabled) {
+    message.value = action.description;
+    return;
+  }
   arbitrationClaim(id);
+  message.value = '理赔已进入仲裁，请等待后台处理。';
 }
 </script>
 
@@ -156,6 +185,16 @@ function arbitrate(id: string) {
 
 .link {
   color: $color-primary;
+  font-size: $fs-sm;
+}
+
+.message {
+  display: block;
+  margin-top: $sp-3;
+  color: $info-ink;
+  background: $info-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
   font-size: $fs-sm;
 }
 </style>
