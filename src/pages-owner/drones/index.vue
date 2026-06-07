@@ -5,8 +5,12 @@
 
     <view class="section">
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
-        <view class="between">
-          <view>
+        <view class="asset-line">
+          <view class="asset-thumb">
+            <view class="asset-wing" />
+            <view class="asset-body" />
+          </view>
+          <view class="asset-copy">
             <text class="drone-title">{{ droneDisplayName(drone) }}</text>
             <text class="muted">{{ drone.sn }} · 载荷 {{ drone.maxPayloadKg }}kg</text>
           </view>
@@ -48,6 +52,46 @@ const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.
 <style lang="scss" scoped>
 .drone-card {
   margin-bottom: $sp-3;
+}
+
+.asset-line {
+  display: grid;
+  grid-template-columns: 96rpx minmax(0, 1fr) auto;
+  gap: $sp-3;
+  align-items: start;
+}
+
+.asset-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: $r-md;
+  background: $role-owner-weak;
+  position: relative;
+}
+
+.asset-wing,
+.asset-body {
+  position: absolute;
+  border-radius: $r-pill;
+  background: $role-owner;
+}
+
+.asset-wing {
+  left: 18rpx;
+  right: 18rpx;
+  top: 46rpx;
+  height: 8rpx;
+}
+
+.asset-body {
+  width: 30rpx;
+  height: 30rpx;
+  left: 33rpx;
+  top: 31rpx;
+}
+
+.asset-copy {
+  min-width: 0;
 }
 
 .drone-title {

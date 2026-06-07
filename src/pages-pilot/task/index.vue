@@ -1,9 +1,23 @@
 <template>
   <view class="page task-page">
     <PageHeader title="任务执行态势" :desc="subtitle" :role="Role.Pilot" compact />
-    <MapTrack title="飞手任务地图" :subtitle="subtitle" :frame="latest" />
+    <RouteHero
+      class="section"
+      title="飞手任务地图"
+      subtitle="围栏、航线、遥测和应急指令统一监控。"
+      :from="order?.from.address"
+      :to="order?.to.address"
+      :frame="latest"
+      :status="emergencyAvailable ? '执行阶段可应急' : '应急关闭'"
+      :eta="order?.status === OrderStatus.Settled ? '已结算' : action.stage"
+      :distance="latest ? '飞行中' : '待起飞'"
+      tone="pilot"
+      compact
+    />
 
-    <view v-if="order" class="card section">
+    <KpiStrip class="section telemetry-strip" :items="telemetryItems" />
+
+    <view v-if="order" class="card section cockpit-card">
       <view class="between">
         <view>
           <text class="section-title">当前阶段：{{ action.stage }}</text>
@@ -15,7 +29,7 @@
       <StepFlow :steps="steps" />
     </view>
 
-    <view v-if="order" class="card section">
+    <view v-if="order" class="card section checklist-card">
       <SectionHeader title="起飞前安检" :desc="`${checkedCount}/${checklist.length} 项完成；完成后主按钮才可继续。`" />
       <label v-for="item in checklist" :key="item.key" class="check">
         <checkbox :checked="item.done" @click="item.done = !item.done" />
@@ -25,13 +39,22 @@
       <text v-if="error" class="error">{{ error }}</text>
     </view>
 
-    <view class="card section">
-      <SectionHeader title="应急处置" desc="返航/降落当前为演示指令反馈；应急异常只在允许阶段开启。" />
-      <view class="emergency">
-        <button class="secondary-button" @click="mockEmergency('return')">返航</button>
-        <button class="secondary-button" @click="mockEmergency('land')">降落</button>
-        <button class="danger-button" :disabled="!emergencyAvailable" @click="exception">应急</button>
-      </view>
+    <CommandPanel
+      class="section"
+      tone="pilot"
+      eyebrow="飞行指挥"
+      title="应急处置"
+      desc="返航/降落当前为演示指令反馈；异常只在状态机允许阶段开启。"
+      primary="应急"
+      secondary="返航"
+      :disabled="!emergencyAvailable"
+      :reason="emergencyReason"
+      @secondary="mockEmergency('return')"
+      @primary="exception"
+    />
+    <view class="section emergency-grid">
+      <button class="secondary-button" @click="mockEmergency('land')">降落</button>
+      <button class="secondary-button" @click="lowBattery">低电量</button>
       <NoticeBar v-if="emergencyReason" tone="warning" :message="emergencyReason" />
       <NoticeBar v-if="feedback" class="feedback" :message="feedback" />
     </view>
@@ -50,9 +73,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
-import MapTrack from '@/components/MapTrack.vue';
+import CommandPanel from '@/components/CommandPanel.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RouteHero from '@/components/RouteHero.vue';
 import SectionHeader from '@/components/SectionHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import StepFlow from '@/components/StepFlow.vue';
@@ -82,6 +107,12 @@ const order = computed(() => {
   return active ?? orderStore.ensureOrder();
 });
 const latest = computed(() => telemetryStore.latest);
+const telemetryItems = computed(() => [
+  { label: '高度', value: latest.value?.altM ?? '--', hint: '米', tone: 'info' as const },
+  { label: '速度', value: latest.value?.speedMs ?? '--', hint: '米/秒', tone: 'neutral' as const },
+  { label: '电量', value: latest.value && latest.value.batteryPct > 0 ? `${latest.value.batteryPct}%` : '--', hint: '动力', tone: latest.value && latest.value.batteryPct > 0 && latest.value.batteryPct <= 30 ? 'danger' as const : 'success' as const },
+  { label: '摆度', value: latest.value ? `${latest.value.swingDeg}°` : '--', hint: '吊挂', tone: 'warning' as const },
+]);
 const allChecked = computed(() => checklist.every((item) => item.done));
 const checkedCount = computed(() => checklist.filter((item) => item.done).length);
 const airspace = computed(() => order.value ? repo.airspace.where((item) => item.orderId === order.value!.id)[0] : undefined);
@@ -182,6 +213,10 @@ function exception() {
   font-size: $fs-body;
 }
 
+.telemetry-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .stage-desc {
   display: block;
   margin-top: $sp-1;
@@ -201,10 +236,13 @@ function exception() {
   margin-top: $sp-3;
 }
 
-.emergency {
+.emergency-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: $sp-2;
-  margin-top: $sp-3;
+}
+
+.emergency-grid :deep(.notice-bar) {
+  grid-column: 1 / -1;
 }
 </style>

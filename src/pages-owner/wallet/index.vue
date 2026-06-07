@@ -6,6 +6,7 @@
       <MoneyText :fen="wallet?.pendingCent ?? 0" size="display" bold />
       <text class="desc">可提现 {{ balanceText }} · 周期 T+7</text>
     </view>
+    <KpiStrip class="section" :items="walletKpis" />
 
     <view class="section card">
       <view v-for="item in ledger" :key="item.id" class="line">
@@ -26,6 +27,7 @@
 import { computed } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
@@ -41,6 +43,11 @@ const user = computed(() => userStore.user.currentRole === Role.Owner ? userStor
 const wallet = computed(() => repo.wallets.find(user.value.id));
 const ledger = computed(() => repo.ledger.where((item) => item.userId === user.value.id).reverse());
 const balanceText = computed(() => `¥${((wallet.value?.balanceCent ?? 0) / 100).toFixed(2)}`);
+const walletKpis = computed(() => [
+  { label: '待结算', value: `¥${((wallet.value?.pendingCent ?? 0) / 100).toFixed(0)}`, hint: 'T+7', tone: 'warning' as const },
+  { label: '可提现', value: `¥${((wallet.value?.balanceCent ?? 0) / 100).toFixed(0)}`, hint: '余额', tone: 'success' as const },
+  { label: '流水', value: ledger.value.length, hint: '记录', tone: 'info' as const },
+]);
 
 async function finish() {
   await orderStore.finish();

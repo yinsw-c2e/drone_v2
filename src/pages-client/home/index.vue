@@ -2,22 +2,30 @@
   <view class="page">
     <PageHeader title="今日吊运态势" :desc="`${user.nickname} · 发单、匹配、追踪、结算一屏掌控`" :role="Role.Client" />
 
-    <view class="metric-grid">
-      <MetricCard label="信用分" :value="credit?.total ?? 0" :hint="credit ? credit.level + ' 级' : '待计算'" delta="实时" />
-      <MetricCard label="在线运力" :value="availableCount" hint="5km 合规池" delta="可用" delta-tone="up" />
-    </view>
+    <RouteHero
+      class="section hero"
+      eyebrow="航线控制台"
+      title="当前吊运航线"
+      :subtitle="nextCopy"
+      :from="order?.from.address ?? '北京低空货运中心'"
+      :to="order?.to.address ?? '顺义临空交付点'"
+      :status="airspaceCopy"
+      :eta="etaText"
+      distance="5km"
+      :battery="order?.status === 'inflight' ? '91%' : '--'"
+      primary="发单"
+      secondary="追踪"
+      @primary="goOrder"
+      @secondary="goTrack"
+    />
 
-    <ActionCard eyebrow="核心动作" title="发起吊运" desc="货物、地点、保险、预算一次提交，进入智能匹配。" cta="发单" @action="goOrder" />
+    <KpiStrip class="section" :items="kpis" />
 
-    <view class="quick-actions section">
-      <button class="secondary-button" @click="goAuth">认证</button>
-      <button class="secondary-button" @click="goCredit">信用</button>
-      <button class="secondary-button" @click="goInsurance">保险</button>
-    </view>
+    <IconActionGrid class="section" :actions="quickActions" @select="handleQuick" />
 
     <view class="section">
       <SectionHeader title="进行中订单" desc="快速查看当前阶段、责任方、费用和风险。" action="匹配" @action="goMatch" />
-      <view v-if="order" class="card order-card">
+      <view v-if="order" class="order-card">
         <view class="between">
           <text class="order-title">{{ order.cargo.remark || '吊运任务' }}</text>
           <StatusTag :status="order.status" />
@@ -41,12 +49,7 @@
             <text class="ops-value">{{ airspaceCopy }}</text>
           </view>
         </view>
-        <view class="mini-flow">
-          <view v-for="step in homeSteps" :key="step.title" :class="['mini-step', step.state]">
-            <view class="mini-dot" />
-            <text>{{ step.title }}</text>
-          </view>
-        </view>
+        <StageStepper :steps="homeSteps" />
         <view class="between summary">
           <text class="muted">{{ order.from.address }} → {{ order.to.address }}</text>
           <button class="link" @click="goTrack">追踪</button>
@@ -59,13 +62,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import ActionCard from '@/components/ActionCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
-import MetricCard from '@/components/MetricCard.vue';
+import IconActionGrid from '@/components/IconActionGrid.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RouteHero from '@/components/RouteHero.vue';
 import SectionHeader from '@/components/SectionHeader.vue';
+import StageStepper from '@/components/StageStepper.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
@@ -78,6 +83,16 @@ const user = computed(() => userStore.user.currentRole === Role.Client ? userSto
 const order = computed(() => orderStore.activeOrder);
 const credit = computed(() => repo.credits.find(user.value.id));
 const availableCount = computed(() => repo.capacity.where((c) => c.status === 'online').length);
+const kpis = computed(() => [
+  { label: '信用分', value: credit.value?.total ?? 0, hint: credit.value ? `${credit.value.level}级` : '待计算', tone: 'info' as const },
+  { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
+  { label: '预算', value: order.value ? `¥${(order.value.budgetCent / 100).toFixed(0)}` : '--', hint: '当前单', tone: 'neutral' as const },
+]);
+const quickActions = computed(() => [
+  { key: 'auth', title: '认证', desc: '实名与货物声明', symbol: '证', status: '可补充', tone: 'info' as const },
+  { key: 'credit', title: '信用', desc: `${credit.value?.level ?? '待评'}级雷达`, symbol: '信', status: '实时', tone: 'success' as const },
+  { key: 'insurance', title: '保险', desc: '投保与理赔', symbol: '保', status: order.value?.policyId ? '已关联' : '待投保', tone: 'warning' as const },
+]);
 const orderPilot = computed(() => order.value?.pilotId ? repo.users.find(order.value.pilotId)?.nickname ?? '已指派飞手' : '待匹配');
 const etaText = computed(() => {
   if (!order.value) return '--';
@@ -88,7 +103,7 @@ const etaText = computed(() => {
   return '待确认';
 });
 const airspaceCopy = computed(() => {
-  if (!order.value) return '--';
+  if (!order.value) return '待发单';
   const item = repo.airspace.where((entry) => entry.orderId === order.value!.id)[0];
   if (item?.status === 'approved') return '已批准';
   if (item?.status === 'rejected') return '需复核';
@@ -96,6 +111,7 @@ const airspaceCopy = computed(() => {
   if (order.value.status === 'matching') return '待确认';
   return '处理中';
 });
+type StepState = 'done' | 'current' | 'todo';
 const nextCopy = computed(() => {
   if (!order.value) return '';
   const map: Partial<Record<string, string>> = {
@@ -125,9 +141,11 @@ const homeSteps = computed(() => {
   return groups.map((step) => {
     const last = Math.max(...step.states.map((item) => orderMap.indexOf(item)));
     const first = Math.min(...step.states.map((item) => orderMap.indexOf(item)));
+    const state: StepState = current > last ? 'done' : current >= first ? 'current' : 'todo';
     return {
       title: step.title,
-      state: current > last ? 'done' : current >= first ? 'current' : 'todo',
+      state,
+      desc: step.title === '发单' ? '需求' : step.title === '确认' ? '运力' : step.title === '执行' ? '飞行' : '分账',
     };
   });
 });
@@ -156,11 +174,19 @@ function goInsurance() {
 function goTrack() {
   uni.navigateTo({ url: '/pages-client/track/index' });
 }
+
+function handleQuick(key: string) {
+  if (key === 'auth') goAuth();
+  if (key === 'credit') goCredit();
+  if (key === 'insurance') goInsurance();
+}
 </script>
 
 <style lang="scss" scoped>
 .order-card {
   margin-top: $sp-3;
+  @include card;
+  border-left: 8rpx solid $color-primary;
 }
 
 .order-title {
@@ -178,12 +204,6 @@ function goTrack() {
 
 .order-notice {
   margin: $sp-3 0;
-}
-
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $sp-2;
 }
 
 .ops-grid {
@@ -218,37 +238,7 @@ function goTrack() {
   font-weight: $fw-semibold;
 }
 
-.mini-flow {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: $sp-2;
-  margin-top: $sp-3;
-}
-
-.mini-step {
-  display: flex;
-  align-items: center;
-  gap: $sp-1;
-  min-height: 56rpx;
-  color: $ink-500;
-  font-size: $fs-cap;
-}
-
-.mini-dot {
-  width: 16rpx;
-  height: 16rpx;
-  border-radius: 50%;
-  background: $line;
-}
-
-.mini-step.done,
-.mini-step.current {
-  color: $color-primary;
-  font-weight: $fw-semibold;
-}
-
-.mini-step.done .mini-dot,
-.mini-step.current .mini-dot {
-  background: $color-primary;
+.hero {
+  margin-top: $sp-4;
 }
 </style>

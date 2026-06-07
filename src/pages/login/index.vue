@@ -1,6 +1,16 @@
 <template>
   <view class="page">
     <PageHeader eyebrow="低空吊运平台" title="选择角色进入系统" desc="当前为演示环境，验证码任意 6 位；切换角色后可体验同一订单的多端协同。" />
+    <RouteHero
+      class="section"
+      title="无人机货物吊运"
+      subtitle="业主、飞手、机主与后台围绕同一航线协同。"
+      status="演示环境"
+      eta="三端"
+      distance="全流程"
+      battery="本地"
+      compact
+    />
     <NoticeBar tone="info" title="演示环境" message="登录用于角色切换体验；实名、人脸、短信与 CAAC 真实核验待生产环境接入。" />
 
     <view class="roles">
@@ -20,6 +30,7 @@
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
+import RouteHero from '@/components/RouteHero.vue';
 import { Role } from '@/models';
 import { useUserStore } from '@/stores/user';
 import { roleHome } from '@/services/app-flow';
@@ -50,6 +61,7 @@ function login(role: Role) {
   @include card;
   width: 100%;
   text-align: left;
+  border-left: 8rpx solid $color-primary;
 }
 
 .phone {

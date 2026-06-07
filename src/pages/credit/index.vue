@@ -2,13 +2,16 @@
   <view class="page">
     <PageHeader title="信用雷达" desc="信用维度用于发单、匹配、接单和风控拦截。" :role="role" />
 
-    <view class="card section">
+    <view class="card section score-card">
       <view class="between">
         <text class="section-title">{{ user.nickname }}</text>
         <text :class="['risk', user.blacklisted ? 'blocked' : '']">{{ user.blacklisted ? '黑名单' : '正常' }}</text>
       </view>
-      <text class="score">{{ credit?.total ?? 0 }}</text>
-      <text class="muted">{{ credit?.level ?? '待计算' }} 级 · 当前角色信用雷达</text>
+      <view class="score-dial">
+        <text class="score">{{ credit?.total ?? 0 }}</text>
+        <text class="score-label">{{ credit?.level ?? '待计算' }} 级信用</text>
+      </view>
+      <text class="muted">发单、匹配、接单和风控均读取当前角色信用雷达。</text>
       <view class="radar">
         <view v-for="dim in dimensions" :key="dim.name" class="bar-line">
           <text class="bar-name">{{ dim.name }}</text>
@@ -72,13 +75,36 @@ function toggle(id: string) {
   color: $danger-ink;
 }
 
+.score-card {
+  border-left: 8rpx solid $color-primary;
+}
+
+.score-dial {
+  margin-top: $sp-4;
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: $r-pill;
+  background: $color-primary-weak;
+  border: 8rpx solid $blue-200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .score {
   @include tabular;
   display: block;
-  margin-top: $sp-3;
   color: $ink-900;
   font-size: $fs-display;
   font-weight: $fw-bold;
+}
+
+.score-label {
+  color: $color-primary;
+  font-size: $fs-cap;
+  line-height: 1.4;
+  font-weight: $fw-semibold;
 }
 
 .radar {

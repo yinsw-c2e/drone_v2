@@ -6,6 +6,7 @@
       <MoneyText :fen="wallet?.balanceCent ?? 0" size="display" bold />
       <text class="desc">待结算 {{ pendingText }}</text>
     </view>
+    <KpiStrip class="section" :items="walletKpis" />
 
     <view class="section">
       <view class="between">
@@ -32,6 +33,7 @@
 import { computed } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import SectionHeader from '@/components/SectionHeader.vue';
@@ -48,6 +50,11 @@ const user = computed(() => userStore.user.currentRole === Role.Pilot ? userStor
 const wallet = computed(() => repo.wallets.find(user.value.id));
 const ledger = computed(() => repo.ledger.where((item) => item.userId === user.value.id).reverse());
 const pendingText = computed(() => `¥${((wallet.value?.pendingCent ?? 0) / 100).toFixed(2)}`);
+const walletKpis = computed(() => [
+  { label: '可提现', value: `¥${((wallet.value?.balanceCent ?? 0) / 100).toFixed(0)}`, hint: '余额', tone: 'success' as const },
+  { label: '待结算', value: `¥${((wallet.value?.pendingCent ?? 0) / 100).toFixed(0)}`, hint: 'T+1', tone: 'warning' as const },
+  { label: '流水', value: ledger.value.length, hint: '记录', tone: 'info' as const },
+]);
 
 async function finish() {
   await orderStore.finish();

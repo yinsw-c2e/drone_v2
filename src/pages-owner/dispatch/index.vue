@@ -6,13 +6,22 @@
       <NoticeBar v-if="error" tone="danger" :message="error" />
       <NoticeBar v-if="feedback" :message="feedback" />
       <view v-for="unit in capacity" :key="unit.id" class="card capacity-card">
-        <view class="between">
+        <view class="capacity-line">
+          <view class="pool-indicator">
+            <view :class="['pool-dot', unit.status]" />
+            <view class="pool-line" />
+          </view>
           <view>
             <text class="capacity-title">{{ droneName(unit.droneId) }}</text>
             <text class="muted">{{ pilotName(unit.pilotId) }} · {{ unit.location.address || '低空货运中心' }}</text>
             <text class="muted">{{ capacityAction(unit.status).description }}</text>
           </view>
           <text :class="['state', unit.status]">{{ capacityStatusLabel(unit.status) }}</text>
+        </view>
+        <view class="pool-strip">
+          <text>匹配池</text>
+          <text>{{ capacityStatusLabel(unit.status) }}</text>
+          <text>{{ pilotName(unit.pilotId) }}</text>
         </view>
         <view class="actions">
           <button v-if="capacityAction(unit.status).secondaryLabel" class="secondary-button" @click="setOffline(unit.id)">{{ capacityAction(unit.status).secondaryLabel }}</button>
@@ -78,11 +87,68 @@ function setOffline(id: string) {
   margin-bottom: $sp-3;
 }
 
+.capacity-line {
+  display: grid;
+  grid-template-columns: 56rpx minmax(0, 1fr) auto;
+  gap: $sp-3;
+  align-items: start;
+}
+
+.pool-indicator {
+  min-height: 116rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pool-dot {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: $r-pill;
+  background: $ink-400;
+  box-shadow: 0 0 0 8rpx $bg-sunken;
+}
+
+.pool-dot.online {
+  background: $success;
+  box-shadow: 0 0 0 8rpx $success-bg;
+}
+
+.pool-dot.busy {
+  background: $warning;
+  box-shadow: 0 0 0 8rpx $warning-bg;
+}
+
+.pool-line {
+  width: 4rpx;
+  flex: 1;
+  margin-top: $sp-2;
+  border-radius: $r-pill;
+  background: $line;
+}
+
 .capacity-title {
   display: block;
   font-size: $fs-h3;
   line-height: 1.35;
   color: $ink-900;
+  font-weight: $fw-semibold;
+}
+
+.pool-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $sp-2;
+  margin-top: $sp-3;
+  padding: $sp-3;
+  border-radius: $r-md;
+  background: $bg-sunken;
+}
+
+.pool-strip text {
+  color: $ink-700;
+  font-size: $fs-cap;
+  line-height: 1.4;
   font-weight: $fw-semibold;
 }
 

@@ -2,12 +2,25 @@
   <view class="page">
     <PageHeader title="任务与通知" :desc="`${user.nickname} · 在线任务、派单通知与飞行钱包`" :role="Role.Pilot" />
 
-    <view class="metric-grid">
-      <MetricCard label="信用分" :value="credit?.total ?? 0" :hint="credit ? credit.level + ' 级' : '实时计算'" />
-      <MetricCard label="通知" :value="notifications.length" hint="未读派单" delta="推送" />
-    </view>
+    <RouteHero
+      class="section"
+      tone="pilot"
+      eyebrow="飞行任务驾驶舱"
+      title="待命航线"
+      :subtitle="order ? '当前任务可直接进入驾驶舱。' : '暂无锁定任务，进入大厅接收可承接订单。'"
+      :from="order?.from.address ?? '北京低空货运中心'"
+      :to="order?.to.address ?? '顺义临空交付点'"
+      :status="order ? '任务已锁定' : '待命在线'"
+      :eta="notifications.length ? `${notifications.length}条` : '待命'"
+      :distance="order ? '任务中' : '5km'"
+      battery="96%"
+      primary="接单"
+      secondary="钱包"
+      @primary="openHall"
+      @secondary="openWallet"
+    />
 
-    <ActionCard tone="pilot" eyebrow="下一任务" title="进入接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" cta="接单" @action="openHall" />
+    <KpiStrip class="section" :items="kpis" />
 
     <view class="section">
       <SectionHeader title="当前任务" desc="有任务时直接进入驾驶舱；无任务时从大厅接单。" action="钱包" @action="openWallet" />
@@ -25,19 +38,17 @@
       <EmptyState v-else title="暂无任务" desc="进入接单大厅响应 Matching 订单" action="去接单" @action="openHall" />
     </view>
 
-    <view class="quick-actions section">
-      <button class="secondary-button" @click="openAuth">认证</button>
-      <button class="secondary-button" @click="openCredit">信用</button>
-    </view>
+    <IconActionGrid class="section" :columns="2" :actions="quickActions" @select="handleQuick" />
   </view>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import ActionCard from '@/components/ActionCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
-import MetricCard from '@/components/MetricCard.vue';
+import IconActionGrid from '@/components/IconActionGrid.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RouteHero from '@/components/RouteHero.vue';
 import SectionHeader from '@/components/SectionHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
@@ -51,6 +62,15 @@ const user = computed(() => userStore.user.currentRole === Role.Pilot ? userStor
 const credit = computed(() => repo.credits.find(user.value.id));
 const notifications = computed(() => repo.notifications.where((n) => n.userId === user.value.id && !n.read));
 const order = computed(() => orderStore.activeOrder ?? repo.orders.where((o) => o.pilotId === user.value.id)[0]);
+const kpis = computed(() => [
+  { label: '信用分', value: credit.value?.total ?? 0, hint: credit.value ? `${credit.value.level}级` : '实时计算', tone: 'success' as const },
+  { label: '通知', value: notifications.value.length, hint: '未读派单', tone: notifications.value.length ? 'warning' as const : 'neutral' as const },
+  { label: '任务', value: order.value ? '1' : '0', hint: order.value ? '执行中' : '待接单', tone: 'info' as const },
+]);
+const quickActions = [
+  { key: 'auth', title: '认证', desc: '资质材料', symbol: '证', status: '可更新', tone: 'pilot' as const },
+  { key: 'credit', title: '信用', desc: '飞行表现', symbol: '信', status: '实时', tone: 'success' as const },
+];
 
 function openHall() {
   uni.navigateTo({ url: '/pages-pilot/hall/index' });
@@ -70,6 +90,11 @@ function openAuth() {
 
 function openCredit() {
   uni.navigateTo({ url: '/pages/credit/index' });
+}
+
+function handleQuick(key: string) {
+  if (key === 'auth') openAuth();
+  if (key === 'credit') openCredit();
 }
 </script>
 
@@ -102,9 +127,4 @@ function openCredit() {
   margin-top: $sp-3;
 }
 
-.quick-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: $sp-2;
-}
 </style>

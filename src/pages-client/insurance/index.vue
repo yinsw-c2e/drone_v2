@@ -2,6 +2,7 @@
   <view class="page">
     <PageHeader title="投保与理赔进度" desc="查看投保方案、当前保单和理赔处理状态。" :role="Role.Client" />
     <NoticeBar tone="warning" message="真实投保、定损、赔付和仲裁接口待生产环境接入；当前展示业务流程和状态流转。" />
+    <KpiStrip class="section" :items="insuranceKpis" />
 
     <view class="card section">
       <SectionHeader title="投保方案" desc="按货物类型展示强制/可选保障范围。" />
@@ -52,6 +53,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
+import KpiStrip from '@/components/KpiStrip.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -71,6 +73,11 @@ const policy = computed(() => order.value?.policyId ? repo.policies.find(order.v
 const claims = computed(() => order.value ? repo.claims.where((c) => c.orderId === order.value!.id) : []);
 const planRows = computed(() => Object.entries(INSURANCE_PLANS).map(([name, plan]) => ({ name, ...plan })));
 const message = ref('');
+const insuranceKpis = computed(() => [
+  { label: '保额', value: policy.value ? `¥${(policy.value.insuredAmountCent / 100).toFixed(0)}` : '--', hint: '货物险', tone: 'info' as const },
+  { label: '保费', value: policy.value ? `¥${(policy.value.premiumCent / 100).toFixed(0)}` : '--', hint: '匹配生成', tone: 'warning' as const },
+  { label: '理赔', value: claims.value.length, hint: '案件数', tone: claims.value.length ? 'danger' as const : 'success' as const },
+]);
 
 function claimActionPlan(claim: Claim) {
   return claimAction(claim);

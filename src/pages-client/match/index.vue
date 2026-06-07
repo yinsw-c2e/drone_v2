@@ -6,16 +6,19 @@
       </template>
     </PageHeader>
     <NoticeBar v-if="!candidates.length" tone="warning" message="当前没有在线合规运力，请等待机主投放或返回调整预算/时间。" />
-    <view v-if="order" class="match-summary card">
-      <view>
-        <text class="summary-label">航线</text>
-        <text class="summary-value">{{ order.from.address }} → {{ order.to.address }}</text>
-      </view>
-      <view>
-        <text class="summary-label">预算</text>
-        <MoneyText :fen="order.budgetCent" bold />
-      </view>
-    </view>
+    <RouteHero
+      v-if="order"
+      class="section"
+      title="派单航线"
+      subtitle="系统按距离、信用、载荷、保额和预算综合排序。"
+      :from="order.from.address"
+      :to="order.to.address"
+      :status="candidates.length ? '候选已生成' : '等待运力'"
+      :eta="selected ? `约${selected.etaMin}分` : '--'"
+      :distance="selected ? `${selected.distanceKm}km` : '5km'"
+      :battery="selected ? '合规' : '--'"
+      compact
+    />
 
     <view class="segmented section">
       <button v-for="item in strategies" :key="item.value" :class="['seg', orderStore.strategy === item.value ? 'active' : '']" @click="orderStore.strategy = item.value">{{ item.label }}</button>
@@ -37,7 +40,10 @@
     </view>
 
     <view v-if="selected" class="card section breakdown">
-      <text class="section-title">费用明细</text>
+      <view class="between">
+        <text class="section-title">费用明细</text>
+        <MoneyText :fen="selected.quoteCent" bold />
+      </view>
       <view class="line"><text>基础</text><MoneyText :fen="selected.priceBreakdown.baseCent" /></view>
       <view class="line"><text>里程</text><MoneyText :fen="selected.priceBreakdown.mileageCent" /></view>
       <view class="line"><text>时长</text><MoneyText :fen="selected.priceBreakdown.durationCent" /></view>
@@ -56,6 +62,7 @@ import MatchCandidateCard from '@/components/MatchCandidateCard.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RouteHero from '@/components/RouteHero.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { DispatchStrategy, Role } from '@/models';
 import type { MatchCandidate } from '@/models';
@@ -167,29 +174,4 @@ function goOrder() {
   font-size: $fs-sm;
 }
 
-.match-summary {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: $sp-3;
-  margin-top: $sp-3;
-}
-
-.summary-label,
-.summary-value {
-  display: block;
-}
-
-.summary-label {
-  color: $ink-500;
-  font-size: $fs-cap;
-  line-height: 1.4;
-}
-
-.summary-value {
-  margin-top: $sp-1;
-  color: $ink-900;
-  font-size: $fs-sm;
-  line-height: 1.45;
-  font-weight: $fw-semibold;
-}
 </style>
