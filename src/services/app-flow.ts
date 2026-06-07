@@ -48,7 +48,7 @@ export function getLatestOrder(): Order | undefined {
 }
 
 export function ensureActiveOrder(): Order {
-  const active = repo.orders.where((o) => o.status !== OrderStatus.Settled && o.status !== OrderStatus.Cancelled)[0];
+  const active = repo.orders.where((o) => o.status !== OrderStatus.Settled && o.status !== OrderStatus.Cancelled).reverse()[0];
   return active ?? submitDemoOrder();
 }
 

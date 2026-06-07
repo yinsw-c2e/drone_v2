@@ -12,7 +12,7 @@
         <text class="desc">{{ subtitle }}</text>
       </view>
       <view class="telemetry">
-        <text>{{ battery }}%</text>
+        <text>{{ battery }}</text>
         <text>电量</text>
       </view>
     </view>
@@ -28,7 +28,7 @@ const props = withDefaults(defineProps<{ title: string; subtitle?: string; frame
   frame: undefined,
 });
 
-const battery = computed(() => props.frame?.batteryPct ?? 96);
+const battery = computed(() => props.frame && props.frame.batteryPct > 0 ? `${props.frame.batteryPct}%` : '--');
 const progress = computed(() => {
   const pct = props.frame ? (100 - props.frame.batteryPct) / 40 : 0.18;
   return Math.max(0.14, Math.min(0.82, pct));

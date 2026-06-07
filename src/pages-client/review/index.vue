@@ -33,10 +33,16 @@ import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
+import { OrderStatus } from '@/models';
 import { useOrderStore } from '@/stores/order';
+import { repo } from '@/utils/repo';
 
 const orderStore = useOrderStore();
-const order = computed(() => orderStore.activeOrder ?? orderStore.ensureOrder());
+const order = computed(() => {
+  const active = orderStore.activeOrder;
+  if (active?.settlement || active?.status === OrderStatus.Completed || active?.status === OrderStatus.Settled) return active;
+  return repo.orders.all().reverse().find((item) => item.settlement || item.status === OrderStatus.Completed || item.status === OrderStatus.Settled) ?? active ?? orderStore.ensureOrder();
+});
 const star = ref<1 | 2 | 3 | 4 | 5>(5);
 const text = ref('准时响应，吊运稳定');
 const message = ref('');

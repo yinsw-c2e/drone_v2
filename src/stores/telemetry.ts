@@ -50,9 +50,19 @@ export const useTelemetryStore = defineStore('telemetry', {
       this.running = false;
     },
     injectLowBattery() {
+      if (stopRunner) stopRunner();
+      stopRunner = undefined;
+      this.running = false;
       const latest = this.latest;
-      if (!latest) return;
-      const frame = { ...latest, batteryPct: 30 };
+      const frame = latest ? { ...latest, batteryPct: 30 } : {
+        ts: new Date().toISOString(),
+        pos: demoRoute[0],
+        altM: 20,
+        speedMs: 0,
+        batteryPct: 30,
+        heading: 0,
+        swingDeg: 5,
+      };
       this.frames.push(frame);
       this.alerts = telemetryAlerts(frame);
     },
