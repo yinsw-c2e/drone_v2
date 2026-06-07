@@ -4,6 +4,7 @@ import type { Claim, Drone } from '@/models';
 import { createOrder } from '@/models/factory';
 import {
   adminOrderAction,
+  adminRunFlowAction,
   canTriggerEmergency,
   claimAction,
   emergencyClosedReason,
@@ -92,5 +93,15 @@ describe('action plans', () => {
     expect(action.primaryLabel).toBe('等待运力');
     expect(action.secondaryLabel).toBe('修改订单');
     expect(action.description).toContain('当前没有在线合规运力');
+  });
+
+  it('后台端到端跑通在 0 在线运力时给出业务阻断', () => {
+    const blocked = adminRunFlowAction(0);
+    expect(blocked.canRun).toBe(false);
+    expect(blocked.description).toContain('当前没有在线合规运力');
+
+    const ready = adminRunFlowAction(1);
+    expect(ready.canRun).toBe(true);
+    expect(ready.description).toContain('可一键跑通');
   });
 });

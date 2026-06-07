@@ -21,6 +21,8 @@
         <button class="link" @click="runFlow">跑通</button>
       </view>
       <text class="muted">生成订单、确认 Top1、空域合规、飞行、卸货、结算与分账。</text>
+      <text class="muted">{{ runFlowAction.description }}</text>
+      <text v-if="message" class="message">{{ message }}</text>
     </view>
 
     <view class="section card">
@@ -49,7 +51,6 @@
 
     <view class="section card">
       <text class="section-title">订单管理</text>
-      <text v-if="message" class="message">{{ message }}</text>
       <view v-for="item in orders" :key="item.id" class="order-line">
         <view>
           <text class="name">{{ item.cargo.remark || item.id }}</text>
@@ -122,7 +123,7 @@ import RoleBadge from '@/components/RoleBadge.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
-import { adminOrderAction, claimAction } from '@/services/action-plans';
+import { adminOrderAction, adminRunFlowAction, claimAction } from '@/services/action-plans';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, arbitrationClaim, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';
@@ -134,6 +135,7 @@ const orderStore = useOrderStore();
 const message = ref('');
 const metrics = computed(() => dashboardMetrics());
 const income = computed(() => `¥${(metrics.value.platformIncome / 100).toFixed(2)}`);
+const runFlowAction = computed(() => adminRunFlowAction(metrics.value.onlineCapacity));
 const pilots = computed(() => repo.pilots.all());
 const orders = computed(() => repo.orders.all().reverse());
 const users = computed(() => repo.users.all());
@@ -237,12 +239,21 @@ function rate(value: number) {
 }
 
 async function runFlow() {
-  const order = orderStore.ensureOrder();
-  if (!order.pilotId) {
-    await orderStore.confirmSelected();
+  if (!runFlowAction.value.canRun) {
+    message.value = runFlowAction.value.description;
+    return;
   }
-  await orderStore.finish();
-  message.value = '端到端流程已跑通，结算与分账已生成';
+  try {
+    message.value = '';
+    const order = orderStore.ensureOrder();
+    if (!order.pilotId) {
+      await orderStore.confirmSelected();
+    }
+    await orderStore.finish();
+    message.value = '端到端流程已跑通，结算与分账已生成';
+  } catch (e) {
+    message.value = e instanceof Error ? e.message : '端到端跑通失败，请先确认在线运力和订单条件。';
+  }
 }
 </script>
 

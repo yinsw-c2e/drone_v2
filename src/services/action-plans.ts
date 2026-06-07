@@ -39,6 +39,11 @@ export interface MatchConfirmAction {
   description: string;
 }
 
+export interface AdminRunFlowAction {
+  canRun: boolean;
+  description: string;
+}
+
 export function isOrderTerminal(status: OrderStatus): boolean {
   return status === OrderStatus.Settled || status === OrderStatus.Cancelled || status === OrderStatus.Exception;
 }
@@ -91,6 +96,19 @@ export function adminOrderAction(order: Order, airspace?: AirspaceRequest): Admi
     return { label: '生成结算', disabled: false, reason: '', description: '生成分账并同步钱包。', terminal: false };
   }
   return { label: '查看明细', disabled: true, reason: '当前状态不能由后台直接流转', description: '请查看订单事件或重新发起流程。', terminal: true };
+}
+
+export function adminRunFlowAction(onlineCapacity: number): AdminRunFlowAction {
+  if (onlineCapacity <= 0) {
+    return {
+      canRun: false,
+      description: '当前没有在线合规运力，请先到机主调度投放运力，或返回调整订单条件。',
+    };
+  }
+  return {
+    canRun: true,
+    description: '在线运力可用，可一键跑通发单、匹配、空域、飞行、卸货、结算与分账。',
+  };
 }
 
 export function reviewSettlementAction(order?: Order): ReviewSettlementAction {
