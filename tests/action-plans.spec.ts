@@ -5,6 +5,7 @@ import { createOrder } from '@/models/factory';
 import {
   adminOrderAction,
   adminRunFlowAction,
+  adminRunFlowPanel,
   canTriggerEmergency,
   claimAction,
   emergencyClosedReason,
@@ -121,5 +122,32 @@ describe('action plans', () => {
     const ready = adminRunFlowAction(1);
     expect(ready.canRun).toBe(true);
     expect(ready.description).toContain('可一键跑通');
+  });
+
+  it('后台端到端跑通成功后不同时展示无在线运力阻断', () => {
+    const actionAfterSuccess = adminRunFlowAction(0);
+    const panel = adminRunFlowPanel(actionAfterSuccess, {
+      kind: 'success',
+      message: '端到端流程已跑通，结算与分账已生成',
+    });
+
+    expect(panel.noticeTone).toBe('success');
+    expect(panel.noticeMessage).toContain('端到端流程已跑通');
+    expect(panel.description).toContain('本次验收已完成');
+    expect(panel.description).not.toContain('当前没有在线合规运力');
+  });
+
+  it('后台端到端跑通无反馈时按当前运力展示可执行说明', () => {
+    const blockedPanel = adminRunFlowPanel(adminRunFlowAction(0), { kind: 'idle', message: '' });
+    expect(blockedPanel.description).toContain('当前没有在线合规运力');
+    expect(blockedPanel.noticeMessage).toBe('');
+
+    const warningPanel = adminRunFlowPanel(adminRunFlowAction(0), {
+      kind: 'warning',
+      message: '当前没有在线合规运力，请先到机主调度投放运力，或返回调整订单条件。',
+    });
+    expect(warningPanel.description).toBe('');
+    expect(warningPanel.noticeTone).toBe('warning');
+    expect(warningPanel.noticeMessage).toContain('当前没有在线合规运力');
   });
 });

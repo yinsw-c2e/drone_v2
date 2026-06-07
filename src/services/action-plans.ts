@@ -47,6 +47,17 @@ export interface AdminRunFlowAction {
   description: string;
 }
 
+export interface AdminRunFlowFeedback {
+  kind: 'idle' | 'info' | 'success' | 'warning' | 'danger';
+  message: string;
+}
+
+export interface AdminRunFlowPanel {
+  description: string;
+  noticeMessage: string;
+  noticeTone: 'info' | 'success' | 'warning' | 'danger';
+}
+
 export function isOrderTerminal(status: OrderStatus): boolean {
   return status === OrderStatus.Settled || status === OrderStatus.Cancelled || status === OrderStatus.Exception;
 }
@@ -111,6 +122,32 @@ export function adminRunFlowAction(onlineCapacity: number): AdminRunFlowAction {
   return {
     canRun: true,
     description: '在线运力可用，可一键跑通发单、匹配、空域、飞行、卸货、结算与分账。',
+  };
+}
+
+export function adminRunFlowPanel(action: AdminRunFlowAction, feedback: AdminRunFlowFeedback): AdminRunFlowPanel {
+  if (feedback.message) {
+    if (feedback.kind === 'success') {
+      return {
+        description: action.canRun
+          ? '本次验收已完成；系统仍有在线运力，可再次执行演示验收。'
+          : '本次验收已完成；当前运力已被任务占用，如需再次跑通请到机主调度恢复在线运力。',
+        noticeMessage: feedback.message,
+        noticeTone: 'success',
+      };
+    }
+
+    return {
+      description: '',
+      noticeMessage: feedback.message,
+      noticeTone: feedback.kind === 'danger' ? 'danger' : feedback.kind === 'warning' ? 'warning' : 'info',
+    };
+  }
+
+  return {
+    description: action.description,
+    noticeMessage: '',
+    noticeTone: action.canRun ? 'info' : 'warning',
   };
 }
 

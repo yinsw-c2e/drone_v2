@@ -35,8 +35,8 @@
 
         <AdminDataPanel class="admin-wide" title="端到端验收" desc="生成订单、确认推荐方案、空域合规、飞行、卸货、结算与分账。" action="跑通" @action="runFlow">
           <view class="panel-body">
-            <text class="muted">{{ runFlowAction.description }}</text>
-            <NoticeBar v-if="message" class="message" :tone="message.includes('没有在线') || message.includes('失败') ? 'warning' : 'info'" :message="message" />
+            <text v-if="runFlowPanel.description" class="muted">{{ runFlowPanel.description }}</text>
+            <NoticeBar v-if="runFlowPanel.noticeMessage" class="message" :tone="runFlowPanel.noticeTone" :message="runFlowPanel.noticeMessage" />
           </view>
         </AdminDataPanel>
 
@@ -179,7 +179,8 @@ import PageHeader from '@/components/PageHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
-import { adminOrderAction, adminRunFlowAction, claimAction } from '@/services/action-plans';
+import { adminOrderAction, adminRunFlowAction, adminRunFlowPanel, claimAction } from '@/services/action-plans';
+import type { AdminRunFlowFeedback } from '@/services/action-plans';
 import { auditActionLabel, auditLogDetailLabel, auditStatusLabel, claimLiabilityLabel, claimStatusLabel, orderDisplayTitle, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
@@ -189,10 +190,11 @@ import { repo } from '@/utils/repo';
 const userStore = useUserStore();
 userStore.loginAs(Role.Admin);
 const orderStore = useOrderStore();
-const message = ref('');
+const feedback = ref<AdminRunFlowFeedback>({ kind: 'idle', message: '' });
 const metrics = computed(() => dashboardMetrics());
 const income = computed(() => `¥${(metrics.value.platformIncome / 100).toFixed(2)}`);
 const runFlowAction = computed(() => adminRunFlowAction(metrics.value.onlineCapacity));
+const runFlowPanel = computed(() => adminRunFlowPanel(runFlowAction.value, feedback.value));
 const pilots = computed(() => repo.pilots.all());
 const orders = computed(() => repo.orders.all().reverse());
 const users = computed(() => repo.users.all());
@@ -201,6 +203,14 @@ const claims = computed(() => repo.claims.all().reverse());
 const report = computed(() => analyticsReport());
 const auditLogs = computed(() => repo.auditLogs.all().slice(-8).reverse());
 const railItems = ['运营概览', '认证审核', '订单管理', '风控理赔', '报表建议', '审计日志'];
+
+function setFeedback(message: string, kind: AdminRunFlowFeedback['kind'] = 'info') {
+  feedback.value = { kind, message };
+}
+
+function clearFeedback() {
+  feedback.value = { kind: 'idle', message: '' };
+}
 
 function userName(id: string) {
   return repo.users.find(id)?.nickname ?? id;
@@ -241,7 +251,7 @@ function toggleRisk(id: string) {
   const user = repo.users.find(id);
   if (user) {
     setUserBlacklist(id, !user.blacklisted);
-    message.value = user.blacklisted ? '已解除风控黑名单' : '已加入风控黑名单';
+    setFeedback(user.blacklisted ? '已解除风控黑名单' : '已加入风控黑名单');
   }
 }
 
@@ -262,15 +272,15 @@ function moveOrder(id: string) {
   if (!order) return;
   const action = orderAction(order);
   if (action.disabled) {
-    message.value = action.reason;
+    setFeedback(action.reason, 'warning');
     return;
   }
   if (order.status === 'airspace') decideMockAirspace(id);
   try {
     const next = advanceOrder(id);
-    message.value = `订单已进入 ${orderAction(next).label === '已完成' ? '已结算' : orderAction(next).description}`;
+    setFeedback(`订单已进入 ${orderAction(next).label === '已完成' ? '已结算' : orderAction(next).description}`);
   } catch (e) {
-    message.value = e instanceof Error ? e.message : '订单流转失败';
+    setFeedback(e instanceof Error ? e.message : '订单流转失败', 'danger');
   }
 }
 
@@ -279,12 +289,12 @@ function nextClaim(id: string) {
   if (!claim) return;
   const action = claimActionPlan(claim);
   if (action.disabled) {
-    message.value = action.description;
+    setFeedback(action.description, 'warning');
     return;
   }
   const nextClaimState = advanceClaim(id);
   const nextAction = claimActionPlan(nextClaimState);
-  message.value = nextAction.terminal ? nextAction.description : '理赔状态已更新';
+  setFeedback(nextAction.terminal ? nextAction.description : '理赔状态已更新');
 }
 
 function arbitrateClaim(id: string) {
@@ -292,11 +302,11 @@ function arbitrateClaim(id: string) {
   if (!claim) return;
   const action = claimActionPlan(claim);
   if (action.secondaryDisabled) {
-    message.value = action.description;
+    setFeedback(action.description, 'warning');
     return;
   }
   arbitrationClaim(id);
-  message.value = '理赔已进入仲裁';
+  setFeedback('理赔已进入仲裁');
 }
 
 function rate(value: number) {
@@ -305,19 +315,19 @@ function rate(value: number) {
 
 async function runFlow() {
   if (!runFlowAction.value.canRun) {
-    message.value = runFlowAction.value.description;
+    setFeedback(runFlowAction.value.description, 'warning');
     return;
   }
   try {
-    message.value = '';
+    clearFeedback();
     const order = orderStore.ensureOrder();
     if (!order.pilotId) {
       await orderStore.confirmSelected();
     }
     await orderStore.finish();
-    message.value = '端到端流程已跑通，结算与分账已生成';
+    setFeedback('端到端流程已跑通，结算与分账已生成', 'success');
   } catch (e) {
-    message.value = e instanceof Error ? e.message : '端到端跑通失败，请先确认在线运力和订单条件。';
+    setFeedback(e instanceof Error ? e.message : '端到端跑通失败，请先确认在线运力和订单条件。', 'warning');
   }
 }
 </script>
