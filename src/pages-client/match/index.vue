@@ -1,11 +1,20 @@
 <template>
   <view class="page match-page">
-    <view class="between">
+    <PageHeader :title="`为你匹配到 ${candidates.length} 个方案`" :desc="action.description" :role="Role.Client" compact>
+      <template #aside>
+        <StatusTag v-if="order" :status="order.status" />
+      </template>
+    </PageHeader>
+    <NoticeBar v-if="!candidates.length" tone="warning" message="当前没有在线合规运力，请等待机主投放或返回调整预算/时间。" />
+    <view v-if="order" class="match-summary card">
       <view>
-        <text class="title">为你匹配到 {{ candidates.length }} 个方案</text>
-        <text class="desc">{{ action.description }}</text>
+        <text class="summary-label">航线</text>
+        <text class="summary-value">{{ order.from.address }} → {{ order.to.address }}</text>
       </view>
-      <StatusTag v-if="order" :status="order.status" />
+      <view>
+        <text class="summary-label">预算</text>
+        <MoneyText :fen="order.budgetCent" bold />
+      </view>
     </view>
 
     <view class="segmented section">
@@ -43,8 +52,10 @@ import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MatchCandidateCard from '@/components/MatchCandidateCard.vue';
 import MoneyText from '@/components/MoneyText.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
-import { DispatchStrategy } from '@/models';
+import { DispatchStrategy, Role } from '@/models';
 import type { MatchCandidate } from '@/models';
 import { matchConfirmAction } from '@/services/action-plans';
 import { useOrderStore } from '@/stores/order';
@@ -98,21 +109,6 @@ function goOrder() {
   padding-bottom: calc($sp-10 + 160rpx);
 }
 
-.title {
-  display: block;
-  font-size: $fs-h2;
-  line-height: 1.3;
-  color: $ink-900;
-  font-weight: $fw-semibold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  font-size: $fs-sm;
-  color: $ink-500;
-}
-
 .segmented {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -155,5 +151,31 @@ function goOrder() {
   justify-content: space-between;
   color: $ink-700;
   font-size: $fs-sm;
+}
+
+.match-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: $sp-3;
+  margin-top: $sp-3;
+}
+
+.summary-label,
+.summary-value {
+  display: block;
+}
+
+.summary-label {
+  color: $ink-500;
+  font-size: $fs-cap;
+  line-height: 1.4;
+}
+
+.summary-value {
+  margin-top: $sp-1;
+  color: $ink-900;
+  font-size: $fs-sm;
+  line-height: 1.45;
+  font-weight: $fw-semibold;
 }
 </style>

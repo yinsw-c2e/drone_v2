@@ -1,14 +1,9 @@
 <template>
   <view class="page hall-page">
-    <view class="top">
-      <view>
-        <text class="title">接单大厅</text>
-        <text class="desc">只展示当前飞手可承接、预算内、合规运力可用的订单。</text>
-      </view>
-      <RoleBadge :role="Role.Pilot" />
-    </view>
+    <PageHeader title="接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" :role="Role.Pilot" />
+    <NoticeBar tone="info" message="接单会锁定匹配运力并通知业主，后续从任务页推进空域、安检和飞行。" />
 
-    <view class="section">
+    <view class="section list-stack">
       <view v-for="item in orders" :key="item.order.id" class="card order-card">
         <view class="between">
           <view>
@@ -45,7 +40,8 @@
 import { computed } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import { matchingOrdersForPilot } from '@/services/app-flow';
@@ -70,33 +66,6 @@ function accept(orderId: string) {
 <style lang="scss" scoped>
 .hall-page {
   padding-bottom: $sp-10;
-}
-
-.top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: $sp-3;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  font-size: $fs-sm;
-  line-height: 1.45;
-  color: $ink-500;
-}
-
-.order-card {
-  margin-bottom: $sp-3;
 }
 
 .order-title {

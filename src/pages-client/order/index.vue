@@ -1,9 +1,11 @@
 <template>
   <view class="page form-page">
+    <PageHeader title="发单向导" desc="按货物、地点、时间、保障和预算形成可匹配订单。" :role="Role.Client" compact />
+    <NoticeBar v-if="draft.cargoType === CargoType.Dangerous" tone="warning" message="危险品需特殊审批，Mock 空域会进入驳回/异常演示。" />
     <StepFlow :steps="formSteps" />
 
     <view class="card section">
-      <text class="section-title">货物信息</text>
+      <SectionHeader title="货物信息" desc="字段进入订单模型并参与校验、保险和匹配。" />
       <view class="field">
         <text class="label">货物类型</text>
         <view class="segmented">
@@ -26,11 +28,10 @@
         <text class="label">货物照片入口</text>
         <input v-model="draft.photoName" class="input" />
       </view>
-      <text v-if="draft.cargoType === CargoType.Dangerous" class="warning">危险品需特殊审批，Mock 空域会进入驳回/异常演示。</text>
     </view>
 
     <view class="section route-section">
-      <text class="section-title">地点与时间</text>
+      <SectionHeader title="地点与时间" desc="当前为 MVP 地点入口，真实地图选点留作生产化对接。" />
       <MapTrack title="航线预览" :subtitle="routeText" />
       <view class="field">
         <text class="label">起点</text>
@@ -59,7 +60,7 @@
     </view>
 
     <view class="card section">
-      <text class="section-title">保障与预算</text>
+      <SectionHeader title="保障与预算" desc="贵重货物强制投保，支付和发票为 Mock 入口。" />
       <label class="check">
         <checkbox :checked="draft.insured" :disabled="draft.cargoType === CargoType.Valuable" @click="draft.insured = true" />
         <text>投保货物险{{ draft.cargoType === CargoType.Valuable ? ' · 贵重强制' : '' }}</text>
@@ -101,6 +102,9 @@
 import { computed, reactive, ref, watch } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import MapTrack from '@/components/MapTrack.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import StepFlow from '@/components/StepFlow.vue';
 import type { GeoPoint } from '@/models';
 import { CargoType, PaymentMode, Role } from '@/models';

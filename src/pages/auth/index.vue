@@ -1,12 +1,7 @@
 <template>
   <view class="page">
-    <view class="top">
-      <view>
-        <text class="title">认证中心</text>
-        <text class="desc">材料写入 repo，后台可通过或驳回，端侧实时读取最新状态。</text>
-      </view>
-      <RoleBadge :role="role" />
-    </view>
+    <PageHeader title="认证中心" desc="材料写入 repo，后台可通过或驳回，端侧实时读取最新状态。" :role="role" />
+    <NoticeBar tone="warning" message="当前为 MVP Mock 审核闭环；真实实名、人脸、无犯罪、健康、UOM 和保险平台对接保留在生产化路线。" />
 
     <view class="card section">
       <view class="between">
@@ -47,7 +42,8 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import StepFlow from '@/components/StepFlow.vue';
 import { AuditStatus, Role } from '@/models';
 import { latestCertification, submitCertification } from '@/services/app-flow';
@@ -93,29 +89,6 @@ function back() {
 </script>
 
 <style lang="scss" scoped>
-.top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: $sp-3;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  color: $ink-500;
-  font-size: $fs-sm;
-  line-height: 1.45;
-}
-
 .state {
   padding: $sp-1 $sp-2;
   border-radius: $r-pill;

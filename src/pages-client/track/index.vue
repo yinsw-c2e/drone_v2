@@ -1,16 +1,14 @@
 <template>
   <view class="page track-page">
-    <view v-if="order" class="alert-strip">
-      <text v-if="alerts.length">{{ alerts.join(' · ') }}</text>
-      <text v-else>空域、合规、遥测均处于可控状态</text>
-    </view>
+    <PageHeader title="订单追踪" :desc="subtitle" :role="Role.Client" compact />
+    <NoticeBar v-if="order" :tone="alerts.length ? 'warning' : 'success'" :message="alerts.length ? alerts.join(' · ') : '空域、合规、遥测均处于可控状态'" />
 
     <MapTrack title="实时吊运轨迹" :subtitle="subtitle" :frame="latest" />
 
     <view v-if="order" class="drawer">
       <view class="between">
         <view>
-          <text class="section-title">订单进度：{{ action.stage }}</text>
+          <text class="section-title">当前阶段：{{ action.stage }}</text>
           <text class="stage-desc">{{ action.next }}</text>
         </view>
         <StatusTag :status="order.status" />
@@ -34,9 +32,11 @@ import { computed, ref } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import MapTrack from '@/components/MapTrack.vue';
 import MetricCard from '@/components/MetricCard.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import StepFlow from '@/components/StepFlow.vue';
-import { OrderStatus } from '@/models';
+import { OrderStatus, Role } from '@/models';
 import { taskActionForStatus, taskSteps } from '@/services/task-guidance';
 import { useOrderStore } from '@/stores/order';
 import { useTelemetryStore } from '@/stores/telemetry';
@@ -95,18 +95,6 @@ async function advance() {
 <style lang="scss" scoped>
 .track-page {
   padding-bottom: calc($sp-10 + 160rpx);
-}
-
-.alert-strip {
-  margin-bottom: $sp-3;
-  min-height: 72rpx;
-  padding: 0 $sp-3;
-  border-radius: $r-md;
-  background: $warning-bg;
-  color: $warning-ink;
-  display: flex;
-  align-items: center;
-  font-size: $fs-sm;
 }
 
 .drawer {

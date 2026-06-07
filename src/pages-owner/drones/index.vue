@@ -1,9 +1,7 @@
 <template>
   <view class="page">
-    <view class="between">
-      <text class="title">设备资质</text>
-      <RoleBadge :role="Role.Owner" />
-    </view>
+    <PageHeader title="设备资质" desc="查看适航、三者险、载荷和设备运行状态。" :role="Role.Owner" />
+    <NoticeBar tone="info" message="三者险不足 500 万或适航未通过的设备不会进入在线运力池。" />
 
     <view class="section">
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
@@ -35,7 +33,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
@@ -46,13 +45,6 @@ const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.
 </script>
 
 <style lang="scss" scoped>
-.title {
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
 .drone-card {
   margin-bottom: $sp-3;
 }

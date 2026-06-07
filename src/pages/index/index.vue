@@ -1,15 +1,17 @@
 <template>
   <view class="page splash">
     <view class="brand-card">
-      <text class="eyebrow">LOW ALTITUDE COMMAND</text>
-      <text class="title">无人机货物吊运智慧服务平台</text>
-      <text class="desc">业主、飞手、机主、后台共用同一数据源，订单流转刷新不丢。</text>
+      <PageHeader eyebrow="LOW ALTITUDE COMMAND" title="无人机货物吊运智慧服务平台" desc="业主、飞手、机主、后台共用同一数据源，订单流转刷新不丢。" compact />
+      <view class="state-card">
+        <text class="status-copy">正在加载低空指挥中心，进入后可按角色完成发单、匹配、飞行、结算与评价。</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { onLoad } from '@dcloudio/uni-app';
+import PageHeader from '@/components/PageHeader.vue';
 
 onLoad(() => {
   setTimeout(() => {
@@ -29,28 +31,4 @@ onLoad(() => {
   width: 100%;
 }
 
-.eyebrow {
-  display: block;
-  font-size: $fs-cap;
-  line-height: 1.4;
-  color: $color-primary;
-  font-weight: $fw-semibold;
-}
-
-.title {
-  display: block;
-  margin-top: $sp-2;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  font-weight: $fw-bold;
-  color: $ink-900;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-3;
-  font-size: $fs-body;
-  line-height: 1.5;
-  color: $ink-500;
-}
 </style>

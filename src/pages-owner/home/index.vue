@@ -1,21 +1,13 @@
 <template>
   <view class="page">
-    <view class="top">
-      <view>
-        <text class="title">机主管理台</text>
-        <text class="desc">{{ user.nickname }} · 设备合规与运力投放</text>
-      </view>
-      <RoleBadge :role="Role.Owner" />
-    </view>
+    <PageHeader title="机主管理台" :desc="`${user.nickname} · 设备合规、运力投放与分账钱包`" :role="Role.Owner" />
 
-    <view class="metrics">
+    <view class="metric-grid">
       <MetricCard label="设备数" :value="drones.length" hint="绑定设备" />
       <MetricCard label="在线运力" :value="onlineCapacity" hint="可参与匹配" delta="实时" delta-tone="up" />
     </view>
 
-    <view class="section">
-      <button class="primary-button" @click="openDevices">管理设备与运力</button>
-    </view>
+    <ActionCard tone="owner" eyebrow="CAPACITY CONTROL" title="管理设备与运力" desc="上线前校验适航、载荷和三者险，合规后进入匹配池。" cta="调度" @action="openDevices" />
     <view class="section">
       <button class="secondary-button" @click="openWallet">查看分账钱包</button>
     </view>
@@ -28,8 +20,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import ActionCard from '@/components/ActionCard.vue';
 import MetricCard from '@/components/MetricCard.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
@@ -57,30 +50,6 @@ function openCredit() {
 </script>
 
 <style lang="scss" scoped>
-.top,
-.metrics {
-  display: grid;
-  gap: $sp-3;
-}
-
-.top {
-  grid-template-columns: 1fr auto;
-  align-items: center;
-}
-
-.metrics {
-  grid-template-columns: 1fr 1fr;
-  margin-top: $sp-4;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  font-weight: $fw-bold;
-  color: $ink-900;
-}
-
 .desc {
   display: block;
   margin-top: $sp-1;

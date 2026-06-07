@@ -6,12 +6,21 @@
   background: $bg-page;
 }
 
+.admin-page {
+  max-width: 1480rpx;
+  margin: 0 auto;
+}
+
 .section {
   margin-top: $sp-4;
 }
 
 .card {
   @include card;
+}
+
+.card + .card {
+  margin-top: $sp-3;
 }
 
 .section-title {
@@ -55,6 +64,24 @@
   background: $danger;
 }
 
+.primary-button:active {
+  background: $color-primary-press;
+}
+
+.secondary-button:active {
+  box-shadow: $shadow-1;
+}
+
+.link {
+  min-height: 72rpx;
+  padding: 0 $sp-2;
+  border-radius: $r-sm;
+  color: $color-primary;
+  background: $color-primary-weak;
+  font-size: $fs-sm;
+  font-weight: $fw-semibold;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -71,4 +98,72 @@
   font-size: $fs-metric;
   line-height: 1.15;
   font-weight: $fw-semibold;
+}
+
+.page-grid {
+  display: grid;
+  gap: $sp-4;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $sp-3;
+}
+
+.list-stack {
+  display: grid;
+  gap: $sp-3;
+}
+
+.inline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $sp-2;
+}
+
+.state-card {
+  padding: $sp-3;
+  border-radius: $r-md;
+  background: $bg-sunken;
+}
+
+.status-copy {
+  display: block;
+  color: $ink-500;
+  font-size: $fs-sm;
+  line-height: 1.45;
+}
+
+.message-inline {
+  display: block;
+  margin-top: $sp-3;
+  padding: $sp-2;
+  border-radius: $r-sm;
+  background: $info-bg;
+  color: $info-ink;
+  font-size: $fs-sm;
+  line-height: 1.45;
+}
+
+@media screen and (min-width: 900px) {
+  .admin-page {
+    padding-left: $sp-6;
+    padding-right: $sp-6;
+  }
+
+  .admin-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+    gap: $sp-4;
+    align-items: start;
+  }
+
+  .admin-wide {
+    grid-column: 1 / -1;
+  }
+
+  .metric-grid.admin-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

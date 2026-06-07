@@ -1,13 +1,10 @@
 <template>
   <view class="page">
-    <view class="between">
-      <text class="title">运力调度</text>
-      <RoleBadge :role="Role.Owner" />
-    </view>
+    <PageHeader title="运力调度" desc="上线运力进入业主匹配池；忙碌运力需订单完成后恢复。" :role="Role.Owner" />
 
     <view class="section">
-      <text v-if="error" class="error">{{ error }}</text>
-      <text v-if="feedback" class="feedback">{{ feedback }}</text>
+      <NoticeBar v-if="error" tone="danger" :message="error" />
+      <NoticeBar v-if="feedback" :message="feedback" />
       <view v-for="unit in capacity" :key="unit.id" class="card capacity-card">
         <view class="between">
           <view>
@@ -28,7 +25,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import type { CapacityStatus } from '@/models';
 import { ownerCapacityAction } from '@/services/action-plans';
@@ -75,13 +73,6 @@ function setOffline(id: string) {
 </script>
 
 <style lang="scss" scoped>
-.title {
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
 .capacity-card {
   margin-bottom: $sp-3;
 }
@@ -110,26 +101,6 @@ function setOffline(id: string) {
 .state.busy {
   background: $warning-bg;
   color: $warning-ink;
-}
-
-.error {
-  display: block;
-  margin-bottom: $sp-3;
-  color: $danger-ink;
-  background: $danger-bg;
-  border-radius: $r-sm;
-  padding: $sp-2;
-  font-size: $fs-sm;
-}
-
-.feedback {
-  display: block;
-  margin-bottom: $sp-3;
-  color: $info-ink;
-  background: $info-bg;
-  border-radius: $r-sm;
-  padding: $sp-2;
-  font-size: $fs-sm;
 }
 
 .actions {

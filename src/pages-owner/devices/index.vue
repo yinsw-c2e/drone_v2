@@ -1,13 +1,10 @@
 <template>
   <view class="page">
-    <view class="between">
-      <text class="title">设备与运力</text>
-      <RoleBadge :role="Role.Owner" />
-    </view>
+    <PageHeader title="设备与运力" desc="投放会复用合规门：适航通过、三者险不低于 500 万、载荷有效。" :role="Role.Owner" />
 
     <view class="section">
-      <text v-if="error" class="error">{{ error }}</text>
-      <text v-if="feedback" class="feedback">{{ feedback }}</text>
+      <NoticeBar v-if="error" tone="danger" :message="error" />
+      <NoticeBar v-if="feedback" :message="feedback" />
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
         <view class="between">
           <view>
@@ -28,7 +25,8 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import type { Drone } from '@/models';
 import { ownerDroneAction } from '@/services/action-plans';
@@ -70,13 +68,6 @@ function withdraw(droneId: string) {
 </script>
 
 <style lang="scss" scoped>
-.title {
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
 .drone-card {
   margin-bottom: $sp-3;
 }
@@ -106,26 +97,6 @@ function withdraw(droneId: string) {
 .state.busy {
   color: $warning-ink;
   background: $warning-bg;
-}
-
-.error {
-  display: block;
-  margin-bottom: $sp-3;
-  color: $danger-ink;
-  background: $danger-bg;
-  border-radius: $r-sm;
-  padding: $sp-2;
-  font-size: $fs-sm;
-}
-
-.feedback {
-  display: block;
-  margin-bottom: $sp-3;
-  color: $info-ink;
-  background: $info-bg;
-  border-radius: $r-sm;
-  padding: $sp-2;
-  font-size: $fs-sm;
 }
 
 .actions {

@@ -1,12 +1,6 @@
 <template>
   <view class="page">
-    <view class="top">
-      <view>
-        <text class="title">信用风控</text>
-        <text class="desc">三方信用维度来自 repo.credits，黑名单会阻断发单与匹配。</text>
-      </view>
-      <RoleBadge :role="role" />
-    </view>
+    <PageHeader title="信用风控" desc="三方信用维度来自 repo.credits，黑名单会阻断发单与匹配。" :role="role" />
 
     <view class="card section">
       <view class="between">
@@ -39,7 +33,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import { ensureDemoCredit, setUserBlacklist } from '@/services/app-flow';
 import { useUserStore } from '@/stores/user';
@@ -64,29 +58,6 @@ function toggle(id: string) {
 </script>
 
 <style lang="scss" scoped>
-.top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: $sp-3;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  color: $ink-500;
-  font-size: $fs-sm;
-  line-height: 1.45;
-}
-
 .risk {
   padding: $sp-1 $sp-2;
   border-radius: $r-pill;

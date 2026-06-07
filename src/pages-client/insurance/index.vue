@@ -1,15 +1,10 @@
 <template>
   <view class="page">
-    <view class="top">
-      <view>
-        <text class="title">保险理赔</text>
-        <text class="desc">保单与理赔记录来自 repo，外部保险公司 API 仍为 Mock provider 预留。</text>
-      </view>
-      <RoleBadge :role="Role.Client" />
-    </view>
+    <PageHeader title="保险理赔" desc="保单与理赔记录来自 repo，外部保险公司 API 仍为 Mock provider 预留。" :role="Role.Client" />
+    <NoticeBar tone="warning" message="真实投保、定损、赔付和仲裁接口不在 MVP 内；当前展示完整前端流程和 repo 状态流转。" />
 
     <view class="card section">
-      <text class="section-title">投保方案</text>
+      <SectionHeader title="投保方案" desc="按货物类型展示强制/可选保障范围。" />
       <view v-for="plan in planRows" :key="plan.name" class="plan-line">
         <view>
           <text class="name">{{ plan.name }}</text>
@@ -21,7 +16,7 @@
 
     <view v-if="policy" class="card section">
       <view class="between">
-        <text class="section-title">当前保单</text>
+        <SectionHeader title="当前保单" />
         <text class="risk">{{ policy.status }}</text>
       </view>
       <view class="policy-grid">
@@ -34,7 +29,7 @@
 
     <view v-if="policy" class="card section">
       <view class="between">
-        <text class="section-title">理赔流程</text>
+        <SectionHeader title="理赔流程" desc="报案、调查、定责、赔付或仲裁均写入 repo。" />
         <button class="link" @click="report">报案</button>
       </view>
       <view v-for="claim in claims" :key="claim.id" class="claim-line">
@@ -58,7 +53,9 @@
 import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import { Role } from '@/models';
 import type { Claim } from '@/models';
 import { claimAction } from '@/services/action-plans';
@@ -112,29 +109,6 @@ function arbitrate(id: string) {
 </script>
 
 <style lang="scss" scoped>
-.top {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: $sp-3;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  color: $ink-500;
-  font-size: $fs-sm;
-  line-height: 1.45;
-}
-
 .plan-line,
 .claim-line {
   min-height: 112rpx;

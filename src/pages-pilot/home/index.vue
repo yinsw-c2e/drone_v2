@@ -1,23 +1,16 @@
 <template>
   <view class="page">
-    <view class="top">
-      <view>
-        <text class="title">飞手驾驶舱</text>
-        <text class="desc">{{ user.nickname }} · 在线任务与派单通知</text>
-      </view>
-      <RoleBadge :role="Role.Pilot" />
-    </view>
+    <PageHeader title="飞手驾驶舱" :desc="`${user.nickname} · 在线任务、派单通知与飞行钱包`" :role="Role.Pilot" />
 
-    <view class="metrics">
+    <view class="metric-grid">
       <MetricCard label="信用分" :value="credit?.total ?? 0" :hint="credit ? credit.level + ' 级' : '实时计算'" />
       <MetricCard label="通知" :value="notifications.length" hint="未读派单" delta="推送" />
     </view>
 
+    <ActionCard tone="pilot" eyebrow="NEXT MISSION" title="进入接单大厅" desc="只展示当前飞手可承接、预算内、合规运力可用的订单。" cta="接单" @action="openHall" />
+
     <view class="section">
-      <view class="between">
-        <text class="section-title">任务大厅</text>
-        <button class="link" @click="openHall">接单</button>
-      </view>
+      <SectionHeader title="当前任务" desc="有任务时直接进入驾驶舱；无任务时从大厅接单。" action="钱包" @action="openWallet" />
       <view v-if="order" class="card task-card">
         <view class="between">
           <text class="task-title">{{ order.cargo.remark || '吊运任务' }}</text>
@@ -32,9 +25,6 @@
       <EmptyState v-else title="暂无任务" desc="进入接单大厅响应 Matching 订单" action="去接单" @action="openHall" />
     </view>
 
-    <view class="section">
-      <button class="secondary-button" @click="openWallet">查看钱包</button>
-    </view>
     <view class="quick-actions section">
       <button class="secondary-button" @click="openAuth">认证</button>
       <button class="secondary-button" @click="openCredit">信用</button>
@@ -44,9 +34,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import ActionCard from '@/components/ActionCard.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MetricCard from '@/components/MetricCard.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
@@ -82,41 +74,12 @@ function openCredit() {
 </script>
 
 <style lang="scss" scoped>
-.top,
-.metrics {
-  display: grid;
-  gap: $sp-3;
-}
-
-.top {
-  grid-template-columns: 1fr auto;
-  align-items: center;
-}
-
-.metrics {
-  grid-template-columns: 1fr 1fr;
-  margin-top: $sp-4;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  font-weight: $fw-bold;
-  color: $ink-900;
-}
-
 .desc,
 .task-meta {
   margin-top: $sp-1;
   color: $ink-500;
   font-size: $fs-sm;
   line-height: 1.45;
-}
-
-.link {
-  color: $color-primary;
-  font-size: $fs-sm;
 }
 
 .task-card {

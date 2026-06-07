@@ -1,14 +1,8 @@
 <template>
   <view class="page admin-page">
-    <view class="top">
-      <view>
-        <text class="title">运营管理后台</text>
-        <text class="desc">审核、订单、风控、看板均来自 repo 实时聚合。</text>
-      </view>
-      <RoleBadge :role="Role.Admin" />
-    </view>
+    <PageHeader title="运营管理后台" desc="审核、订单、风控、看板均来自 repo 实时聚合。" :role="Role.Admin" />
 
-    <view class="metrics">
+    <view class="metric-grid admin-metrics">
       <MetricCard label="订单量" :value="metrics.orderCount" hint="全部订单" />
       <MetricCard label="完成数" :value="metrics.completedCount" hint="完成与已结算" delta-tone="up" />
       <MetricCard label="平台收入" :value="income" hint="技术服务费" />
@@ -16,17 +10,13 @@
     </view>
 
     <view class="section card">
-      <view class="between">
-        <text class="section-title">端到端验收</text>
-        <button class="link" @click="runFlow">跑通</button>
-      </view>
-      <text class="muted">生成订单、确认 Top1、空域合规、飞行、卸货、结算与分账。</text>
+      <SectionHeader title="端到端验收" desc="生成订单、确认 Top1、空域合规、飞行、卸货、结算与分账。" action="跑通" @action="runFlow" />
       <text class="muted">{{ runFlowAction.description }}</text>
-      <text v-if="message" class="message">{{ message }}</text>
+      <NoticeBar v-if="message" class="message" :tone="message.includes('没有在线') || message.includes('失败') ? 'warning' : 'info'" :message="message" />
     </view>
 
     <view class="section card">
-      <text class="section-title">认证审核</text>
+      <SectionHeader title="认证审核" desc="飞手、机主、业主材料均可通过或驳回，端侧实时读取状态。" />
       <view v-for="app in applications" :key="app.id" class="audit-line">
         <view>
           <text class="name">{{ roleName(app.role) }} · {{ userName(app.userId) }}</text>
@@ -50,7 +40,7 @@
     </view>
 
     <view class="section card">
-      <text class="section-title">订单管理</text>
+      <SectionHeader title="订单管理" desc="每行只显示当前可用动作，终态不再推进。" />
       <view v-for="item in orders" :key="item.id" class="order-line">
         <view>
           <text class="name">{{ item.cargo.remark || item.id }}</text>
@@ -66,7 +56,7 @@
     </view>
 
     <view class="section card">
-      <text class="section-title">风控与理赔</text>
+      <SectionHeader title="风控与理赔" desc="黑名单会阻断发单/匹配，理赔终态不重复推进。" />
       <view v-for="item in users" :key="item.id" class="audit-line">
         <view>
           <text class="name">{{ item.nickname }}</text>
@@ -88,7 +78,7 @@
     </view>
 
     <view class="section card">
-      <text class="section-title">报表与建议</text>
+      <SectionHeader title="报表与建议" desc="日报、周报、月报、运力热力和规则建议均基于 repo 聚合。" />
       <view class="report-grid">
         <MetricCard label="完成率" :value="rate(report.completionRate)" hint="完成/总订单" />
         <MetricCard label="取消率" :value="rate(report.cancelRate)" hint="取消/总订单" />
@@ -106,7 +96,7 @@
     </view>
 
     <view class="section card">
-      <text class="section-title">审计日志</text>
+      <SectionHeader title="审计日志" desc="关键登录、认证、支付、空域、投保、订单和提现动作留痕。" />
       <view v-for="log in auditLogs" :key="log.id" class="log-line">
         <text class="name">{{ log.action }}</text>
         <text class="muted">{{ log.detail }}</text>
@@ -119,7 +109,9 @@
 import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MetricCard from '@/components/MetricCard.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
@@ -258,46 +250,6 @@ async function runFlow() {
 </script>
 
 <style lang="scss" scoped>
-.admin-page {
-  max-width: 1180rpx;
-}
-
-.top,
-.metrics {
-  display: grid;
-  gap: $sp-3;
-}
-
-.top {
-  grid-template-columns: 1fr auto;
-  align-items: center;
-}
-
-.metrics {
-  grid-template-columns: 1fr 1fr;
-  margin-top: $sp-4;
-}
-
-.title {
-  display: block;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  color: $ink-900;
-  font-weight: $fw-bold;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-1;
-  font-size: $fs-sm;
-  color: $ink-500;
-}
-
-.link {
-  color: $color-primary;
-  font-size: $fs-sm;
-}
-
 .audit-line,
 .order-line {
   min-height: 112rpx;
@@ -315,14 +267,7 @@ async function runFlow() {
 }
 
 .message {
-  display: block;
   margin: $sp-3 0;
-  padding: $sp-2;
-  border-radius: $r-sm;
-  background: $info-bg;
-  color: $info-ink;
-  font-size: $fs-sm;
-  line-height: 1.45;
 }
 
 .name {

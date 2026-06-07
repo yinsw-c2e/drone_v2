@@ -1,5 +1,6 @@
 <template>
   <view class="page task-page">
+    <PageHeader title="飞手任务驾驶舱" :desc="subtitle" :role="Role.Pilot" compact />
     <MapTrack title="飞手任务地图" :subtitle="subtitle" :frame="latest" />
 
     <view v-if="order" class="card section">
@@ -10,32 +11,29 @@
         </view>
         <StatusTag :status="order.status" />
       </view>
-      <text v-if="action.reason" class="notice">{{ action.reason }}</text>
+      <NoticeBar v-if="action.reason" tone="warning" :message="action.reason" />
       <StepFlow :steps="steps" />
     </view>
 
     <view v-if="order" class="card section">
-      <view class="between">
-        <text class="section-title">起飞前安检</text>
-        <text class="muted">{{ checkedCount }}/{{ checklist.length }} 项完成</text>
-      </view>
+      <SectionHeader title="起飞前安检" :desc="`${checkedCount}/${checklist.length} 项完成；完成后主按钮才可继续。`" />
       <label v-for="item in checklist" :key="item.key" class="check">
         <checkbox :checked="item.done" @click="item.done = !item.done" />
         <text>{{ item.label }}</text>
       </label>
-      <text v-if="!allChecked" class="notice">完成 4 项安检后可放行</text>
+      <NoticeBar v-if="!allChecked" tone="warning" message="完成 4 项安检后可放行" />
       <text v-if="error" class="error">{{ error }}</text>
     </view>
 
     <view class="card section">
-      <text class="section-title">应急处置</text>
+      <SectionHeader title="应急处置" desc="返航/降落为 Mock 指令反馈；应急异常只在状态机允许阶段开启。" />
       <view class="emergency">
         <button class="secondary-button" @click="mockEmergency('return')">返航</button>
         <button class="secondary-button" @click="mockEmergency('land')">降落</button>
         <button class="danger-button" :disabled="!emergencyAvailable" @click="exception">应急</button>
       </view>
-      <text v-if="emergencyReason" class="notice">{{ emergencyReason }}</text>
-      <text v-if="feedback" class="feedback">{{ feedback }}</text>
+      <NoticeBar v-if="emergencyReason" tone="warning" :message="emergencyReason" />
+      <NoticeBar v-if="feedback" class="feedback" :message="feedback" />
     </view>
 
     <BottomActionBar
@@ -53,6 +51,9 @@
 import { computed, reactive, ref } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import MapTrack from '@/components/MapTrack.vue';
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import StepFlow from '@/components/StepFlow.vue';
 import { OrderStatus, Role } from '@/models';
@@ -189,17 +190,6 @@ function exception() {
   line-height: 1.45;
 }
 
-.notice {
-  display: block;
-  margin: $sp-3 0;
-  padding: $sp-2;
-  border-radius: $r-sm;
-  color: $warning-ink;
-  background: $warning-bg;
-  font-size: $fs-sm;
-  line-height: 1.45;
-}
-
 .error {
   display: block;
   margin-top: $sp-2;
@@ -208,14 +198,7 @@ function exception() {
 }
 
 .feedback {
-  display: block;
   margin-top: $sp-3;
-  color: $info-ink;
-  background: $info-bg;
-  border-radius: $r-sm;
-  padding: $sp-2;
-  font-size: $fs-sm;
-  line-height: 1.45;
 }
 
 .emergency {

@@ -1,10 +1,7 @@
 <template>
   <view class="page">
-    <view class="hero">
-      <text class="eyebrow">LOW ALTITUDE COMMAND</text>
-      <text class="title">选择角色进入指挥中心</text>
-      <text class="desc">演示账号来自 seed，验证码任意 6 位；切换角色后仍读写同一 repo。</text>
-    </view>
+    <PageHeader eyebrow="LOW ALTITUDE COMMAND" title="选择角色进入指挥中心" desc="演示账号来自 seed，验证码任意 6 位；切换角色后仍读写同一 repo。" />
+    <NoticeBar tone="info" title="MVP 口径" message="登录仅用于角色切换演示；实名、人脸、短信与 CAAC 真实核验仍是生产化接口预留。" />
 
     <view class="roles">
       <button v-for="item in roles" :key="item.role" class="role-card" @click="login(item.role)">
@@ -20,6 +17,8 @@
 </template>
 
 <script setup lang="ts">
+import NoticeBar from '@/components/NoticeBar.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import RoleBadge from '@/components/RoleBadge.vue';
 import { Role } from '@/models';
 import { useUserStore } from '@/stores/user';
@@ -40,38 +39,11 @@ function login(role: Role) {
 </script>
 
 <style lang="scss" scoped>
-.hero {
-  padding: $sp-2 0 $sp-4;
-}
-
-.eyebrow {
-  font-size: $fs-cap;
-  line-height: 1.4;
-  color: $color-primary;
-  font-weight: $fw-semibold;
-}
-
-.title {
-  display: block;
-  margin-top: $sp-2;
-  font-size: $fs-h1;
-  line-height: 1.25;
-  font-weight: $fw-bold;
-  color: $ink-900;
-}
-
-.desc {
-  display: block;
-  margin-top: $sp-2;
-  font-size: $fs-body;
-  line-height: 1.5;
-  color: $ink-500;
-}
-
 .roles {
   display: flex;
   flex-direction: column;
   gap: $sp-3;
+  margin-top: $sp-4;
 }
 
 .role-card {

@@ -1,5 +1,6 @@
 <template>
   <view class="page wallet-page">
+    <PageHeader title="机主钱包" desc="设备使用费按 T+7 周期释放，流水来自 wallet/ledger。" :role="Role.Owner" />
     <view class="balance-card">
       <text class="label">机主待结算</text>
       <MoneyText :fen="wallet?.pendingCent ?? 0" size="display" bold />
@@ -26,6 +27,7 @@ import { computed } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';

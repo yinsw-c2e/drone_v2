@@ -29,4 +29,13 @@ button {
   line-height: 1;
   background: transparent;
 }
+
+button:active {
+  transform: scale(.99);
+}
+
+button[disabled] {
+  color: $ink-400;
+  background: $bg-sunken;
+}
 </style>

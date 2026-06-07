@@ -1,5 +1,6 @@
 <template>
   <view class="page wallet-page">
+    <PageHeader title="飞手钱包" desc="T+1 入账、提现和流水都从 wallet/ledger 读取。" :role="Role.Pilot" />
     <view class="balance-card">
       <text class="label">飞手可提现</text>
       <MoneyText :fen="wallet?.balanceCent ?? 0" size="display" bold />
@@ -8,7 +9,7 @@
 
     <view class="section">
       <view class="between">
-        <text class="section-title">流水</text>
+        <SectionHeader title="流水" desc="入账、提现和待结算状态按时间排列。" />
         <button class="link" @click="release">到账</button>
       </view>
       <view class="card">
@@ -32,6 +33,8 @@ import { computed } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
+import PageHeader from '@/components/PageHeader.vue';
+import SectionHeader from '@/components/SectionHeader.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
