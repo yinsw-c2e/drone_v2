@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { DispatchStrategy, OrderStatus } from '@/models';
+import { DispatchStrategy, OrderStatus, PaymentMode } from '@/models';
 import type { MatchCandidate, Order } from '@/models';
 import { advanceOrder, candidatesForOrder, confirmCandidate, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
@@ -66,7 +66,7 @@ export const useOrderStore = defineStore('order', {
       this.loading = true;
       try {
         await providers.insurance.quote(order.id, order.cargo.valueCent);
-        await providers.payment.prepay(order.id, candidate.quoteCent, 'escrow');
+        await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
         const confirmed = confirmCandidate(order.id, candidate);
         this.activeOrderId = confirmed.id;
         return confirmed;

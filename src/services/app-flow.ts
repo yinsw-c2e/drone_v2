@@ -1,8 +1,8 @@
-import { AuditAction, AuditStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role } from '@/models';
+import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role } from '@/models';
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
-import { createOrder } from '@/models/factory';
+import { createCapacity, createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
-import { INSURANCE_PLANS } from '@/stores/config-data';
+import { INSURANCE_PLANS, PRICE_CONFIG } from '@/stores/config-data';
 import { match } from '@/utils/match';
 import { notify } from '@/utils/notify';
 import { transition } from '@/utils/order-machine';
@@ -266,13 +266,94 @@ export function dashboardMetrics() {
 }
 
 export function submitCertification(role: Role, userId: string, fields: CertificationApplication['fields']): CertificationApplication {
+  if (role === Role.Owner) submitOwnerDeviceCertification(userId, fields);
   const app = repo.authApplications.insert({ id: genId('cert'), userId, role, status: AuditStatus.Pending, submittedAt: new Date().toISOString(), fields });
   if (role === Role.Pilot) repo.pilots.update(userId, { noCrimeProof: AuditStatus.Pending, healthProof: AuditStatus.Pending, trainingCerts: Array.isArray(fields.trainingCerts) ? fields.trainingCerts as string[] : [] });
-  if (role === Role.Owner) repo.owners.update(userId, { uomVerified: false });
+  if (role === Role.Owner) {
+    repo.owners.update(userId, { uomVerified: false });
+  }
   if (role === Role.Client) repo.users.update(userId, { realNameVerified: false });
   recordAudit(AuditAction.Certification, userId, role, 'certification', app.id, '提交三方认证材料');
   notify(userId, NotificationType.Audit, '认证已提交', 'Mock 审核进入 pending 状态', app.id);
   return app;
+}
+
+function ownerDeviceFields(fields: CertificationApplication['fields']) {
+  return {
+    model: String(fields.droneModel || 'MVP Device'),
+    sn: String(fields.droneSn || `SN-${genId('dev')}`),
+    insuranceAmount: Number(fields.insuranceAmount || 0),
+    maintenance: String(fields.maintenance || 'Mock 维护记录'),
+    maxPayloadKg: Number(fields.maxPayloadKg || 30),
+  };
+}
+
+export function validateOwnerDroneCompliance(droneId: string) {
+  const drone = repo.drones.find(droneId);
+  if (!drone) throw new Error('设备不存在');
+  if (drone.airworthiness !== AuditStatus.Approved) throw new Error('设备适航未通过');
+  if (drone.insured.thirdPartyAmount < PRICE_CONFIG.minThirdParty) throw new Error('三者险保额不足500万');
+  if (drone.maxPayloadKg <= 0) throw new Error('设备载荷必须大于0');
+  return drone;
+}
+
+export function deployOwnerDrone(ownerId: string, droneId: string) {
+  const drone = validateOwnerDroneCompliance(droneId);
+  if (drone.ownerId !== ownerId) throw new Error('设备不属于当前机主');
+  const pilot = repo.pilots.all()[0];
+  const existing = repo.capacity.where((c) => c.droneId === drone.id)[0];
+  if (existing) {
+    repo.capacity.update(existing.id, { status: CapacityStatus.Online, ownerId, pilotId: pilot.userId, location: pilot.location });
+    recordAudit(AuditAction.Certification, ownerId, Role.Owner, 'capacity', existing.id, '合规设备重新上线');
+    return repo.capacity.find(existing.id)!;
+  }
+  const capacity = repo.capacity.insert(createCapacity({ pilotId: pilot.userId, droneId: drone.id, ownerId, location: pilot.location, status: CapacityStatus.Online }));
+  recordAudit(AuditAction.Certification, ownerId, Role.Owner, 'capacity', capacity.id, '合规设备生成运力并上线');
+  return capacity;
+}
+
+export function withdrawOwnerDrone(ownerId: string, droneId: string) {
+  repo.capacity.where((c) => c.droneId === droneId && c.ownerId === ownerId).forEach((c) => repo.capacity.update(c.id, { status: CapacityStatus.Offline }));
+  recordAudit(AuditAction.Certification, ownerId, Role.Owner, 'drone', droneId, '机主撤回运力');
+}
+
+export function setCapacityOnline(ownerId: string, capacityId: string) {
+  const capacity = repo.capacity.find(capacityId);
+  if (!capacity) throw new Error('运力不存在');
+  if (capacity.ownerId !== ownerId) throw new Error('运力不属于当前机主');
+  validateOwnerDroneCompliance(capacity.droneId);
+  return repo.capacity.update(capacity.id, { status: CapacityStatus.Online });
+}
+
+export function setCapacityOffline(ownerId: string, capacityId: string) {
+  const capacity = repo.capacity.find(capacityId);
+  if (!capacity) throw new Error('运力不存在');
+  if (capacity.ownerId !== ownerId) throw new Error('运力不属于当前机主');
+  return repo.capacity.update(capacity.id, { status: CapacityStatus.Offline });
+}
+
+export function submitOwnerDeviceCertification(ownerId: string, fields: CertificationApplication['fields']) {
+  const data = ownerDeviceFields(fields);
+  if (data.insuranceAmount < PRICE_CONFIG.minThirdParty) throw new Error('三者险保额不足500万');
+  if (data.maxPayloadKg <= 0) throw new Error('设备载荷必须大于0');
+  const exists = repo.drones.where((d) => d.ownerId === ownerId && d.sn === data.sn)[0];
+  const patch = {
+    brand: 'Other' as const,
+    model: data.model,
+    sn: data.sn,
+    maxPayloadKg: data.maxPayloadKg,
+    airworthiness: AuditStatus.Approved,
+    insured: { hull: true, thirdParty: true, thirdPartyAmount: data.insuranceAmount },
+    maintenanceLog: [{ date: new Date().toISOString().slice(0, 10), note: data.maintenance }],
+    ownerId,
+    status: 'idle' as const,
+  };
+  const drone = exists ? repo.drones.update(exists.id, patch) : repo.drones.insert({ id: genId('drn'), ...patch });
+  const owner = repo.owners.find(ownerId);
+  if (owner && !owner.drones.includes(drone.id)) repo.owners.update(ownerId, { drones: [...owner.drones, drone.id] });
+  deployOwnerDrone(ownerId, drone.id);
+  recordAudit(AuditAction.Certification, ownerId, Role.Owner, 'drone', drone.id, '机主设备认证写入设备与运力');
+  return drone;
 }
 
 export function latestCertification(role: Role, userId: string): CertificationApplication | undefined {

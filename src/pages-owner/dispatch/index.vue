@@ -6,6 +6,7 @@
     </view>
 
     <view class="section">
+      <text v-if="error" class="error">{{ error }}</text>
       <view v-for="unit in capacity" :key="unit.id" class="card capacity-card">
         <view class="between">
           <view>
@@ -24,15 +25,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import RoleBadge from '@/components/RoleBadge.vue';
-import { CapacityStatus, Role } from '@/models';
+import { Role } from '@/models';
+import { setCapacityOffline, setCapacityOnline } from '@/services/app-flow';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
 const userStore = useUserStore();
 const user = computed(() => userStore.user.currentRole === Role.Owner ? userStore.user : userStore.loginAs(Role.Owner));
 const capacity = computed(() => repo.capacity.where((c) => c.ownerId === user.value.id));
+const error = ref('');
 
 function droneName(id: string) {
   const drone = repo.drones.find(id);
@@ -44,11 +47,17 @@ function pilotName(id: string) {
 }
 
 function setOnline(id: string) {
-  repo.capacity.update(id, { status: CapacityStatus.Online });
+  try {
+    error.value = '';
+    setCapacityOnline(user.value.id, id);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '投放失败';
+  }
 }
 
 function setOffline(id: string) {
-  repo.capacity.update(id, { status: CapacityStatus.Offline });
+  error.value = '';
+  setCapacityOffline(user.value.id, id);
 }
 </script>
 
@@ -88,6 +97,16 @@ function setOffline(id: string) {
 .state.busy {
   background: $warning-bg;
   color: $warning-ink;
+}
+
+.error {
+  display: block;
+  margin-bottom: $sp-3;
+  color: $danger-ink;
+  background: $danger-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
+  font-size: $fs-sm;
 }
 
 .actions {

@@ -1,4 +1,4 @@
-export type PaymentMode = 'prepay' | 'escrow' | 'credit' | 'installment';
+import type { PaymentMode } from '@/models';
 
 export interface PaymentProvider {
   prepay(orderId: string, amountCent: number, mode: PaymentMode): Promise<{ tradeNo: string; paidCent: number; mode: PaymentMode }>;

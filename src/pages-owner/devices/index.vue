@@ -6,6 +6,7 @@
     </view>
 
     <view class="section">
+      <text v-if="error" class="error">{{ error }}</text>
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
         <view class="between">
           <view>
@@ -24,30 +25,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import RoleBadge from '@/components/RoleBadge.vue';
-import { CapacityStatus, Role } from '@/models';
-import { createCapacity } from '@/models/factory';
+import { Role } from '@/models';
+import { deployOwnerDrone, withdrawOwnerDrone } from '@/services/app-flow';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
 const userStore = useUserStore();
 const user = computed(() => userStore.user.currentRole === Role.Owner ? userStore.user : userStore.loginAs(Role.Owner));
 const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));
+const error = ref('');
 
 function deploy(droneId: string) {
-  const existing = repo.capacity.where((c) => c.droneId === droneId)[0];
-  if (existing) {
-    repo.capacity.update(existing.id, { status: CapacityStatus.Online });
-  } else {
-    const pilot = repo.pilots.all()[0];
-    repo.capacity.insert(createCapacity({ pilotId: pilot.userId, droneId, ownerId: user.value.id, location: pilot.location }));
+  try {
+    error.value = '';
+    deployOwnerDrone(user.value.id, droneId);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '投放失败';
   }
-  repo.drones.update(droneId, { status: 'idle' });
 }
 
 function withdraw(droneId: string) {
-  repo.capacity.where((c) => c.droneId === droneId).forEach((c) => repo.capacity.update(c.id, { status: CapacityStatus.Offline }));
+  error.value = '';
+  withdrawOwnerDrone(user.value.id, droneId);
 }
 </script>
 
@@ -73,7 +74,7 @@ function withdraw(droneId: string) {
 
 .state {
   @include tabular;
-  padding: 6rpx 16rpx;
+  padding: $sp-1 $sp-2;
   border-radius: $r-pill;
   background: $bg-sunken;
   color: $ink-700;
@@ -88,6 +89,16 @@ function withdraw(droneId: string) {
 .state.busy {
   color: $warning-ink;
   background: $warning-bg;
+}
+
+.error {
+  display: block;
+  margin-bottom: $sp-3;
+  color: $danger-ink;
+  background: $danger-bg;
+  border-radius: $r-sm;
+  padding: $sp-2;
+  font-size: $fs-sm;
 }
 
 .actions {
