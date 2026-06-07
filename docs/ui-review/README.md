@@ -7,6 +7,7 @@
 - 已刷新 `00-splash-redirect.png` 至 `24-admin-dashboard-mobile.png`，覆盖登录、三端关键业务页、后台桌面看板和后台移动回落。
 - 新增 `00-splash-redirect.png`、`22-client-publish-redirect.png`、`23-admin-index-redirect.png`，记录自动重定向入口的落地页面。
 - 新增 `25-admin-audit-log.png`，记录审计日志滚动区域；DOM 复核覆盖历史日志中的工程词兼容清洗。
+- 新增 `26-client-match-locked.png`，记录订单已进入执行阶段后打开匹配页的保护态：不展示候选确认动作，不再出现“确认下单”或状态机技术错误。
 - 新增 `PRODUCTION_UI_AUDIT.md`，逐页记录生产级 UI/UX 优化点和生产化能力边界。
 - 本轮视觉重构新增 `docs/ui-redesign/REFERENCE_BRIEF.md` 与 `docs/ui-redesign/DESIGN_DIRECTIONS.md`，并刷新关键页面截图，重点验证“组件库接管 + 低空调度控制台”方向。
 - 本轮生产级收口刷新 `02-client-home.png`、`04-client-match.png`、`05-client-track.png`、`08-pilot-task.png`、`10-owner-home.png`、`13-admin-dashboard.png`、`24-admin-dashboard-mobile.png`：后台桌面容器从移动宽度解锁到真实桌面宽度，业主/机主首页改为业务工作台，fixed 底栏页面改用正常 390 视口截图并在匹配页滚动到候选卡可读位置。
@@ -28,6 +29,7 @@
 - 匹配页指标收口：候选摘要改为“预计接单 / 接近距离 / 合规状态”，不再把“合规”显示在“电量”标签下。
 - 匹配页 0 候选：底部主按钮显示“等待运力”，副按钮“修改订单”；点击主按钮显示“当前没有在线合规运力，请等待机主投放或返回调整预算/时间”，不进入无效确认。
 - 匹配页截图策略：`04-client-match.png` 使用 390 视口并滚动到候选列表位置，展示选中方案、候选排序和底部确认动作，避免 full-page 截图把 fixed 底栏拍在卡片中段造成伪影。
+- 匹配页非匹配状态：`26-client-match-locked.png` 覆盖 `运输中` 订单回到匹配页的状态保护，页面提示“不能重复确认方案”，主按钮改为“查看追踪”，不会调用重复确认。
 - 追踪页：主按钮按状态从提交空域申请、刷新审批结果、开始装货、起飞执行、确认卸货、完成任务到生成结算逐步变化。
 - 追踪页第二轮视觉：地图/航线升为首屏主体，遥测指标改为紧凑 strip，状态抽屉围绕当前阶段组织。
 - 追踪页指标收口：终态显示“送达状态/航线距离/空域状态”，执行中显示“航线状态/航线距离/电量”，避免终态继续套 ETA 语义。

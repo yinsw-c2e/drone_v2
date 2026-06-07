@@ -35,7 +35,10 @@ export interface OwnerResourceAction {
 export interface MatchConfirmAction {
   primaryLabel: string;
   secondaryLabel: string;
+  primaryTarget: 'confirm' | 'track' | 'review' | 'order' | 'message';
+  secondaryTarget: 'order' | 'track' | 'review' | 'none';
   canConfirm: boolean;
+  showCandidates: boolean;
   description: string;
 }
 
@@ -118,12 +121,88 @@ export function reviewSettlementAction(order?: Order): ReviewSettlementAction {
   return { secondaryLabel: '完成结算', description: '订单尚未结算，可先生成结算分账。', canFinish: true };
 }
 
-export function matchConfirmAction(candidateCount: number, hasSelected: boolean): MatchConfirmAction {
+function matchStageLabel(status: OrderStatus): string {
+  const map: Record<OrderStatus, string> = {
+    [OrderStatus.Created]: '待发单',
+    [OrderStatus.Matching]: '匹配中',
+    [OrderStatus.Confirmed]: '已接单',
+    [OrderStatus.AirspaceApplying]: '空域审批',
+    [OrderStatus.Preparing]: '飞行准备',
+    [OrderStatus.Loading]: '装货中',
+    [OrderStatus.InFlight]: '运输中',
+    [OrderStatus.Unloading]: '卸货中',
+    [OrderStatus.Completed]: '已完成',
+    [OrderStatus.Settled]: '已结算',
+    [OrderStatus.Cancelled]: '已取消',
+    [OrderStatus.Exception]: '异常处理',
+  };
+  return map[status];
+}
+
+export function matchConfirmAction(status: OrderStatus | undefined, candidateCount: number, hasSelected: boolean): MatchConfirmAction {
+  if (!status || status === OrderStatus.Created) {
+    return {
+      primaryLabel: '重新发单',
+      secondaryLabel: '',
+      primaryTarget: 'order',
+      secondaryTarget: 'none',
+      canConfirm: false,
+      showCandidates: false,
+      description: '当前没有处于匹配中的订单，请先提交发单需求。',
+    };
+  }
+  if (status !== OrderStatus.Matching) {
+    if (status === OrderStatus.Settled) {
+      return {
+        primaryLabel: '查看结算',
+        secondaryLabel: '重新发单',
+        primaryTarget: 'review',
+        secondaryTarget: 'order',
+        canConfirm: false,
+        showCandidates: false,
+        description: '当前订单已结算，不能重复确认方案；可查看结算评价或重新发单。',
+      };
+    }
+    if (status === OrderStatus.Completed) {
+      return {
+        primaryLabel: '查看追踪',
+        secondaryLabel: '重新发单',
+        primaryTarget: 'track',
+        secondaryTarget: 'order',
+        canConfirm: false,
+        showCandidates: false,
+        description: '当前订单已完成，不能重复确认方案；请在追踪页生成结算或重新发单。',
+      };
+    }
+    if (status === OrderStatus.Cancelled || status === OrderStatus.Exception) {
+      return {
+        primaryLabel: '重新发单',
+        secondaryLabel: '查看追踪',
+        primaryTarget: 'order',
+        secondaryTarget: 'track',
+        canConfirm: false,
+        showCandidates: false,
+        description: `当前订单已进入${matchStageLabel(status)}阶段，不能重复确认方案；如需继续作业请重新发单。`,
+      };
+    }
+    return {
+      primaryLabel: '查看追踪',
+      secondaryLabel: '重新发单',
+      primaryTarget: 'track',
+      secondaryTarget: 'order',
+      canConfirm: false,
+      showCandidates: false,
+      description: `当前订单已进入${matchStageLabel(status)}阶段，不能重复确认方案；请查看追踪或重新发单。`,
+    };
+  }
   if (candidateCount === 0) {
     return {
       primaryLabel: '等待运力',
       secondaryLabel: '修改订单',
+      primaryTarget: 'message',
+      secondaryTarget: 'order',
       canConfirm: false,
+      showCandidates: true,
       description: '当前没有在线合规运力，请等待机主投放或返回调整预算/时间。',
     };
   }
@@ -131,14 +210,20 @@ export function matchConfirmAction(candidateCount: number, hasSelected: boolean)
     return {
       primaryLabel: '请选择方案',
       secondaryLabel: '修改订单',
+      primaryTarget: 'message',
+      secondaryTarget: 'order',
       canConfirm: false,
+      showCandidates: true,
       description: '请选择一个匹配方案后再确认下单。',
     };
   }
   return {
     primaryLabel: '确认下单',
     secondaryLabel: '发单',
+    primaryTarget: 'confirm',
+    secondaryTarget: 'order',
     canConfirm: true,
+    showCandidates: true,
     description: '已选中推荐方案，可确认下单并进入追踪。',
   };
 }

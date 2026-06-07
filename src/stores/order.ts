@@ -4,6 +4,7 @@ import type { MatchCandidate, Order } from '@/models';
 import { advanceOrder, candidatesForOrder, confirmCandidate, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 import { providers } from '@/api/providers';
+import { matchConfirmAction } from '@/services/action-plans';
 
 interface OrderState {
   activeOrderId: string;
@@ -61,6 +62,10 @@ export const useOrderStore = defineStore('order', {
     },
     async confirmSelected() {
       const order = this.activeOrder ?? this.ensureOrder();
+      if (order.status !== OrderStatus.Matching) {
+        this.error = matchConfirmAction(order.status, 0, false).description;
+        throw new Error(this.error);
+      }
       const candidate = this.selectedCandidate ?? this.candidates[0];
       if (!candidate) {
         this.error = '当前没有在线合规运力，请等待机主投放或返回调整预算/时间';

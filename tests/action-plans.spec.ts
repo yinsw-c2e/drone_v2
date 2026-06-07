@@ -88,11 +88,29 @@ describe('action plans', () => {
   });
 
   it('0 候选匹配页不允许确认下单并给出明确动作', () => {
-    const action = matchConfirmAction(0, false);
+    const action = matchConfirmAction(OrderStatus.Matching, 0, false);
     expect(action.canConfirm).toBe(false);
     expect(action.primaryLabel).toBe('等待运力');
     expect(action.secondaryLabel).toBe('修改订单');
+    expect(action.showCandidates).toBe(true);
     expect(action.description).toContain('当前没有在线合规运力');
+  });
+
+  it('非 Matching 状态进入匹配页不再显示确认下单', () => {
+    const inflight = matchConfirmAction(OrderStatus.InFlight, 1, true);
+    expect(inflight.canConfirm).toBe(false);
+    expect(inflight.showCandidates).toBe(false);
+    expect(inflight.primaryLabel).toBe('查看追踪');
+    expect(inflight.description).toContain('不能重复确认方案');
+
+    const settled = matchConfirmAction(OrderStatus.Settled, 1, true);
+    expect(settled.canConfirm).toBe(false);
+    expect(settled.showCandidates).toBe(false);
+    expect(settled.primaryLabel).toBe('查看结算');
+
+    const exception = matchConfirmAction(OrderStatus.Exception, 1, true);
+    expect(exception.canConfirm).toBe(false);
+    expect(exception.primaryLabel).toBe('重新发单');
   });
 
   it('后台端到端跑通在 0 在线运力时给出业务阻断', () => {

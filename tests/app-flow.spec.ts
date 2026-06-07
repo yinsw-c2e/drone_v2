@@ -247,6 +247,34 @@ it('无匹配候选时确认下单给出业务错误且不调用支付', async (
   expect(store.error).toContain('当前没有在线合规运力');
 });
 
+it('非 Matching 订单不能重复确认方案且不调用支付或保险', async () => {
+  const store = useOrderStore();
+  const order = store.createOrderDraft({
+    clientId: repo.clients.all()[0].userId,
+    cargoType: CargoType.Normal,
+    weightKg: 5,
+    valueCent: 50000,
+    budgetCent: 300000,
+    insured: false,
+    shockProof: false,
+  });
+  store.chooseCandidate(candidatesForOrder(order.id)[0]);
+  repo.orders.update(order.id, { status: OrderStatus.InFlight });
+  const paymentSpy = vi.spyOn(providers.payment, 'prepay');
+  const insuranceSpy = vi.spyOn(providers.insurance, 'quote');
+
+  await expect(store.confirmSelected()).rejects.toThrow('不能重复确认方案');
+  expect(store.error).toContain('运输中');
+  expect(store.error).not.toContain('非法流转');
+  expect(paymentSpy).not.toHaveBeenCalled();
+  expect(insuranceSpy).not.toHaveBeenCalled();
+
+  repo.orders.update(order.id, { status: OrderStatus.Settled });
+  await expect(store.confirmSelected()).rejects.toThrow('不能重复确认方案');
+  expect(store.error).toContain('已结算');
+  expect(paymentSpy).not.toHaveBeenCalled();
+});
+
 it('后台运力热力图只返回业务标签，不暴露内部运力编号', () => {
   repo.capacity.insert({ id: 'cap_Uhm90Vqv', pilotId: 'u_p1', droneId: 'd1', ownerId: 'u_o1', location: { lng: 116.41, lat: 39.91 }, status: CapacityStatus.Online });
   const visibleText = analyticsReport().heatmap.map((point) => point.label).join(' ');

@@ -1,24 +1,24 @@
 <template>
   <view class="page match-page">
-    <PageHeader :title="`为你匹配到 ${candidates.length} 个方案`" :desc="action.description" :role="Role.Client" compact>
+    <PageHeader :title="pageTitle" :desc="action.description" :role="Role.Client" compact>
       <template #aside>
         <StatusTag v-if="order" :status="order.status" />
       </template>
     </PageHeader>
-    <NoticeBar v-if="!candidates.length" tone="warning" message="当前没有在线合规运力，请等待机主投放或返回调整预算/时间。" />
+    <NoticeBar v-if="!action.canConfirm" :tone="action.showCandidates ? 'warning' : 'info'" :message="action.description" />
     <RouteHero
       v-if="order"
       class="section"
       title="派单航线"
-      subtitle="系统按距离、信用、载荷、保额和预算综合排序。"
+      :subtitle="action.showCandidates ? '系统按距离、信用、载荷、保额和预算综合排序。' : '当前订单阶段已经推进，匹配页仅提供去向引导。'"
       :from="order.from.address"
       :to="order.to.address"
-      :status="candidates.length ? '候选已生成' : '等待运力'"
+      :status="heroStatus"
       :metrics="dispatchMetrics"
       compact
     />
 
-    <view class="section strategy-switch" role="tablist">
+    <view v-if="action.showCandidates" class="section strategy-switch" role="tablist">
       <wd-button
         v-for="item in strategies"
         :key="item.label"
@@ -32,7 +32,7 @@
 
     <view class="section">
       <MatchCandidateCard
-        v-for="candidate in candidates"
+        v-for="candidate in visibleCandidates"
         :key="candidate.capacityId"
         :candidate="candidate"
         :pilot-name="pilotName(candidate.pilotId)"
@@ -41,11 +41,24 @@
         :selected="selectedId === candidate.capacityId"
         @select="select"
       />
-      <EmptyState v-if="!candidates.length" title="当前无可用运力" desc="当前没有在线合规运力，请等待机主投放或返回调整预算/时间" action="返回修改订单" @action="goOrder" />
+      <EmptyState
+        v-if="action.showCandidates && !visibleCandidates.length"
+        title="当前无可用运力"
+        desc="当前没有在线合规运力，请等待机主投放或返回调整预算/时间"
+        action="返回修改订单"
+        @action="goOrder"
+      />
+      <EmptyState
+        v-if="!action.showCandidates"
+        title="不能重复确认方案"
+        :desc="action.description"
+        :action="action.primaryLabel"
+        @action="runPrimaryAction"
+      />
       <text v-if="message" class="message">{{ message }}</text>
     </view>
 
-    <view v-if="selected" class="card section breakdown">
+    <view v-if="action.showCandidates && selected" class="card section breakdown">
       <view class="between">
         <text class="section-title">费用明细</text>
         <MoneyText :fen="selected.quoteCent" bold />
@@ -56,7 +69,7 @@
       <view class="line"><text>保险</text><MoneyText :fen="selected.priceBreakdown.insuranceCent" /></view>
     </view>
 
-    <BottomActionBar :primary="action.primaryLabel" :secondary="action.secondaryLabel" :loading="orderStore.loading" @secondary="goOrder" @primary="confirm" />
+    <BottomActionBar :primary="action.primaryLabel" :secondary="action.secondaryLabel" :loading="orderStore.loading" @secondary="runSecondaryAction" @primary="confirm" />
   </view>
 </template>
 
@@ -79,15 +92,28 @@ import { repo } from '@/utils/repo';
 
 const orderStore = useOrderStore();
 const message = ref('');
-const order = computed(() => orderStore.ensureOrder());
+const order = computed(() => orderStore.activeOrder ?? orderStore.ensureOrder());
 const candidates = computed(() => orderStore.candidates);
 const selectedId = computed(() => orderStore.selectedCapacityId || candidates.value[0]?.capacityId || '');
-const selected = computed(() => candidates.value.find((c) => c.capacityId === selectedId.value));
-const action = computed(() => matchConfirmAction(candidates.value.length, Boolean(selected.value)));
+const rawSelected = computed(() => candidates.value.find((c) => c.capacityId === selectedId.value));
+const action = computed(() => matchConfirmAction(order.value?.status, candidates.value.length, Boolean(rawSelected.value)));
+const visibleCandidates = computed(() => action.value.showCandidates ? candidates.value : []);
+const selected = computed(() => action.value.showCandidates ? rawSelected.value : undefined);
+const pageTitle = computed(() => action.value.showCandidates ? `为你匹配到 ${candidates.value.length} 个方案` : '订单已离开匹配阶段');
+const heroStatus = computed(() => {
+  if (!action.value.showCandidates) return '阶段已推进';
+  return candidates.value.length ? '候选已生成' : '等待运力';
+});
 const dispatchMetrics = computed(() => [
-  { label: '预计接单', value: selected.value ? `约${selected.value.etaMin}分` : '--', hint: selected.value ? '推荐方案' : '待匹配', tone: selected.value ? 'info' as const : 'neutral' as const },
-  { label: '接近距离', value: selected.value ? `${selected.value.distanceKm}km` : '--', hint: '飞手到起点', tone: 'neutral' as const },
-  { label: '合规状态', value: selected.value ? '合规' : '待确认', hint: selected.value ? '保额/载荷通过' : '无候选', tone: selected.value ? 'success' as const : 'warning' as const },
+  action.value.showCandidates
+    ? { label: '预计接单', value: selected.value ? `约${selected.value.etaMin}分` : '--', hint: selected.value ? '推荐方案' : '待匹配', tone: selected.value ? 'info' as const : 'neutral' as const }
+    : { label: '当前阶段', value: order.value ? statusCopy(order.value.status) : '--', hint: '已推进', tone: 'info' as const },
+  action.value.showCandidates
+    ? { label: '接近距离', value: selected.value ? `${selected.value.distanceKm}km` : '--', hint: '飞手到起点', tone: 'neutral' as const }
+    : { label: '推荐动作', value: action.value.primaryLabel, hint: '下一步', tone: 'neutral' as const },
+  action.value.showCandidates
+    ? { label: '合规状态', value: selected.value ? '合规' : '待确认', hint: selected.value ? '保额/载荷通过' : '无候选', tone: selected.value ? 'success' as const : 'warning' as const }
+    : { label: '确认方案', value: '已关闭', hint: '防重复', tone: 'warning' as const },
 ]);
 const strategies = [
   { label: '最近', value: DispatchStrategy.Nearest },
@@ -122,7 +148,7 @@ function changeStrategy(value: DispatchStrategy) {
 
 async function confirm() {
   if (!action.value.canConfirm) {
-    message.value = action.value.description;
+    runPrimaryAction();
     return;
   }
   try {
@@ -131,12 +157,74 @@ async function confirm() {
     await orderStore.confirmSelected();
     uni.navigateTo({ url: '/pages-client/track/index' });
   } catch (e) {
-    message.value = e instanceof Error ? e.message : '确认下单失败，请重新选择方案或返回修改订单。';
+    message.value = matchErrorMessage(e);
   }
 }
 
 function goOrder() {
   uni.navigateTo({ url: '/pages-client/order/index' });
+}
+
+function goTrack() {
+  uni.navigateTo({ url: '/pages-client/track/index' });
+}
+
+function goReview() {
+  uni.navigateTo({ url: '/pages-client/review/index' });
+}
+
+function runPrimaryAction() {
+  if (action.value.primaryTarget === 'track') {
+    goTrack();
+    return;
+  }
+  if (action.value.primaryTarget === 'review') {
+    goReview();
+    return;
+  }
+  if (action.value.primaryTarget === 'order') {
+    goOrder();
+    return;
+  }
+  message.value = action.value.description;
+}
+
+function runSecondaryAction() {
+  if (action.value.secondaryTarget === 'track') {
+    goTrack();
+    return;
+  }
+  if (action.value.secondaryTarget === 'review') {
+    goReview();
+    return;
+  }
+  if (action.value.secondaryTarget === 'order') {
+    goOrder();
+  }
+}
+
+function statusCopy(status: string) {
+  const map: Record<string, string> = {
+    created: '待发单',
+    matching: '匹配中',
+    confirmed: '已接单',
+    airspace: '空域审批',
+    preparing: '飞行准备',
+    loading: '装货中',
+    inflight: '运输中',
+    unloading: '卸货中',
+    completed: '已完成',
+    settled: '已结算',
+    cancelled: '已取消',
+    exception: '异常处理',
+  };
+  return map[status] ?? '已推进';
+}
+
+function matchErrorMessage(e: unknown) {
+  const raw = e instanceof Error ? e.message : '';
+  if (/非法流转|confirmed|当前订单已进入/.test(raw)) return action.value.description || '当前订单已进入执行阶段，不能重复确认方案；请查看追踪或重新发单。';
+  return raw || '确认下单失败，请重新选择方案或返回修改订单。';
 }
 </script>
 
