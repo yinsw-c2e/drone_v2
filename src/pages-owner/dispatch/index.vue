@@ -85,6 +85,9 @@ function setOffline(id: string) {
 <style lang="scss" scoped>
 .capacity-card {
   margin-bottom: $sp-3;
+  border: 2rpx solid $line;
+  border-radius: $r-lg;
+  box-shadow: $shadow-soft;
 }
 
 .capacity-line {
@@ -142,7 +145,8 @@ function setOffline(id: string) {
   margin-top: $sp-3;
   padding: $sp-3;
   border-radius: $r-md;
-  background: $bg-sunken;
+  background: $surface-panel;
+  border: 2rpx solid $line;
 }
 
 .pool-strip text {

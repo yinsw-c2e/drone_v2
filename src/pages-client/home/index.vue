@@ -5,7 +5,7 @@
     <KpiStrip class="section" :items="kpis" />
 
     <view class="section mission-console">
-      <view class="mission-map">
+      <view class="mission-map command-surface">
         <view class="mission-head">
           <view>
             <text class="console-label">{{ order ? '当前吊运' : '常用航线' }}</text>
@@ -24,7 +24,7 @@
           <text>{{ routeStart }}</text>
           <text>{{ routeEnd }}</text>
         </view>
-        <view class="mission-metrics">
+        <view class="mission-metrics surface-metrics">
           <view v-for="item in missionMetrics" :key="item.label" class="mission-metric">
             <text class="metric-value">{{ item.value }}</text>
             <text class="metric-label">{{ item.label }}</text>
@@ -32,7 +32,7 @@
         </view>
       </view>
 
-      <view class="mission-panel">
+      <view class="mission-panel command-surface">
         <text class="panel-title">{{ order ? '下一步' : '发单准备' }}</text>
         <NoticeBar class="order-notice" :message="nextCopy" />
         <view class="risk-strip">
@@ -47,8 +47,8 @@
           </wd-steps>
         </view>
         <view class="command-actions">
-          <wd-button type="info" plain block @click="secondaryAction">{{ secondaryActionLabel }}</wd-button>
           <wd-button type="primary" block @click="primaryAction">{{ primaryActionLabel }}</wd-button>
+          <wd-button type="info" plain block @click="secondaryAction">{{ secondaryActionLabel }}</wd-button>
         </view>
       </view>
     </view>
@@ -262,8 +262,11 @@ function handleQuick(key: string) {
     linear-gradient(0deg, $line 2rpx, transparent 2rpx),
     $bg-card;
   background-size: 56rpx 56rpx;
-  box-shadow: $shadow-2;
-  border: 2rpx solid $line;
+}
+
+.command-surface {
+  box-shadow: $shadow-command;
+  border: 2rpx solid $info-line;
 }
 
 .mission-head,
@@ -406,7 +409,7 @@ function handleQuick(key: string) {
   border: 2rpx solid $line;
   border-radius: $r-lg;
   background: $bg-card;
-  box-shadow: $shadow-1;
+  box-shadow: $shadow-soft;
 }
 
 .mission-panel {
@@ -439,6 +442,9 @@ function handleQuick(key: string) {
 
 .command-actions {
   margin-top: $sp-4;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+  gap: $sp-2;
 }
 
 .workbench-grid {

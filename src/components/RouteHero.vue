@@ -290,6 +290,7 @@ const craftTop = computed(() => `${Math.round((0.68 - progress.value * 0.36) * 1
 
 .hero-value {
   @include tabular;
+  @include ellipsis(1);
   color: $ink-900;
   font-size: $fs-h2;
   line-height: 1.2;

@@ -20,6 +20,8 @@ withDefaults(defineProps<{ label: string; value: string | number; hint?: string;
 <style lang="scss" scoped>
 .metric-card {
   @include card;
+  border: 2rpx solid $line;
+  box-shadow: $shadow-soft;
 }
 
 .label {

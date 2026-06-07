@@ -122,10 +122,20 @@ const flightState = computed(() => {
   return '待起飞';
 });
 const heroMetrics = computed(() => [
-  { label: '当前阶段', value: action.value.stage, hint: action.value.terminal ? '终态' : '流程节点', tone: action.value.terminal ? 'success' as const : 'info' as const },
+  { label: '当前阶段', value: stageBrief.value, hint: action.value.terminal ? '终态' : '流程节点', tone: action.value.terminal ? 'success' as const : 'info' as const },
   { label: '飞行状态', value: flightState.value, hint: latest.value ? '遥测在线' : '按阶段判断', tone: flightState.value === '飞行中' ? 'info' as const : flightState.value === '异常' ? 'danger' as const : 'neutral' as const },
   { label: '电量', value: latest.value && latest.value.batteryPct > 0 ? `${latest.value.batteryPct}%` : '--', hint: latest.value ? '遥测' : '暂无遥测', tone: latest.value && latest.value.batteryPct > 0 && latest.value.batteryPct <= 30 ? 'danger' as const : 'success' as const },
 ]);
+const stageBrief = computed(() => {
+  const map: Partial<Record<string, string>> = {
+    待空域审批: '待审批',
+    起飞前准备: '准备中',
+    已完成: '已完成',
+    已结算: '已结算',
+    异常处理: '异常',
+  };
+  return map[action.value.stage] ?? action.value.stage;
+});
 const telemetryItems = computed(() => [
   { label: '高度', value: latest.value?.altM ?? '--', hint: '米', tone: 'info' as const },
   { label: '速度', value: latest.value?.speedMs ?? '--', hint: '米/秒', tone: 'neutral' as const },

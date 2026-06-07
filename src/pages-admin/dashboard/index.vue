@@ -91,7 +91,17 @@
                 <wd-button class="small" type="info" plain :disabled="orderAction(item).disabled" @click="moveOrder(item.id)">{{ orderAction(item).label }}</wd-button>
               </view>
             </view>
-            <EmptyState v-if="!orders.length" title="暂无订单" desc="点击跑通生成端到端订单" />
+            <view v-if="!orders.length" class="ops-empty-row">
+              <view class="empty-signal">
+                <view class="empty-line" />
+                <view class="empty-dot" />
+              </view>
+              <view>
+                <text class="name">暂无待处理订单</text>
+                <text class="muted">点击跑通可生成一笔端到端验收订单，随后会出现在队列表格。</text>
+              </view>
+              <wd-button class="small" type="primary" @click="runFlow">跑通</wd-button>
+            </view>
           </view>
         </AdminDataPanel>
 
@@ -163,7 +173,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import AdminDataPanel from '@/components/AdminDataPanel.vue';
-import EmptyState from '@/components/EmptyState.vue';
 import MetricCard from '@/components/MetricCard.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -523,6 +532,50 @@ async function runFlow() {
   padding-bottom: $sp-2;
 }
 
+.ops-empty-row {
+  min-height: 152rpx;
+  padding: $sp-4;
+  border-radius: $r-md;
+  background: $surface-panel;
+  display: grid;
+  grid-template-columns: 112rpx minmax(0, 1fr);
+  gap: $sp-3;
+  align-items: center;
+}
+
+.ops-empty-row .small {
+  grid-column: 1 / -1;
+}
+
+.empty-signal {
+  height: 80rpx;
+  border-radius: $r-md;
+  background: $bg-card;
+  border: 2rpx solid $line;
+  position: relative;
+}
+
+.empty-line {
+  position: absolute;
+  left: 18rpx;
+  right: 18rpx;
+  top: 42rpx;
+  height: 6rpx;
+  border-radius: $r-pill;
+  background: $color-primary;
+  transform: rotate(-12deg);
+}
+
+.empty-dot {
+  position: absolute;
+  right: 22rpx;
+  top: 28rpx;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $r-pill;
+  background: $success;
+}
+
 .order-summary,
 .order-route-cell,
 .order-stage {
@@ -675,6 +728,15 @@ async function runFlow() {
     min-height: 96rpx;
     align-items: center;
     padding: 0;
+  }
+
+  .ops-empty-row {
+    grid-template-columns: 160rpx minmax(0, 1fr) 176rpx;
+    margin: $sp-3;
+  }
+
+  .ops-empty-row .small {
+    grid-column: auto;
   }
 
   .order-table-head {

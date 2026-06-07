@@ -23,18 +23,27 @@ defineEmits<{ (e: 'primary'): void; (e: 'secondary'): void }>();
   bottom: 0;
   z-index: $z-bottombar;
   display: flex;
-  gap: $sp-3;
+  gap: $sp-2;
   padding: $sp-3 $page-x calc($sp-3 + env(safe-area-inset-bottom));
-  background: $bg-card;
+  background: $surface-raised;
   border-top: 2rpx solid $line;
-  box-shadow: $shadow-2;
+  box-shadow: $shadow-3;
 }
 
 .primary {
   flex: 1;
+  min-width: 0;
 }
 
 .secondary {
-  width: 220rpx;
+  width: 208rpx;
+  flex: 0 0 208rpx;
+}
+
+.bar :deep(.wd-button) {
+  min-height: 96rpx;
+  border-radius: $r-md;
+  font-weight: $fw-semibold;
+  white-space: nowrap;
 }
 </style>

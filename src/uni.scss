@@ -4,6 +4,7 @@
   min-height: 100vh;
   padding: $sp-4 $page-x calc($sp-10 + env(safe-area-inset-bottom));
   background: $bg-page;
+  box-sizing: border-box;
 }
 
 .admin-page {
@@ -144,6 +145,28 @@
   color: $info-ink;
   font-size: $fs-sm;
   line-height: 1.45;
+}
+
+.page :deep(.wd-card) {
+  border-radius: $r-lg;
+  box-shadow: $shadow-soft;
+}
+
+.page :deep(.wd-button) {
+  min-height: 88rpx;
+  font-weight: $fw-semibold;
+  touch-action: manipulation;
+}
+
+.page :deep(.wd-tag) {
+  min-height: 40rpx;
+  display: inline-flex;
+  align-items: center;
+  font-weight: $fw-semibold;
+}
+
+.page :deep(.wd-cell) {
+  min-height: 88rpx;
 }
 
 @media screen and (min-width: 900px) {

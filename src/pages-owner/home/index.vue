@@ -5,7 +5,7 @@
     <KpiStrip class="section" :items="kpis" />
 
     <view class="section owner-console">
-      <view class="pool-board">
+      <view class="pool-board command-surface">
         <view class="pool-head">
           <view>
             <text class="console-label">运力池</text>
@@ -13,7 +13,7 @@
           </view>
           <wd-tag round :type="onlineCapacity ? 'success' : 'warning'">{{ onlineCapacity ? '可调度' : '待投放' }}</wd-tag>
         </view>
-        <view class="pool-lanes">
+        <view class="pool-lanes surface-metrics">
           <view v-for="item in poolStats" :key="item.label" :class="['pool-lane', item.tone]">
             <text class="lane-value">{{ item.value }}</text>
             <text class="lane-label">{{ item.label }}</text>
@@ -31,17 +31,17 @@
         </view>
       </view>
 
-      <wd-card class="queue-card" title="设备队列">
+      <wd-card class="queue-card command-surface" title="设备队列">
         <view class="device-queue">
           <view v-for="drone in visibleDrones" :key="drone.id" class="device-row">
             <view class="device-mark">
               <text>{{ drone.brand.slice(0, 1) }}</text>
             </view>
             <view class="device-copy">
-              <text class="device-name">{{ droneName(drone) }}</text>
-              <text class="muted">载荷 {{ drone.maxPayloadKg }}kg · 三者险 {{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
+              <text class="device-name">{{ droneDisplayName(drone) }}</text>
+              <text class="muted device-meta">{{ auditStatusLabel(drone.airworthiness) }} · 载荷{{ drone.maxPayloadKg }}kg · 三者险{{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
             </view>
-            <wd-tag round :type="canDeploy(drone) ? 'success' : 'warning'">{{ canDeploy(drone) ? droneStatusName(drone.status) : '需补合规' }}</wd-tag>
+            <wd-tag round :type="hasComplianceGap(drone) ? 'warning' : drone.status === 'busy' ? 'warning' : 'success'">{{ homeDroneStatus(drone) }}</wd-tag>
           </view>
         </view>
         <view v-if="!visibleDrones.length" class="empty-queue">
@@ -140,12 +140,13 @@ function handleQuick(key: string) {
   if (key === 'credit') openCredit();
 }
 
-function droneName(drone: Drone) {
-  return `${droneDisplayName(drone)} · ${auditStatusLabel(drone.airworthiness)}`;
+function hasComplianceGap(drone: Drone) {
+  return drone.airworthiness !== 'approved' || drone.insured.thirdPartyAmount < 5000000 || !drone.maintenanceLog.length;
 }
 
-function canDeploy(drone: Drone) {
-  return drone.status === 'idle' && drone.airworthiness === 'approved' && drone.insured.thirdPartyAmount >= 5000000 && Boolean(drone.maintenanceLog.length);
+function homeDroneStatus(drone: Drone) {
+  if (hasComplianceGap(drone)) return '需补合规';
+  return droneStatusName(drone.status);
 }
 </script>
 
@@ -160,7 +161,12 @@ function canDeploy(drone: Drone) {
   border-radius: $r-lg;
   background: $bg-card;
   border: 2rpx solid $line;
-  box-shadow: $shadow-2;
+  box-shadow: $shadow-soft;
+}
+
+.command-surface {
+  border-color: $role-owner-weak;
+  box-shadow: $shadow-command;
 }
 
 .pool-head,
@@ -204,11 +210,12 @@ function canDeploy(drone: Drone) {
 }
 
 .pool-lane {
-  min-height: 108rpx;
+  min-height: 116rpx;
   padding: $sp-2;
   border-radius: $r-md;
-  background: $bg-sunken;
+  background: $surface-panel;
   border: 2rpx solid $line;
+  box-sizing: border-box;
 }
 
 .pool-lane.success {
@@ -256,6 +263,7 @@ function canDeploy(drone: Drone) {
   background: $bg-sunken;
   color: $ink-700;
   font-size: $fs-cap;
+  font-weight: $fw-semibold;
 }
 
 .gate-dot {
@@ -281,6 +289,7 @@ function canDeploy(drone: Drone) {
 }
 
 .device-row {
+  min-height: 112rpx;
   padding: $sp-3 0;
   border-bottom: 2rpx solid $line;
 }
@@ -301,6 +310,7 @@ function canDeploy(drone: Drone) {
   justify-content: center;
   font-size: $fs-h3;
   font-weight: $fw-bold;
+  box-shadow: $shadow-soft;
 }
 
 .device-copy {
@@ -308,7 +318,12 @@ function canDeploy(drone: Drone) {
   min-width: 0;
 }
 
+.device-meta {
+  font-size: $fs-cap;
+}
+
 .device-name {
+  @include ellipsis(1);
   color: $ink-900;
   font-size: $fs-body;
   line-height: 1.35;

@@ -18,19 +18,25 @@
       compact
     />
 
-    <view v-if="action.showCandidates" class="section strategy-switch" role="tablist">
-      <wd-button
-        v-for="item in strategies"
-        :key="item.label"
-        :type="orderStore.strategy === item.value ? 'primary' : 'info'"
-        :plain="orderStore.strategy !== item.value"
-        @click="changeStrategy(item.value)"
-      >
-        {{ item.label }}
-      </wd-button>
-    </view>
+    <ProSegmentedControl
+      v-if="action.showCandidates"
+      class="section"
+      :model-value="orderStore.strategy"
+      :options="strategies"
+      @change="changeStrategy"
+    />
 
     <view class="section">
+      <view v-if="action.showCandidates && selected" class="match-summary">
+        <view>
+          <text class="summary-label">当前推荐</text>
+          <text class="summary-title">{{ droneLabel(selected.droneId) }}</text>
+        </view>
+        <view class="summary-price">
+          <MoneyText :fen="selected.quoteCent" bold />
+          <text>含保险试算</text>
+        </view>
+      </view>
       <MatchCandidateCard
         v-for="candidate in visibleCandidates"
         :key="candidate.capacityId"
@@ -58,16 +64,15 @@
       <text v-if="message" class="message">{{ message }}</text>
     </view>
 
-    <view v-if="action.showCandidates && selected" class="card section breakdown">
+    <wd-card v-if="action.showCandidates && selected" class="section breakdown" title="费用明细">
       <view class="between">
-        <text class="section-title">费用明细</text>
         <MoneyText :fen="selected.quoteCent" bold />
       </view>
       <view class="line"><text>基础</text><MoneyText :fen="selected.priceBreakdown.baseCent" /></view>
       <view class="line"><text>里程</text><MoneyText :fen="selected.priceBreakdown.mileageCent" /></view>
       <view class="line"><text>时长</text><MoneyText :fen="selected.priceBreakdown.durationCent" /></view>
       <view class="line"><text>保险</text><MoneyText :fen="selected.priceBreakdown.insuranceCent" /></view>
-    </view>
+    </wd-card>
 
     <BottomActionBar :primary="action.primaryLabel" :secondary="action.secondaryLabel" :loading="orderStore.loading" @secondary="runSecondaryAction" @primary="confirm" />
   </view>
@@ -81,6 +86,7 @@ import MatchCandidateCard from '@/components/MatchCandidateCard.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import ProSegmentedControl from '@/components/ProSegmentedControl.vue';
 import RouteHero from '@/components/RouteHero.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { DispatchStrategy, Role } from '@/models';
@@ -116,10 +122,10 @@ const dispatchMetrics = computed(() => [
     : { label: '确认方案', value: '已关闭', hint: '防重复', tone: 'warning' as const },
 ]);
 const strategies = [
-  { label: '最近', value: DispatchStrategy.Nearest },
-  { label: '利润', value: DispatchStrategy.MaxProfit },
-  { label: '全局', value: DispatchStrategy.GlobalOptimal },
-  { label: '接力', value: DispatchStrategy.Chain },
+  { label: '最近', hint: '最快', value: DispatchStrategy.Nearest },
+  { label: '利润', hint: '收益', value: DispatchStrategy.MaxProfit },
+  { label: '全局', hint: '均衡', value: DispatchStrategy.GlobalOptimal },
+  { label: '接力', hint: '多段', value: DispatchStrategy.Chain },
 ];
 
 function pilotName(id: string) {
@@ -142,8 +148,8 @@ function select(candidate: MatchCandidate) {
   orderStore.chooseCandidate(candidate);
 }
 
-function changeStrategy(value: DispatchStrategy) {
-  orderStore.strategy = value;
+function changeStrategy(value: string) {
+  orderStore.strategy = value as DispatchStrategy;
 }
 
 async function confirm() {
@@ -237,6 +243,52 @@ function matchErrorMessage(e: unknown) {
   margin-bottom: $sp-4;
 }
 
+.match-summary {
+  margin-bottom: $sp-3;
+  padding: $sp-3;
+  border-radius: $r-lg;
+  background: $surface-command;
+  border: 2rpx solid $info-line;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $sp-3;
+  box-shadow: $shadow-soft;
+}
+
+.summary-label,
+.summary-title,
+.summary-price text {
+  display: block;
+}
+
+.summary-label {
+  color: $info-ink;
+  font-size: $fs-cap;
+  line-height: 1.4;
+  font-weight: $fw-semibold;
+}
+
+.summary-title {
+  @include ellipsis(1);
+  max-width: 390rpx;
+  color: $ink-900;
+  font-size: $fs-h3;
+  line-height: 1.3;
+  font-weight: $fw-bold;
+}
+
+.summary-price {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.summary-price text {
+  color: $ink-500;
+  font-size: $fs-cap;
+  line-height: 1.4;
+}
+
 .message {
   display: block;
   margin-top: $sp-3;
@@ -255,12 +307,6 @@ function matchErrorMessage(e: unknown) {
   justify-content: space-between;
   color: $ink-700;
   font-size: $fs-sm;
-}
-
-.strategy-switch {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: $sp-2;
 }
 
 </style>

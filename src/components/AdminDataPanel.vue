@@ -24,17 +24,20 @@ defineEmits<{ (e: 'action'): void }>();
 .admin-data-panel {
   padding: 0;
   overflow: hidden;
+  border: 2rpx solid $line;
+  border-radius: $r-lg;
+  box-shadow: $shadow-soft;
 }
 
 .panel-head {
-  min-height: 104rpx;
-  padding: $sp-4;
+  min-height: 96rpx;
+  padding: $sp-3 $sp-4;
   border-bottom: 2rpx solid $line;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: $sp-3;
-  background: $bg-card;
+  background: $surface-panel;
 }
 
 .title,

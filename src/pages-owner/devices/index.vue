@@ -8,8 +8,7 @@
       <wd-card v-for="drone in drones" :key="drone.id" class="drone-card">
         <view class="asset-line">
           <view class="asset-thumb">
-            <view class="asset-wing" />
-            <view class="asset-body" />
+            <text>{{ drone.brand.slice(0, 1) }}</text>
           </view>
           <view class="asset-copy">
             <text class="drone-title">{{ droneDisplayName(drone) }}</text>
@@ -85,6 +84,9 @@ function withdraw(droneId: string) {
 <style lang="scss" scoped>
 .drone-card {
   margin-bottom: $sp-3;
+  border: 2rpx solid $line;
+  border-radius: $r-lg;
+  box-shadow: $shadow-soft;
 }
 
 .asset-line {
@@ -99,28 +101,13 @@ function withdraw(droneId: string) {
   height: 104rpx;
   border-radius: $r-md;
   background: $role-owner-weak;
-  position: relative;
-}
-
-.asset-wing,
-.asset-body {
-  position: absolute;
-  border-radius: $r-pill;
-  background: $role-owner;
-}
-
-.asset-wing {
-  left: 20rpx;
-  right: 20rpx;
-  top: 50rpx;
-  height: 8rpx;
-}
-
-.asset-body {
-  width: 32rpx;
-  height: 32rpx;
-  left: 36rpx;
-  top: 34rpx;
+  color: $role-owner;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $fs-h2;
+  font-weight: $fw-bold;
+  box-shadow: $shadow-soft;
 }
 
 .asset-copy {

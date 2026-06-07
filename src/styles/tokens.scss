@@ -36,6 +36,15 @@ $shadow-2:0 8rpx 32rpx rgba(15,22,38,.10);
 $shadow-3:0 16rpx 48rpx rgba(15,22,38,.16);
 $z-base:0; $z-sticky:10; $z-dropdown:100; $z-bottombar:200; $z-sheet:1000; $z-modal:1100; $z-toast:2000;
 
+/* Pro 工作台扩展令牌：仍属于 §13 低空指挥中心体系，供业务组件统一引用。 */
+$surface-raised:#FFFFFF;
+$surface-panel:#F8FAFD;
+$surface-command:#EDF4FF;
+$surface-ink:#14223A;
+$line-strong:#CBD5E1;
+$shadow-command:0 12rpx 40rpx rgba(30,111,255,.14);
+$shadow-soft:0 6rpx 22rpx rgba(15,22,38,.08);
+
 /* mixin */
 @mixin tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 @mixin ellipsis($lines: 1) {

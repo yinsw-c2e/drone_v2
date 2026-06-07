@@ -11,11 +11,15 @@
 - 新增 `PRODUCTION_UI_AUDIT.md`，逐页记录生产级 UI/UX 优化点和生产化能力边界。
 - 本轮视觉重构新增 `docs/ui-redesign/REFERENCE_BRIEF.md` 与 `docs/ui-redesign/DESIGN_DIRECTIONS.md`，并刷新关键页面截图，重点验证“组件库接管 + 低空调度控制台”方向。
 - 本轮生产级收口刷新 `02-client-home.png`、`04-client-match.png`、`05-client-track.png`、`08-pilot-task.png`、`10-owner-home.png`、`13-admin-dashboard.png`、`24-admin-dashboard-mobile.png`：后台桌面容器从移动宽度解锁到真实桌面宽度，业主/机主首页改为业务工作台，fixed 底栏页面改用正常 390 视口截图并在匹配页滚动到候选卡可读位置。
+- 本轮按本地 `ui-ux-pro-max` 查询结果新增 `docs/ui-redesign/UI_UX_PRO_MAX_PLAN.md`，采用“低空物流调度工作台”方向：移动端吸收 Logistics/Delivery + Enterprise SaaS Mobile + Real-Time Monitoring，后台吸收 Data-Dense Operational Dashboard。
+- 本轮重点替换粗糙控件：新增 `ProSegmentedControl`，重构 `MatchCandidateCard` 为专业物流报价卡，强化 `BottomActionBar`、`KpiStrip`、`AdminDataPanel` 和 `MetricCard` 的触控、层级和数据读数质感。
+- 新增 `27-client-match-430.png`，用于 430 宽移动端抽查匹配页设备名、价格、分段控件和底部动作是否断裂或遮挡。
 
 ## H5 走查记录
 
 - 全局：新增 `PageHeader`、`SectionHeader`、`NoticeBar`、`ActionCard` 共享组件，统一页头、区块说明、状态反馈和首屏主行动；第二轮已清除面向用户页面的英文模板眉标与工程术语泄漏。
 - 全局组件库接管：页面结构、状态反馈和动作位改用 `wot-design-uni` 的 `wd-navbar`、`wd-card`、`wd-cell-group`、`wd-cell`、`wd-tag`、`wd-notice-bar`、`wd-steps`、`wd-button`、`wd-action-sheet`、`wd-checkbox` 等组件；新增 `InfoCell` 包装保证 H5/小程序可见文本稳定。
+- 全局 UI UX Pro Max 收口：按 skill 查询结果将移动端卡片统一为“身份 + 状态 / 关键指标 / 保障或风险 / 操作”的稳定结构；关键触控目标保持不低于 88rpx，分段控件等宽且选中态清楚。
 - 全局视觉重构：`RouteHero` 限定在匹配、追踪、飞手任务等真实航线页；首页不再复用同一张假地图，改由 `KpiStrip`、`IconActionGrid`、`CommandPanel`、`AdminDataPanel` 和 wot 组件组织工作流。
 - 全局指标语义：`RouteHero` 已改为显式 `metrics` 契约；非航线场景不再复用 ETA/距离/电量标签承载资产、通知、分账等业务指标。
 - 全局状态：设备、运力、认证、货物、保单、理赔、流水和角色枚举均经中文展示映射，不再向用户暴露 raw status。
@@ -26,6 +30,7 @@
 - 业主首页指标收口：首屏指标按订单状态显示“航线状态/送达状态/在线运力/预算/空域状态”等业务标签，不再出现“已送达/ETA”或“预算/电量”错配。
 - 匹配页：候选方案、费用明细和确认下单按钮可见；候选卡展示设备品牌/型号/载荷/三者险，不再暴露内部设备编号。
 - 匹配页第二轮视觉：候选卡改为派单结果结构，设备缩略、飞手信用、报价、ETA/距离/综合分、合规 chips 分层展示。
+- 匹配页 Pro Max 重构：策略切换改为 `ProSegmentedControl`，候选卡去掉彩色标签堆，报价、ETA、距离、综合分、承运保障和推荐理由按物流报价单分区展示；设备名保持单行可读，选中状态移到底部状态条。
 - 匹配页指标收口：候选摘要改为“预计接单 / 接近距离 / 合规状态”，不再把“合规”显示在“电量”标签下。
 - 匹配页 0 候选：底部主按钮显示“等待运力”，副按钮“修改订单”；点击主按钮显示“当前没有在线合规运力，请等待机主投放或返回调整预算/时间”，不进入无效确认。
 - 匹配页截图策略：`04-client-match.png` 使用 390 视口并滚动到候选列表位置，展示选中方案、候选排序和底部确认动作，避免 full-page 截图把 fixed 底栏拍在卡片中段造成伪影。
