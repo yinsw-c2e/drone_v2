@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "低空吊运"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "角色登录"
+      }
+    },
+    {
+      "path": "pages-client/home/index",
+      "style": {
+        "navigationBarTitleText": "业主指挥台"
+      }
+    },
+    {
+      "path": "pages-client/order/index",
+      "style": {
+        "navigationBarTitleText": "发起吊运"
+      }
+    },
+    {
+      "path": "pages-client/publish/index",
+      "style": {
+        "navigationBarTitleText": "发起吊运"
+      }
+    },
+    {
+      "path": "pages-client/match/index",
+      "style": {
+        "navigationBarTitleText": "智能匹配"
+      }
+    },
+    {
+      "path": "pages-client/track/index",
+      "style": {
+        "navigationBarTitleText": "订单追踪"
+      }
+    },
+    {
+      "path": "pages-client/review/index",
+      "style": {
+        "navigationBarTitleText": "评价结算"
+      }
+    },
+    {
+      "path": "pages-pilot/home/index",
+      "style": {
+        "navigationBarTitleText": "飞手驾驶舱"
+      }
+    },
+    {
+      "path": "pages-pilot/hall/index",
+      "style": {
+        "navigationBarTitleText": "接单大厅"
+      }
+    },
+    {
+      "path": "pages-pilot/task/index",
+      "style": {
+        "navigationBarTitleText": "任务执行"
+      }
+    },
+    {
+      "path": "pages-pilot/wallet/index",
+      "style": {
+        "navigationBarTitleText": "飞手钱包"
+      }
+    },
+    {
+      "path": "pages-owner/home/index",
+      "style": {
+        "navigationBarTitleText": "机主管理台"
+      }
+    },
+    {
+      "path": "pages-owner/devices/index",
+      "style": {
+        "navigationBarTitleText": "设备与运力"
+      }
+    },
+    {
+      "path": "pages-owner/drones/index",
+      "style": {
+        "navigationBarTitleText": "设备管理"
+      }
+    },
+    {
+      "path": "pages-owner/dispatch/index",
+      "style": {
+        "navigationBarTitleText": "运力调度"
+      }
+    },
+    {
+      "path": "pages-owner/wallet/index",
+      "style": {
+        "navigationBarTitleText": "机主钱包"
+      }
+    },
+    {
+      "path": "pages-admin/dashboard/index",
+      "style": {
+        "navigationBarTitleText": "管理后台"
+      }
+    },
+    {
+      "path": "pages-admin/index/index",
+      "style": {
+        "navigationBarTitleText": "管理后台"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "低空吊运",
+    "navigationBarBackgroundColor": "#F4F6FA",
+    "backgroundColor": "#F4F6FA"
+  }
+}

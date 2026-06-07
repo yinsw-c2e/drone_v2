@@ -1,0 +1,46 @@
+/* 「低空指挥中心」设计令牌 —— 唯一风格真源。页面/组件只准引用这些变量与 mixin。 */
+
+/* 品牌主色阶 */
+$blue-50:#EAF1FF; $blue-100:#D4E2FF; $blue-200:#A9C5FF; $blue-300:#7BA6FF;
+$blue-400:#4D86FF; $blue-500:#1E6FFF; $blue-600:#0E5AE6; $blue-700:#0A47B4; $blue-800:#073584; $blue-900:#052456;
+$color-primary:$blue-500; $color-primary-press:$blue-600; $color-primary-weak:$blue-50;
+
+/* 角色色（小面积强调） */
+$role-client:#1E6FFF; $role-client-weak:#EAF1FF;
+$role-pilot:#00B894;  $role-pilot-weak:#E3FBF3;
+$role-owner:#6C5CE7;  $role-owner-weak:#EFECFE;
+
+/* 语义色：主/弱底/描边/文字 */
+$success:#16C784; $success-bg:#E7FAF1; $success-line:#A8ECC9; $success-ink:#0B7A4E;
+$warning:#FF9F1C; $warning-bg:#FFF4E5; $warning-line:#FFD79E; $warning-ink:#B26A00;
+$danger:#F5455C;  $danger-bg:#FEEAED;  $danger-line:#FBB4BE;  $danger-ink:#B11E33;
+$info:#3B82F6;    $info-bg:#EAF1FF;    $info-line:#BFD6FF;    $info-ink:#0A47B4;
+
+/* 中性灰阶（冷调） */
+$ink-900:#0F1626; $ink-700:#303A4D; $ink-500:#6B7385; $ink-400:#9AA2B1;
+$line:#E7EAF0; $bg-page:#F4F6FA; $bg-sunken:#EEF1F6; $bg-card:#FFFFFF;
+$overlay:rgba(15,22,38,.45);
+$on-primary:#FFFFFF; /* 主色之上的文字/图标 */
+
+/* 字阶 */
+$fs-display:56rpx; $fs-metric:44rpx; $fs-h1:40rpx; $fs-h2:34rpx; $fs-h3:30rpx; $fs-body:28rpx; $fs-sm:24rpx; $fs-cap:20rpx;
+/* 字重 */
+$fw-regular:400; $fw-medium:500; $fw-semibold:600; $fw-bold:700;
+
+/* 间距 / 圆角 / 阴影 / 层级 */
+$sp-1:8rpx; $sp-2:16rpx; $sp-3:24rpx; $sp-4:32rpx; $sp-5:40rpx; $sp-6:48rpx; $sp-8:64rpx; $sp-10:80rpx;
+$page-x:32rpx;
+$r-sm:12rpx; $r-md:20rpx; $r-lg:32rpx; $r-pill:999rpx;
+$shadow-1:0 2rpx 12rpx rgba(15,22,38,.06);
+$shadow-2:0 8rpx 32rpx rgba(15,22,38,.10);
+$shadow-3:0 16rpx 48rpx rgba(15,22,38,.16);
+$z-base:0; $z-sticky:10; $z-dropdown:100; $z-bottombar:200; $z-sheet:1000; $z-modal:1100; $z-toast:2000;
+
+/* mixin */
+@mixin tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+@mixin ellipsis($lines: 1) {
+  @if $lines == 1 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  @else { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: $lines; }
+}
+@mixin card { background: $bg-card; border-radius: $r-md; box-shadow: $shadow-1; padding: $sp-4; }
+@mixin tap-min { min-height: 88rpx; }

@@ -1,0 +1,74 @@
+@import '@/styles/tokens.scss';
+
+.page {
+  min-height: 100vh;
+  padding: $sp-4 $page-x calc($sp-10 + env(safe-area-inset-bottom));
+  background: $bg-page;
+}
+
+.section {
+  margin-top: $sp-4;
+}
+
+.card {
+  @include card;
+}
+
+.section-title {
+  font-size: $fs-h3;
+  line-height: 1.35;
+  font-weight: $fw-semibold;
+  color: $ink-900;
+}
+
+.muted {
+  color: $ink-500;
+  font-size: $fs-sm;
+  line-height: 1.45;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  @include tap-min;
+  border-radius: $r-md;
+  font-size: $fs-body;
+  font-weight: $fw-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.primary-button {
+  color: $on-primary;
+  background: $color-primary;
+}
+
+.secondary-button {
+  color: $ink-700;
+  background: $bg-card;
+  border: 2rpx solid $line;
+}
+
+.danger-button {
+  color: $on-primary;
+  background: $danger;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metric-number {
+  @include tabular;
+  font-size: $fs-metric;
+  line-height: 1.15;
+  font-weight: $fw-semibold;
+}

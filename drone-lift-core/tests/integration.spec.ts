@@ -1,0 +1,28 @@
+import { it, expect, beforeEach } from 'vitest';
+import { resetDB } from '@/utils/db';
+import { repo } from '@/utils/repo';
+import { createOrder } from '@/models/factory';
+import { match } from '@/utils/match';
+import { transition } from '@/utils/order-machine';
+import { releasePending, walletWithdraw } from '@/utils/wallet';
+import { OrderStatus as S, Role } from '@/models';
+beforeEach(() => resetDB());
+it('一笔订单可走通全流程且不变量成立', () => {
+  const client = repo.clients.all()[0];
+  const o = repo.orders.insert(createOrder({ clientId: client.userId, from: { lng: 116.397, lat: 39.908 }, to: { lng: 116.45, lat: 39.95 }, budgetCent: 200000, cargo: { type: 'normal' as any, weightKg: 6, valueCent: 0, photos: [] } }));
+  transition(o.id, S.Matching, { actor: Role.Client });
+  const cands = match(o); expect(cands.length).toBeGreaterThan(0);
+  const top = cands[0];
+  repo.orders.update(o.id, { pilotId: top.pilotId, droneId: top.droneId, capacityId: top.capacityId, priceBreakdown: top.priceBreakdown });
+  transition(o.id, S.Confirmed, { actor: Role.Client });
+  expect(repo.drones.find(top.droneId)!.status).toBe('busy');
+  transition(o.id, S.AirspaceApplying, { actor: Role.Client });
+  transition(o.id, S.Preparing, { actor: Role.Pilot });
+  (['loading', 'inflight', 'unloading', 'completed'] as S[]).forEach((s) => transition(o.id, s, { actor: Role.Pilot }));
+  expect(repo.drones.find(top.droneId)!.status).toBe('idle');
+  const settled = transition(o.id, S.Settled, { actor: Role.Client });
+  expect(settled.settlement!.items.reduce((a, i) => a + i.amountCent, 0)).toBe(settled.priceBreakdown!.totalCent);
+  const w = repo.wallets.find(top.pilotId)!; expect(w.balanceCent + w.pendingCent).toBeGreaterThan(0);
+  releasePending(top.pilotId); expect(() => walletWithdraw(top.pilotId, 1)).not.toThrow();
+});
+it('非法流转必抛错', () => { const o = repo.orders.insert(createOrder({ clientId: repo.clients.all()[0].userId, from: { lng: 116.4, lat: 39.9 }, to: { lng: 116.4, lat: 39.9 }, budgetCent: 1000, cargo: { type: 'normal' as any, weightKg: 1, valueCent: 0, photos: [] } })); expect(() => transition(o.id, S.Completed, { actor: Role.Client })).toThrow(); });
