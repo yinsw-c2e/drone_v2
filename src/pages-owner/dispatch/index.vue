@@ -12,7 +12,7 @@
             <text class="muted">{{ pilotName(unit.pilotId) }} · {{ unit.location.address || '低空货运中心' }}</text>
             <text class="muted">{{ capacityAction(unit.status).description }}</text>
           </view>
-          <text :class="['state', unit.status]">{{ unit.status }}</text>
+          <text :class="['state', unit.status]">{{ capacityStatusLabel(unit.status) }}</text>
         </view>
         <view class="actions">
           <button v-if="capacityAction(unit.status).secondaryLabel" class="secondary-button" @click="setOffline(unit.id)">{{ capacityAction(unit.status).secondaryLabel }}</button>
@@ -31,6 +31,7 @@ import { Role } from '@/models';
 import type { CapacityStatus } from '@/models';
 import { ownerCapacityAction } from '@/services/action-plans';
 import { setCapacityOffline, setCapacityOnline } from '@/services/app-flow';
+import { capacityStatusLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 

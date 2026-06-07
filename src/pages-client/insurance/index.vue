@@ -7,7 +7,7 @@
       <SectionHeader title="投保方案" desc="按货物类型展示强制/可选保障范围。" />
       <view v-for="plan in planRows" :key="plan.name" class="plan-line">
         <view>
-          <text class="name">{{ plan.name }}</text>
+          <text class="name">{{ cargoTypeLabel(plan.name) }}</text>
           <text class="muted">{{ plan.coverages.join(' / ') }}</text>
         </view>
         <text :class="['risk', plan.mustInsure ? 'blocked' : '']">{{ plan.mustInsure ? '强制' : '可选' }}</text>
@@ -17,7 +17,7 @@
     <view v-if="policy" class="card section">
       <view class="between">
         <SectionHeader title="当前保单" />
-        <text class="risk">{{ policy.status }}</text>
+        <text class="risk">{{ policyStatusLabel(policy.status) }}</text>
       </view>
       <view class="policy-grid">
         <view><MoneyText :fen="policy.insuredAmountCent" bold /><text class="muted">保额</text></view>
@@ -34,7 +34,7 @@
       </view>
       <view v-for="claim in claims" :key="claim.id" class="claim-line">
         <view>
-          <text class="name">{{ claim.status }}</text>
+          <text class="name">{{ claimStatusLabel(claim.status) }}</text>
           <text class="muted">{{ claimActionPlan(claim).description }}</text>
           <text class="muted">{{ claim.liability || '等待责任认定' }}</text>
         </view>
@@ -59,6 +59,7 @@ import SectionHeader from '@/components/SectionHeader.vue';
 import { Role } from '@/models';
 import type { Claim } from '@/models';
 import { claimAction } from '@/services/action-plans';
+import { cargoTypeLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
 import { INSURANCE_PLANS } from '@/stores/config-data';
 import { useOrderStore } from '@/stores/order';
 import { advanceClaim, arbitrationClaim, createClaim } from '@/services/app-flow';

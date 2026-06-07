@@ -12,7 +12,7 @@
             <text class="muted">载荷 {{ drone.maxPayloadKg }}kg · 三者险 {{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
             <text class="muted">{{ droneAction(drone).description }}</text>
           </view>
-          <text :class="['state', drone.status]">{{ drone.status }}</text>
+          <text :class="['state', drone.status]">{{ droneStatusLabel(drone.status) }}</text>
         </view>
         <view class="actions">
           <button v-if="droneAction(drone).secondaryLabel" class="secondary-button" @click="withdraw(drone.id)">{{ droneAction(drone).secondaryLabel }}</button>
@@ -31,6 +31,7 @@ import { Role } from '@/models';
 import type { Drone } from '@/models';
 import { ownerDroneAction } from '@/services/action-plans';
 import { deployOwnerDrone, withdrawOwnerDrone } from '@/services/app-flow';
+import { droneStatusLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 

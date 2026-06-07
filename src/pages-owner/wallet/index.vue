@@ -10,8 +10,8 @@
     <view class="section card">
       <view v-for="item in ledger" :key="item.id" class="line">
         <view>
-          <text class="note">{{ item.note || item.type }}</text>
-          <text class="time">{{ item.cycle }} · {{ item.status }}</text>
+          <text class="note">{{ item.note || ledgerTypeLabel(item.type) }}</text>
+          <text class="time">{{ item.cycle }} · {{ ledgerStatusLabel(item.status) }}</text>
         </view>
         <MoneyText :fen="item.amountCent" />
       </view>
@@ -29,6 +29,7 @@ import EmptyState from '@/components/EmptyState.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
+import { ledgerStatusLabel, ledgerTypeLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';

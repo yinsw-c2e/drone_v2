@@ -2,6 +2,7 @@ import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, 
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
 import { createCapacity, createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
+import { cargoTypeLabel } from '@/services/display-labels';
 import { INSURANCE_PLANS, PRICE_CONFIG } from '@/stores/config-data';
 import { match } from '@/utils/match';
 import { notify } from '@/utils/notify';
@@ -94,7 +95,7 @@ export function submitOrderDraft(input: { clientId: string; cargoType: CargoType
   if (errors.length) throw new Error(errors.join('、'));
   const saved = repo.orders.insert(order);
   transition(saved.id, OrderStatus.Matching, { actor: Role.Client, note: '发单进入智能匹配' });
-  recordAudit(AuditAction.Order, input.clientId, Role.Client, 'order', saved.id, `发布${input.cargoType}吊运订单`);
+  recordAudit(AuditAction.Order, input.clientId, Role.Client, 'order', saved.id, `发布${cargoTypeLabel(input.cargoType)}吊运订单`);
   repo.pilots.all().forEach((p) => notify(p.userId, NotificationType.Dispatch, '新吊运任务', '业主发布了精密设备吊运单', saved.id));
   return saved;
 }

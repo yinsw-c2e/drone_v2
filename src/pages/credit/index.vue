@@ -23,7 +23,7 @@
       <view v-for="item in users" :key="item.id" class="user-line">
         <view>
           <text class="name">{{ item.nickname }}</text>
-          <text class="muted">{{ item.currentRole }} · {{ item.blacklisted ? '已阻断' : '可交易' }}</text>
+          <text class="muted">{{ roleLabel(item.currentRole) }} · {{ item.blacklisted ? '已阻断' : '可交易' }}</text>
         </view>
         <button :class="[item.blacklisted ? 'primary-button' : 'danger-button', 'small']" @click="toggle(item.id)">{{ item.blacklisted ? '解除' : '拉黑' }}</button>
       </view>
@@ -36,6 +36,7 @@ import { computed } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
 import { ensureDemoCredit, setUserBlacklist } from '@/services/app-flow';
+import { roleLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 

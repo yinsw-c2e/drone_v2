@@ -127,6 +127,7 @@ import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
 import { adminOrderAction, adminRunFlowAction, claimAction } from '@/services/action-plans';
+import { auditStatusLabel, claimStatusLabel, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, arbitrationClaim, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';
@@ -152,31 +153,9 @@ function userName(id: string) {
   return repo.users.find(id)?.nickname ?? id;
 }
 
-function roleName(role: Role) {
-  return role === Role.Pilot ? '飞手' : role === Role.Owner ? '机主' : role === Role.Client ? '业主' : '管理';
-}
-
-function certStatusName(status: string) {
-  const map: Record<string, string> = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已驳回',
-    expired: '已过期',
-    none: '未提交',
-  };
-  return map[status] ?? status;
-}
-
-function claimStatusName(status: string) {
-  const map: Record<string, string> = {
-    reported: '已报案',
-    investigating: '调查中',
-    assessed: '已定责',
-    paid: '已赔付',
-    arbitration: '仲裁中',
-  };
-  return map[status] ?? status;
-}
+const roleName = roleLabel;
+const certStatusName = auditStatusLabel;
+const claimStatusName = claimStatusLabel;
 
 function formatFieldValue(value: string | number | boolean | string[]) {
   if (Array.isArray(value)) return value.join('、');

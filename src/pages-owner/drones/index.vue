@@ -10,7 +10,7 @@
             <text class="drone-title">{{ drone.brand }} {{ drone.model }}</text>
             <text class="muted">{{ drone.sn }} · 载荷 {{ drone.maxPayloadKg }}kg</text>
           </view>
-          <text :class="['tag', drone.airworthiness]">{{ drone.airworthiness }}</text>
+          <text :class="['tag', drone.airworthiness]">{{ auditStatusLabel(drone.airworthiness) }}</text>
         </view>
         <view class="audit-grid">
           <view>
@@ -22,7 +22,7 @@
             <text class="muted">保额</text>
           </view>
           <view>
-            <text class="metric">{{ drone.status }}</text>
+            <text class="metric">{{ droneStatusLabel(drone.status) }}</text>
             <text class="muted">设备状态</text>
           </view>
         </view>
@@ -36,6 +36,7 @@ import { computed } from 'vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
+import { auditStatusLabel, droneStatusLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 

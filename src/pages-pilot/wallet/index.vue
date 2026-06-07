@@ -15,8 +15,8 @@
       <view class="card">
         <view v-for="item in ledger" :key="item.id" class="line">
           <view>
-            <text class="note">{{ item.note || item.type }}</text>
-            <text class="time">{{ item.createdAt.slice(0, 10) }} · {{ item.status }}</text>
+            <text class="note">{{ item.note || ledgerTypeLabel(item.type) }}</text>
+            <text class="time">{{ item.createdAt.slice(0, 10) }} · {{ ledgerStatusLabel(item.status) }}</text>
           </view>
           <MoneyText :fen="item.amountCent" :danger="item.amountCent < 0" />
         </view>
@@ -38,6 +38,7 @@ import SectionHeader from '@/components/SectionHeader.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
+import { ledgerStatusLabel, ledgerTypeLabel } from '@/services/display-labels';
 import { repo } from '@/utils/repo';
 import { releasePending, walletWithdraw } from '@/utils/wallet';
 
