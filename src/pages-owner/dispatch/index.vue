@@ -31,7 +31,7 @@ import { Role } from '@/models';
 import type { CapacityStatus } from '@/models';
 import { ownerCapacityAction } from '@/services/action-plans';
 import { setCapacityOffline, setCapacityOnline } from '@/services/app-flow';
-import { capacityStatusLabel } from '@/services/display-labels';
+import { capacityStatusLabel, droneDisplayName } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
@@ -43,7 +43,7 @@ const feedback = ref('');
 
 function droneName(id: string) {
   const drone = repo.drones.find(id);
-  return drone ? `${drone.brand} ${drone.model}` : id;
+  return drone ? droneDisplayName(drone) : id;
 }
 
 function pilotName(id: string) {

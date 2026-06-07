@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, Role } from '@/models';
-import { auditStatusLabel, capacityStatusLabel, cargoTypeLabel, claimStatusLabel, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
+import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
+import { auditActionLabel, auditDetailLabel, auditLogDetailLabel, auditStatusLabel, capacityStatusLabel, cargoTypeLabel, claimStatusLabel, droneDisplayName, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, paymentModeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
 
 describe('display labels', () => {
   it('maps role and cargo enums to Chinese business labels', () => {
@@ -40,5 +40,19 @@ describe('display labels', () => {
     expect(ledgerStatusLabel(LedgerStatus.Available)).toBe('可提现');
     expect(ledgerStatusLabel(LedgerStatus.Paid)).toBe('已支付');
     expect(ledgerTypeLabel(LedgerType.SettleIn)).toBe('结算入账');
+  });
+
+  it('sanitizes audit logs and device names for user-facing display', () => {
+    expect(auditActionLabel(AuditAction.Order)).toBe('订单');
+    expect(auditActionLabel(AuditAction.Payment)).toBe('支付');
+    expect(auditActionLabel(AuditAction.Airspace)).toBe('空域');
+    expect(auditActionLabel(AuditAction.Certification)).toBe('认证');
+    expect(paymentModeLabel(PaymentMode.Escrow)).toBe('担保支付');
+    expect(auditDetailLabel('Mock 空域审批通过')).toBe('演示环境空域审批通过');
+    expect(auditDetailLabel('escrow 模式预支付已由 Mock provider 受理')).toBe('担保支付模式预支付已由演示支付通道受理');
+    expect(auditDetailLabel('发布valuable吊运订单')).toBe('发布贵重货物吊运订单');
+    expect(auditLogDetailLabel({ id: 'log', at: '', action: AuditAction.Payment, actorId: 'u', actorRole: Role.Client, targetType: 'order', detail: '理赔流转到 paid' })).toBe('理赔流转到 已赔付');
+    expect(droneDisplayName({ brand: 'Other', model: 'Cheap' })).toBe('低保额轻载机 A8');
+    expect(droneDisplayName({ brand: 'Other', model: 'DJI FlyCart 30' })).toBe('DJI FlyCart 30');
   });
 });

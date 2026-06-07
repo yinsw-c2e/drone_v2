@@ -29,7 +29,7 @@ export function buildSeed(): DBShape {
     { id: 'd3', brand: 'EHang', model: 'EH-216', sn: 'SN-D3', maxPayloadKg: 15, airworthiness: AuditStatus.Approved, insured: ins(5_000_000), maintenanceLog: [], ownerId: 'u_o2', status: 'idle' },
     { id: 'd4', brand: 'Autel', model: 'Dragonfish', sn: 'SN-D4', maxPayloadKg: 10, airworthiness: AuditStatus.Approved, insured: ins(5_000_000), maintenanceLog: [], ownerId: 'u_o2', status: 'idle' },
     // 非合规设备（三者险<500万），故意不投放到运力池，用于 UI 端测试合规拦截
-    { id: 'd5', brand: 'Other', model: 'Cheap', sn: 'SN-D5', maxPayloadKg: 8, airworthiness: AuditStatus.Approved, insured: ins(1_000_000), maintenanceLog: [], ownerId: 'u_o1', status: 'idle' },
+    { id: 'd5', brand: 'Other', model: '低保额轻载机 A8', sn: 'SN-D5', maxPayloadKg: 8, airworthiness: AuditStatus.Approved, insured: ins(1_000_000), maintenanceLog: [], ownerId: 'u_o1', status: 'idle' },
   ];
   owners[0].drones = ['d1', 'd2', 'd5'];
   owners[1].drones = ['d3', 'd4'];

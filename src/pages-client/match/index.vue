@@ -60,6 +60,7 @@ import StatusTag from '@/components/StatusTag.vue';
 import { DispatchStrategy, Role } from '@/models';
 import type { MatchCandidate } from '@/models';
 import { matchConfirmAction } from '@/services/action-plans';
+import { droneDisplayName } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { repo } from '@/utils/repo';
 
@@ -83,7 +84,7 @@ function pilotName(id: string) {
 
 function droneLabel(id: string) {
   const drone = repo.drones.find(id);
-  return drone ? `${drone.brand} ${drone.model}` : '合规运力';
+  return drone ? droneDisplayName(drone) : '合规运力';
 }
 
 function droneMeta(id: string) {

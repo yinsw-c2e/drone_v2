@@ -107,8 +107,8 @@
         <view class="section card admin-panel admin-wide">
           <SectionHeader title="审计日志" desc="关键登录、认证、支付、空域、投保、订单和提现动作留痕。" />
           <view v-for="log in auditLogs" :key="log.id" class="log-line">
-            <text class="name">{{ log.action }}</text>
-            <text class="muted">{{ log.detail }}</text>
+            <text class="name">{{ auditActionLabel(log.action) }}</text>
+            <text class="muted">{{ auditLogDetailLabel(log) }}</text>
           </view>
         </view>
       </view>
@@ -127,7 +127,7 @@ import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
 import { adminOrderAction, adminRunFlowAction, claimAction } from '@/services/action-plans';
-import { auditStatusLabel, claimStatusLabel, roleLabel } from '@/services/display-labels';
+import { auditActionLabel, auditLogDetailLabel, auditStatusLabel, claimStatusLabel, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, arbitrationClaim, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';

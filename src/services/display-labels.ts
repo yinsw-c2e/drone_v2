@@ -1,5 +1,5 @@
-import { AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, Role } from '@/models';
-import type { AirspaceStatus, Drone, InsurancePolicy, Claim } from '@/models';
+import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
+import type { AirspaceStatus, AuditLog, Claim, Drone, InsurancePolicy } from '@/models';
 
 export function roleLabel(role: Role | string) {
   const map: Record<string, string> = {
@@ -19,6 +19,16 @@ export function cargoTypeLabel(type: CargoType | string) {
     [CargoType.Agricultural]: '农资',
   };
   return map[type] ?? `${type}`;
+}
+
+export function paymentModeLabel(mode: PaymentMode | string) {
+  const map: Record<string, string> = {
+    [PaymentMode.Prepay]: '预付',
+    [PaymentMode.Escrow]: '担保支付',
+    [PaymentMode.Credit]: '信用支付',
+    [PaymentMode.Installment]: '分期支付',
+  };
+  return map[mode] ?? `${mode}`;
 }
 
 export function auditStatusLabel(status: AuditStatus | string) {
@@ -100,4 +110,55 @@ export function airspaceStatusLabel(status: AirspaceStatus | string) {
     rejected: '已驳回',
   };
   return map[status] ?? `${status}`;
+}
+
+export function auditActionLabel(action: AuditAction | string) {
+  const map: Record<string, string> = {
+    [AuditAction.Login]: '登录',
+    [AuditAction.Certification]: '认证',
+    [AuditAction.Payment]: '支付',
+    [AuditAction.Airspace]: '空域',
+    [AuditAction.Insurance]: '保险',
+    [AuditAction.Order]: '订单',
+    [AuditAction.Withdraw]: '提现',
+    [AuditAction.Risk]: '风控',
+    wallet: '钱包',
+  };
+  return map[action] ?? `${action}`;
+}
+
+export function auditDetailLabel(detail: string) {
+  return detail
+    .replace(/Mock provider/g, '演示支付通道')
+    .replace(/Mock 空域审批/g, '演示环境空域审批')
+    .replace(/mock-insurance/g, '演示保险服务')
+    .replace(/Top1/g, '推荐方案')
+    .replace(/escrow/g, paymentModeLabel(PaymentMode.Escrow))
+    .replace(/prepay/g, paymentModeLabel(PaymentMode.Prepay))
+    .replace(/credit/g, paymentModeLabel(PaymentMode.Credit))
+    .replace(/installment/g, paymentModeLabel(PaymentMode.Installment))
+    .replace(/valuable/g, cargoTypeLabel(CargoType.Valuable))
+    .replace(/normal/g, cargoTypeLabel(CargoType.Normal))
+    .replace(/dangerous/g, cargoTypeLabel(CargoType.Dangerous))
+    .replace(/agricultural/g, cargoTypeLabel(CargoType.Agricultural))
+    .replace(/\bpaid\b/g, claimStatusLabel('paid'))
+    .replace(/\bassessed\b/g, claimStatusLabel('assessed'))
+    .replace(/\binvestigating\b/g, claimStatusLabel('investigating'))
+    .replace(/\breported\b/g, claimStatusLabel('reported'))
+    .replace(/\barbitration\b/g, claimStatusLabel('arbitration'))
+    .replace(/(预付|担保支付|信用支付|分期支付)\s+模式/g, '$1模式')
+    .replace(/由\s+演示支付通道\s+受理/g, '由演示支付通道受理');
+}
+
+export function auditLogDetailLabel(log: AuditLog) {
+  return auditDetailLabel(log.detail);
+}
+
+export function droneDisplayName(drone: Pick<Drone, 'brand' | 'model'>) {
+  const cleanModel = drone.model
+    .replace(/^Cheap$/i, '低保额轻载机 A8')
+    .replace(/^Other\s+/i, '')
+    .replace(/^DJI FlyCart 30$/i, 'DJI FlyCart 30');
+  if (drone.brand === 'Other') return cleanModel;
+  return `${drone.brand} ${cleanModel}`;
 }

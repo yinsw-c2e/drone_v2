@@ -57,7 +57,7 @@ const form = reactive({
   noCrimeProof: '三年内无犯罪记录证明',
   healthProof: '矫正视力达标，无色盲色弱',
   trainingCerts: '应急处置,特殊场景作业',
-  droneModel: 'DJI FlyCart 30',
+  droneModel: '合规吊运机 A30',
   droneSn: 'SN-NEW',
   uomNo: 'UOM-2026-演示',
   insuranceAmount: '8000000',

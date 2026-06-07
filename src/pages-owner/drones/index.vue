@@ -7,7 +7,7 @@
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
         <view class="between">
           <view>
-            <text class="drone-title">{{ drone.brand }} {{ drone.model }}</text>
+            <text class="drone-title">{{ droneDisplayName(drone) }}</text>
             <text class="muted">{{ drone.sn }} · 载荷 {{ drone.maxPayloadKg }}kg</text>
           </view>
           <text :class="['tag', drone.airworthiness]">{{ auditStatusLabel(drone.airworthiness) }}</text>
@@ -36,7 +36,7 @@ import { computed } from 'vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Role } from '@/models';
-import { auditStatusLabel, droneStatusLabel } from '@/services/display-labels';
+import { auditStatusLabel, droneDisplayName, droneStatusLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 

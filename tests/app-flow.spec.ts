@@ -225,7 +225,7 @@ it('确认订单时 payment provider 使用订单选择的支付模式', async (
   const spy = vi.spyOn(providers.payment, 'prepay');
   await store.confirmSelected();
   expect(spy).toHaveBeenCalledWith(order.id, candidate.quoteCent, PaymentMode.Installment);
-  expect(repo.auditLogs.where((log) => log.targetId === order.id && log.detail.includes(PaymentMode.Installment))).toHaveLength(1);
+  expect(repo.auditLogs.where((log) => log.targetId === order.id && log.detail.includes('分期支付'))).toHaveLength(1);
 });
 
 it('无匹配候选时确认下单给出业务错误且不调用支付', async () => {

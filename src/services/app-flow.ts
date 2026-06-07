@@ -2,7 +2,7 @@ import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, 
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
 import { createCapacity, createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
-import { cargoTypeLabel } from '@/services/display-labels';
+import { cargoTypeLabel, claimStatusLabel, paymentModeLabel } from '@/services/display-labels';
 import { INSURANCE_PLANS, PRICE_CONFIG } from '@/stores/config-data';
 import { match } from '@/utils/match';
 import { notify } from '@/utils/notify';
@@ -153,7 +153,7 @@ export function confirmCandidate(orderId: string, candidate: MatchCandidate): Or
     priceBreakdown: candidate.priceBreakdown,
   });
   const confirmed = transition(order.id, OrderStatus.Confirmed, { actor: Role.Client, note: '业主确认推荐方案' });
-  recordAudit(AuditAction.Payment, order.clientId, Role.Client, 'order', order.id, `${order.paymentMode ?? PaymentMode.Escrow} 模式预支付已由演示支付通道受理`);
+  recordAudit(AuditAction.Payment, order.clientId, Role.Client, 'order', order.id, `${paymentModeLabel(order.paymentMode ?? PaymentMode.Escrow)}预支付已由演示支付通道受理`);
   notify(candidate.pilotId, NotificationType.Dispatch, '任务已确认', '请进入驾驶舱完成空域与安检', order.id);
   return confirmed;
 }
@@ -410,7 +410,7 @@ export function advanceClaim(claimId: string): Claim {
     patch.payoutCent = Math.round(repo.orders.find(claim.orderId)!.cargo.valueCent * 0.8);
   }
   repo.claims.update(claim.id, patch);
-  recordAudit(AuditAction.Insurance, 'mock-insurance', Role.Admin, 'claim', claim.id, `理赔流转到 ${next}`);
+  recordAudit(AuditAction.Insurance, 'insurance-demo', Role.Admin, 'claim', claim.id, `理赔流转到${claimStatusLabel(next)}`);
   if (next === 'paid') repo.policies.update(claim.policyId, { status: 'closed' });
   return repo.claims.find(claim.id)!;
 }

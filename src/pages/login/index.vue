@@ -29,7 +29,7 @@ const roles = [
   { role: Role.Client, title: '业主端', phone: '13800000001', desc: '发单、比价、追踪、评价' },
   { role: Role.Pilot, title: '飞手端', phone: '13800000002', desc: '接单、安检、飞行监控、钱包' },
   { role: Role.Owner, title: '机主端', phone: '13800000003', desc: '设备、运力投放、T+7 分账' },
-  { role: Role.Admin, title: '管理后台', phone: 'admin', desc: '审核、风控、订单与看板' },
+  { role: Role.Admin, title: '管理后台', phone: '后台入口', desc: '审核、风控、订单与看板' },
 ];
 
 function login(role: Role) {

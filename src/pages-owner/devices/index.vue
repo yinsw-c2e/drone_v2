@@ -8,7 +8,7 @@
       <view v-for="drone in drones" :key="drone.id" class="card drone-card">
         <view class="between">
           <view>
-            <text class="drone-title">{{ drone.brand }} {{ drone.model }}</text>
+            <text class="drone-title">{{ droneDisplayName(drone) }}</text>
             <text class="muted">载荷 {{ drone.maxPayloadKg }}kg · 三者险 {{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
             <text class="muted">{{ droneAction(drone).description }}</text>
           </view>
@@ -31,7 +31,7 @@ import { Role } from '@/models';
 import type { Drone } from '@/models';
 import { ownerDroneAction } from '@/services/action-plans';
 import { deployOwnerDrone, withdrawOwnerDrone } from '@/services/app-flow';
-import { droneStatusLabel } from '@/services/display-labels';
+import { droneDisplayName, droneStatusLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
