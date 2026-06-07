@@ -1,5 +1,5 @@
 <template>
-  <view :class="['cand', { selected }]" @click="$emit('select', candidate)">
+  <wd-card :class="['cand', { selected }]" @click="$emit('select', candidate)">
     <view class="head">
       <view class="asset">
         <view class="asset-thumb">
@@ -31,15 +31,15 @@
       </view>
     </view>
     <view class="chips">
-      <view v-if="droneMeta" class="chip"><text>{{ droneMeta }}</text></view>
-      <view class="chip"><text>空域合规</text></view>
-      <view class="chip"><text>责任险校验</text></view>
+      <wd-tag v-if="droneMeta" round type="primary">{{ droneMeta }}</wd-tag>
+      <wd-tag round type="success">空域合规</wd-tag>
+      <wd-tag round type="success">责任险校验</wd-tag>
     </view>
     <view class="reasons">
-      <text v-for="(r, i) in candidate.reasons.slice(0, 4)" :key="i" class="reason">{{ r }}</text>
+      <wd-tag v-for="(r, i) in candidate.reasons.slice(0, 4)" :key="i" round>{{ r }}</wd-tag>
     </view>
-    <view v-if="selected" class="check">已选</view>
-  </view>
+    <wd-button class="choose" :type="selected ? 'success' : 'primary'" block @click.stop="$emit('select', candidate)">{{ selected ? '已选中' : '选择方案' }}</wd-button>
+  </wd-card>
 </template>
 <script setup lang="ts">
 import MoneyText from './MoneyText.vue';
@@ -50,7 +50,6 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
 <style lang="scss" scoped>
 .cand {
   position: relative;
-  @include card;
   margin-bottom: $sp-3;
   border: 2rpx solid transparent;
 }
@@ -172,15 +171,6 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   margin-top: $sp-3;
 }
 
-.chip {
-  background: $bg-card;
-  color: $ink-700;
-  font-size: $fs-cap;
-  padding: $sp-1 $sp-2;
-  border-radius: $r-pill;
-  border: 2rpx solid $line;
-}
-
 .reasons {
   display: flex;
   flex-wrap: wrap;
@@ -188,22 +178,8 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   margin-top: $sp-2;
 }
 
-.reason {
-  font-size: $fs-cap;
-  color: $color-primary;
-  background: $color-primary-weak;
-  padding: $sp-1 $sp-2;
-  border-radius: $r-sm;
+.choose {
+  margin-top: $sp-3;
 }
 
-.check {
-  position: absolute;
-  top: 0;
-  right: 0;
-  background: $color-primary;
-  color: $on-primary;
-  font-size: $fs-cap;
-  padding: $sp-1 $sp-2;
-  border-radius: 0 $r-md 0 $r-md;
-}
 </style>

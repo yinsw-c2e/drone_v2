@@ -1,7 +1,5 @@
 <template>
-  <view :class="['tag', meta.tone]">
-    <view class="dot" /><text class="label">{{ meta.label }}</text>
-  </view>
+  <wd-tag round :type="tagType">{{ meta.label }}</wd-tag>
 </template>
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -23,16 +21,11 @@ const MAP: Record<OrderStatus, { label: string; tone: Tone }> = {
   [OrderStatus.Exception]: { label: '异常', tone: 'danger' },
 };
 const meta = computed(() => MAP[props.status]);
+const tagType = computed(() => {
+  if (meta.value.tone === 'danger') return 'danger';
+  if (meta.value.tone === 'warning') return 'warning';
+  if (meta.value.tone === 'success') return 'success';
+  if (meta.value.tone === 'muted') return 'default';
+  return 'primary';
+});
 </script>
-<style lang="scss" scoped>
-@import '../styles/tokens.scss';
-.tag { display: inline-flex; align-items: center; gap: $sp-1; padding: 6rpx 18rpx; border-radius: $r-pill; font-size: $fs-cap; line-height: 1; }
-.dot { width: 10rpx; height: 10rpx; border-radius: 50%; }
-.label { font-weight: $fw-medium; }
-.info { background: $info-bg; color: $info-ink; } .info .dot { background: $info; }
-.primary { background: $color-primary-weak; color: $blue-700; } .primary .dot { background: $color-primary; }
-.warning { background: $warning-bg; color: $warning-ink; } .warning .dot { background: $warning; }
-.success { background: $success-bg; color: $success-ink; } .success .dot { background: $success; }
-.danger { background: $danger-bg; color: $danger-ink; } .danger .dot { background: $danger; }
-.muted { background: $bg-sunken; color: $ink-500; } .muted .dot { background: $ink-400; }
-</style>

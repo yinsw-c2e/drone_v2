@@ -1,44 +1,28 @@
 <template>
   <view class="page">
-    <PageHeader eyebrow="低空吊运平台" title="选择角色进入系统" desc="当前为演示环境，验证码任意 6 位；切换角色后可体验同一订单的多端协同。" />
-    <RouteHero
-      class="section"
-      title="无人机货物吊运"
-      subtitle="业主、飞手、机主与后台围绕同一航线协同。"
-      status="演示环境"
-      :metrics="heroMetrics"
-      compact
-    />
+    <wd-navbar title="低空吊运平台" left-text="演示环境" bordered />
+    <PageHeader title="选择角色进入系统" desc="用同一订单体验业主、飞手、机主和后台协同。" compact />
     <NoticeBar tone="info" title="演示环境" message="登录用于角色切换体验；实名、人脸、短信与 CAAC 真实核验待生产环境接入。" />
 
-    <view class="roles">
-      <button v-for="item in roles" :key="item.role" class="role-card" @click="login(item.role)">
-        <view class="between">
-          <RoleBadge :role="item.role" />
-          <text class="phone">{{ item.phone }}</text>
-        </view>
-        <text class="role-title">{{ item.title }}</text>
-        <text class="role-desc">{{ item.desc }}</text>
-      </button>
-    </view>
+    <wd-cell-group class="roles" insert>
+      <InfoCell v-for="item in roles" :key="item.role" :title="item.title" :desc="item.desc" clickable is-link @click="login(item.role)">
+        <template #side>
+          <wd-tag round type="primary">{{ item.phone }}</wd-tag>
+        </template>
+      </InfoCell>
+    </wd-cell-group>
   </view>
 </template>
 
 <script setup lang="ts">
+import InfoCell from '@/components/InfoCell.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import RoleBadge from '@/components/RoleBadge.vue';
-import RouteHero from '@/components/RouteHero.vue';
 import { Role } from '@/models';
 import { useUserStore } from '@/stores/user';
 import { roleHome } from '@/services/app-flow';
 
 const userStore = useUserStore();
-const heroMetrics = [
-  { label: '协同端口', value: '三端', hint: '含后台', tone: 'info' as const },
-  { label: '流程范围', value: '全流程', hint: 'MVP 自测', tone: 'success' as const },
-  { label: '数据环境', value: '本地演示', hint: '待接生产', tone: 'neutral' as const },
-];
 const roles = [
   { role: Role.Client, title: '业主端', phone: '13800000001', desc: '发单、比价、追踪、评价' },
   { role: Role.Pilot, title: '飞手端', phone: '13800000002', desc: '接单、安检、飞行监控、钱包' },
@@ -54,39 +38,7 @@ function login(role: Role) {
 
 <style lang="scss" scoped>
 .roles {
-  display: flex;
-  flex-direction: column;
-  gap: $sp-3;
   margin-top: $sp-4;
 }
 
-.role-card {
-  @include card;
-  width: 100%;
-  text-align: left;
-  border-left: 8rpx solid $color-primary;
-}
-
-.phone {
-  @include tabular;
-  font-size: $fs-sm;
-  color: $ink-500;
-}
-
-.role-title {
-  display: block;
-  margin-top: $sp-3;
-  font-size: $fs-h2;
-  line-height: 1.3;
-  color: $ink-900;
-  font-weight: $fw-semibold;
-}
-
-.role-desc {
-  display: block;
-  margin-top: $sp-1;
-  font-size: $fs-sm;
-  line-height: 1.45;
-  color: $ink-500;
-}
 </style>

@@ -30,10 +30,13 @@
 
     <view v-if="order" class="card section checklist-card">
       <SectionHeader title="起飞前安检" :desc="`${checkedCount}/${checklist.length} 项完成；完成后主按钮才可继续。`" />
-      <label v-for="item in checklist" :key="item.key" class="check">
-        <checkbox :checked="item.done" @click="item.done = !item.done" />
-        <text>{{ item.label }}</text>
-      </label>
+      <wd-cell-group insert>
+        <InfoCell v-for="item in checklist" :key="item.key" :title="item.label">
+          <template #side>
+            <wd-checkbox :model-value="item.done" shape="square" @change="item.done = !item.done" />
+          </template>
+        </InfoCell>
+      </wd-cell-group>
       <NoticeBar v-if="!allChecked" tone="warning" message="完成 4 项安检后可放行" />
       <text v-if="error" class="error">{{ error }}</text>
     </view>
@@ -44,16 +47,15 @@
       eyebrow="飞行指挥"
       title="应急处置"
       desc="返航/降落当前为演示指令反馈；异常只在状态机允许阶段开启。"
-      primary="应急"
-      secondary="返航"
+      primary="处置菜单"
+      secondary="低电量"
       :disabled="!emergencyAvailable"
       :reason="emergencyReason"
-      @secondary="mockEmergency('return')"
-      @primary="exception"
+      @secondary="lowBattery"
+      @primary="showEmergencySheet = true"
     />
+    <wd-action-sheet v-model="showEmergencySheet" title="应急处置" cancel-text="取消" :actions="emergencyActions" @select="handleEmergencySelect" />
     <view class="section emergency-grid">
-      <button class="secondary-button" @click="mockEmergency('land')">降落</button>
-      <button class="secondary-button" @click="lowBattery">低电量</button>
       <NoticeBar v-if="emergencyReason" tone="warning" :message="emergencyReason" />
       <NoticeBar v-if="feedback" class="feedback" :message="feedback" />
     </view>
@@ -73,6 +75,7 @@
 import { computed, reactive, ref } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import CommandPanel from '@/components/CommandPanel.vue';
+import InfoCell from '@/components/InfoCell.vue';
 import KpiStrip from '@/components/KpiStrip.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -92,6 +95,7 @@ const orderStore = useOrderStore();
 const telemetryStore = useTelemetryStore();
 const error = ref('');
 const feedback = ref('');
+const showEmergencySheet = ref(false);
 const checklist = reactive([
   { key: 'battery', label: '电池与动力系统正常', done: true },
   { key: 'cargo', label: '吊框锁具与货物固定完成', done: true },
@@ -143,6 +147,12 @@ const steps = computed(() => taskSteps(order.value?.status ?? OrderStatus.Confir
 const emergencyAvailable = computed(() => order.value ? canTriggerEmergency(order.value.status) : false);
 const emergencyReason = computed(() => order.value ? emergencyClosedReason(order.value.status) : '');
 const subtitle = computed(() => order.value ? `${order.value.from.address} → ${order.value.to.address}` : '任务航线');
+const emergencyActions = computed(() => [
+  { name: '返航', subname: '记录演示返航指令' },
+  { name: '降落', subname: '记录演示就近降落指令' },
+  { name: '低电量', subname: '注入 30% 低电告警' },
+  { name: '应急', subname: emergencyAvailable.value ? '进入异常处置流' : emergencyReason.value, disabled: !emergencyAvailable.value },
+]);
 
 async function advance() {
   const current = order.value;
@@ -196,6 +206,13 @@ function mockEmergency(type: 'return' | 'land') {
     : '降落指令已记录；生产环境接入真机 SDK 后执行就近降落。';
 }
 
+function handleEmergencySelect(event: { item: { name: string } }) {
+  if (event.item.name === '返航') mockEmergency('return');
+  if (event.item.name === '降落') mockEmergency('land');
+  if (event.item.name === '低电量') lowBattery();
+  if (event.item.name === '应急') exception();
+}
+
 function exception() {
   const current = order.value;
   if (!current) return;
@@ -216,16 +233,6 @@ function exception() {
 <style lang="scss" scoped>
 .task-page {
   padding-bottom: calc($sp-10 + 160rpx);
-}
-
-.check {
-  min-height: 88rpx;
-  display: flex;
-  align-items: center;
-  gap: $sp-2;
-  border-bottom: 2rpx solid $line;
-  color: $ink-700;
-  font-size: $fs-body;
 }
 
 .telemetry-strip {

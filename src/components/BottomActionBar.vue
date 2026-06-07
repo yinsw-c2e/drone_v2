@@ -1,9 +1,7 @@
 <template>
   <view class="bar">
-    <button v-if="secondary" class="secondary-button secondary" @click="$emit('secondary')">{{ secondary }}</button>
-    <button :class="[danger ? 'danger-button' : 'primary-button', 'primary']" :disabled="disabled" @click="$emit('primary')">
-      {{ loading ? '处理中' : primary }}
-    </button>
+    <wd-button v-if="secondary" class="secondary" type="info" size="large" plain block @click="$emit('secondary')">{{ secondary }}</wd-button>
+    <wd-button class="primary" :type="danger ? 'error' : 'primary'" size="large" block :disabled="disabled" :loading="loading" @click="$emit('primary')">{{ primary }}</wd-button>
   </view>
 </template>
 
@@ -38,10 +36,5 @@ defineEmits<{ (e: 'primary'): void; (e: 'secondary'): void }>();
 
 .secondary {
   width: 220rpx;
-}
-
-button[disabled] {
-  color: $ink-400;
-  background: $bg-sunken;
 }
 </style>

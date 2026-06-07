@@ -33,8 +33,8 @@
         </view>
       </view>
       <view v-if="primary" class="hero-actions">
-        <button v-if="secondary" class="secondary-button hero-button" @click="$emit('secondary')">{{ secondary }}</button>
-        <button class="primary-button hero-button" @click="$emit('primary')">{{ primary }}</button>
+        <wd-button v-if="secondary" class="hero-button" type="info" plain @click="$emit('secondary')">{{ secondary }}</wd-button>
+        <wd-button class="hero-button" type="primary" @click="$emit('primary')">{{ primary }}</wd-button>
       </view>
     </view>
   </view>

@@ -5,7 +5,7 @@
     <view class="section">
       <NoticeBar v-if="error" tone="danger" :message="error" />
       <NoticeBar v-if="feedback" :message="feedback" />
-      <view v-for="drone in drones" :key="drone.id" class="card drone-card">
+      <wd-card v-for="drone in drones" :key="drone.id" class="drone-card">
         <view class="asset-line">
           <view class="asset-thumb">
             <view class="asset-wing" />
@@ -16,14 +16,14 @@
             <text class="muted">载荷 {{ drone.maxPayloadKg }}kg · 三者险 {{ Math.round(drone.insured.thirdPartyAmount / 10000) }}万</text>
             <text class="muted">{{ droneAction(drone).description }}</text>
           </view>
-          <text :class="['state', drone.status]">{{ droneStatusLabel(drone.status) }}</text>
+          <wd-tag round :type="drone.status === 'busy' ? 'warning' : 'success'">{{ droneStatusLabel(drone.status) }}</wd-tag>
         </view>
         <KpiStrip class="asset-kpis" :items="assetKpis(drone)" />
         <view class="actions">
-          <button v-if="droneAction(drone).secondaryLabel" class="secondary-button" @click="withdraw(drone.id)">{{ droneAction(drone).secondaryLabel }}</button>
-          <button v-if="droneAction(drone).primaryLabel" class="primary-button" @click="deploy(drone.id)">{{ droneAction(drone).primaryLabel }}</button>
+          <wd-button v-if="droneAction(drone).secondaryLabel" type="info" plain block @click="withdraw(drone.id)">{{ droneAction(drone).secondaryLabel }}</wd-button>
+          <wd-button v-if="droneAction(drone).primaryLabel" type="primary" block @click="deploy(drone.id)">{{ droneAction(drone).primaryLabel }}</wd-button>
         </view>
-      </view>
+      </wd-card>
     </view>
   </view>
 </template>
@@ -137,25 +137,6 @@ function withdraw(droneId: string) {
 
 .asset-kpis {
   margin-top: $sp-3;
-}
-
-.state {
-  @include tabular;
-  padding: $sp-1 $sp-2;
-  border-radius: $r-pill;
-  background: $bg-sunken;
-  color: $ink-700;
-  font-size: $fs-cap;
-}
-
-.state.idle {
-  color: $success-ink;
-  background: $success-bg;
-}
-
-.state.busy {
-  color: $warning-ink;
-  background: $warning-bg;
 }
 
 .actions {

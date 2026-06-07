@@ -23,7 +23,7 @@
             <text class="ops-title">空域、订单、运力、理赔实时汇总</text>
             <text class="ops-desc">当前在线运力 {{ metrics.onlineCapacity }}，待处理订单 {{ metrics.orderCount }}，平台收入 {{ income }}。</text>
           </view>
-          <button class="primary-button ops-run" @click="runFlow">跑通</button>
+          <wd-button class="ops-run" type="primary" block @click="runFlow">跑通</wd-button>
         </view>
 
         <view class="metric-grid admin-metrics">
@@ -48,8 +48,8 @@
                 <text class="muted">{{ certStatusName(app.status) }} · {{ fieldSummary(app.fields) }}</text>
               </view>
               <view class="audit-actions">
-                <button class="secondary-button small" @click="rejectApp(app.id)">驳回</button>
-                <button class="primary-button small" @click="approveApp(app.id)">通过</button>
+                <wd-button class="small" type="info" plain @click="rejectApp(app.id)">驳回</wd-button>
+                <wd-button class="small" type="primary" @click="approveApp(app.id)">通过</wd-button>
               </view>
             </view>
             <view v-for="pilot in pilots" :key="pilot.userId" class="audit-line">
@@ -58,8 +58,8 @@
                 <text class="muted">执照 {{ pilot.caacLevel }} · 无犯罪 {{ certStatusName(pilot.noCrimeProof) }}</text>
               </view>
               <view class="audit-actions">
-                <button class="secondary-button small" @click="rejectPilot(pilot.userId)">驳回</button>
-                <button class="primary-button small" @click="approvePilot(pilot.userId)">通过</button>
+                <wd-button class="small" type="info" plain @click="rejectPilot(pilot.userId)">驳回</wd-button>
+                <wd-button class="small" type="primary" @click="approvePilot(pilot.userId)">通过</wd-button>
               </view>
             </view>
           </view>
@@ -75,7 +75,7 @@
               </view>
               <view class="order-actions">
                 <StatusTag :status="item.status" />
-                <button class="secondary-button small" :disabled="orderAction(item).disabled" @click="moveOrder(item.id)">{{ orderAction(item).label }}</button>
+                <wd-button class="small" type="info" plain :disabled="orderAction(item).disabled" @click="moveOrder(item.id)">{{ orderAction(item).label }}</wd-button>
               </view>
             </view>
             <EmptyState v-if="!orders.length" title="暂无订单" desc="点击跑通生成端到端订单" />
@@ -89,7 +89,7 @@
                 <text class="name">{{ item.nickname }}</text>
                 <text class="muted">{{ roleName(item.currentRole) }} · {{ item.blacklisted ? '黑名单' : '正常' }}</text>
               </view>
-              <button :class="[item.blacklisted ? 'primary-button' : 'danger-button', 'small']" @click="toggleRisk(item.id)">{{ item.blacklisted ? '解除' : '拉黑' }}</button>
+              <wd-button class="small" :type="item.blacklisted ? 'primary' : 'error'" @click="toggleRisk(item.id)">{{ item.blacklisted ? '解除' : '拉黑' }}</wd-button>
             </view>
             <view v-for="claim in claims" :key="claim.id" class="audit-line">
               <view>
@@ -98,8 +98,8 @@
                 <text class="muted">{{ claimLiabilityLabel(claim.liability) }}</text>
               </view>
               <view class="audit-actions">
-                <button v-if="claimActionPlan(claim).secondaryLabel" class="secondary-button small" :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrateClaim(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</button>
-                <button class="primary-button small" :disabled="claimActionPlan(claim).disabled" @click="nextClaim(claim.id)">{{ claimActionPlan(claim).label }}</button>
+                <wd-button v-if="claimActionPlan(claim).secondaryLabel" class="small" type="info" plain :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrateClaim(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</wd-button>
+                <wd-button class="small" type="primary" :disabled="claimActionPlan(claim).disabled" @click="nextClaim(claim.id)">{{ claimActionPlan(claim).label }}</wd-button>
               </view>
             </view>
           </view>

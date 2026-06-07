@@ -1,14 +1,14 @@
 <template>
-  <view :class="['admin-data-panel', wide ? 'wide' : '']">
+  <wd-card :class="['admin-data-panel', wide ? 'wide' : '']">
     <view class="panel-head">
       <view>
         <text class="title">{{ title }}</text>
         <text v-if="desc" class="desc">{{ desc }}</text>
       </view>
-      <button v-if="action" class="panel-action" @click="$emit('action')">{{ action }}</button>
+      <wd-button v-if="action" class="panel-action" type="info" plain @click="$emit('action')">{{ action }}</wd-button>
     </view>
     <slot />
-  </view>
+  </wd-card>
 </template>
 
 <script setup lang="ts">
@@ -22,7 +22,6 @@ defineEmits<{ (e: 'action'): void }>();
 
 <style lang="scss" scoped>
 .admin-data-panel {
-  @include card;
   padding: 0;
   overflow: hidden;
 }
@@ -55,17 +54,6 @@ defineEmits<{ (e: 'action'): void }>();
   color: $ink-500;
   font-size: $fs-cap;
   line-height: 1.4;
-}
-
-.panel-action {
-  min-width: 104rpx;
-  min-height: 72rpx;
-  padding: 0 $sp-3;
-  border-radius: $r-sm;
-  background: $color-primary-weak;
-  color: $color-primary;
-  font-size: $fs-sm;
-  font-weight: $fw-semibold;
 }
 
 :deep(.panel-body) {

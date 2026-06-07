@@ -5,7 +5,7 @@
     <view class="section">
       <NoticeBar v-if="error" tone="danger" :message="error" />
       <NoticeBar v-if="feedback" :message="feedback" />
-      <view v-for="unit in capacity" :key="unit.id" class="card capacity-card">
+      <wd-card v-for="unit in capacity" :key="unit.id" class="capacity-card">
         <view class="capacity-line">
           <view class="pool-indicator">
             <view :class="['pool-dot', unit.status]" />
@@ -16,7 +16,7 @@
             <text class="muted">{{ pilotName(unit.pilotId) }} · {{ unit.location.address || '低空货运中心' }}</text>
             <text class="muted">{{ capacityAction(unit.status).description }}</text>
           </view>
-          <text :class="['state', unit.status]">{{ capacityStatusLabel(unit.status) }}</text>
+          <wd-tag round :type="unit.status === 'online' ? 'success' : unit.status === 'busy' ? 'warning' : 'default'">{{ capacityStatusLabel(unit.status) }}</wd-tag>
         </view>
         <view class="pool-strip">
           <text>匹配池</text>
@@ -24,10 +24,10 @@
           <text>{{ pilotName(unit.pilotId) }}</text>
         </view>
         <view class="actions">
-          <button v-if="capacityAction(unit.status).secondaryLabel" class="secondary-button" @click="setOffline(unit.id)">{{ capacityAction(unit.status).secondaryLabel }}</button>
-          <button v-if="capacityAction(unit.status).primaryLabel" class="primary-button" @click="setOnline(unit.id)">{{ capacityAction(unit.status).primaryLabel }}</button>
+          <wd-button v-if="capacityAction(unit.status).secondaryLabel" type="info" plain block @click="setOffline(unit.id)">{{ capacityAction(unit.status).secondaryLabel }}</wd-button>
+          <wd-button v-if="capacityAction(unit.status).primaryLabel" type="primary" block @click="setOnline(unit.id)">{{ capacityAction(unit.status).primaryLabel }}</wd-button>
         </view>
-      </view>
+      </wd-card>
     </view>
   </view>
 </template>
@@ -150,24 +150,6 @@ function setOffline(id: string) {
   font-size: $fs-cap;
   line-height: 1.4;
   font-weight: $fw-semibold;
-}
-
-.state {
-  padding: $sp-1 $sp-2;
-  border-radius: $r-pill;
-  background: $bg-sunken;
-  color: $ink-700;
-  font-size: $fs-cap;
-}
-
-.state.online {
-  background: $success-bg;
-  color: $success-ink;
-}
-
-.state.busy {
-  background: $warning-bg;
-  color: $warning-ink;
 }
 
 .actions {

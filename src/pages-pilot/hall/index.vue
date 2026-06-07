@@ -31,7 +31,7 @@
         </view>
         <button class="primary-button accept" @click="accept(item.order.id)">接单</button>
       </view>
-      <EmptyState v-if="!orders.length" title="暂无可接订单" desc="没有满足距离、载重、合规和预算条件的 Matching 订单" action="生成待接单" @action="createMatching" />
+      <EmptyState v-if="!orders.length" title="暂无可接订单" desc="没有满足距离、载重、合规和预算条件的待匹配订单" action="生成待接单" @action="createMatching" />
     </view>
   </view>
 </template>

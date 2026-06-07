@@ -18,8 +18,16 @@
       compact
     />
 
-    <view class="segmented section">
-      <button v-for="item in strategies" :key="item.value" :class="['seg', orderStore.strategy === item.value ? 'active' : '']" @click="orderStore.strategy = item.value">{{ item.label }}</button>
+    <view class="section strategy-switch" role="tablist">
+      <wd-button
+        v-for="item in strategies"
+        :key="item.label"
+        :type="orderStore.strategy === item.value ? 'primary' : 'info'"
+        :plain="orderStore.strategy !== item.value"
+        @click="changeStrategy(item.value)"
+      >
+        {{ item.label }}
+      </wd-button>
     </view>
 
     <view class="section">
@@ -108,6 +116,10 @@ function select(candidate: MatchCandidate) {
   orderStore.chooseCandidate(candidate);
 }
 
+function changeStrategy(value: DispatchStrategy) {
+  orderStore.strategy = value;
+}
+
 async function confirm() {
   if (!action.value.canConfirm) {
     message.value = action.value.description;
@@ -133,26 +145,6 @@ function goOrder() {
   padding-bottom: calc($sp-10 + 160rpx);
 }
 
-.segmented {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: $sp-2;
-}
-
-.seg {
-  min-height: 88rpx;
-  border-radius: $r-sm;
-  background: $bg-card;
-  color: $ink-700;
-  font-size: $fs-sm;
-  box-shadow: $shadow-1;
-}
-
-.seg.active {
-  color: $on-primary;
-  background: $color-primary;
-}
-
 .breakdown {
   margin-bottom: $sp-4;
 }
@@ -175,6 +167,12 @@ function goOrder() {
   justify-content: space-between;
   color: $ink-700;
   font-size: $fs-sm;
+}
+
+.strategy-switch {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: $sp-2;
 }
 
 </style>

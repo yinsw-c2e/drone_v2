@@ -2,73 +2,78 @@
   <view class="page">
     <PageHeader title="今日吊运态势" :desc="`${user.nickname} · 发单、匹配、追踪、结算一屏掌控`" :role="Role.Client" />
 
-    <RouteHero
-      class="section hero"
-      eyebrow="航线控制台"
-      title="当前吊运航线"
-      :subtitle="nextCopy"
-      :from="order?.from.address ?? '北京低空货运中心'"
-      :to="order?.to.address ?? '顺义临空交付点'"
-      :status="airspaceCopy"
-      :metrics="heroMetrics"
-      primary="发单"
-      secondary="追踪"
-      @primary="goOrder"
-      @secondary="goTrack"
-    />
-
     <KpiStrip class="section" :items="kpis" />
 
-    <IconActionGrid class="section" :actions="quickActions" @select="handleQuick" />
+    <view class="section console-switch" role="tablist">
+      <wd-button
+        v-for="item in paneOptions"
+        :key="item"
+        :type="activePane === item ? 'primary' : 'info'"
+        :plain="activePane !== item"
+        @click="switchPane(item)"
+      >
+        {{ item }}
+      </wd-button>
+    </view>
 
-    <view class="section">
-      <SectionHeader title="进行中订单" desc="快速查看当前阶段、责任方、费用和风险。" action="匹配" @action="goMatch" />
-      <view v-if="order" class="order-card">
-        <view class="between">
-          <text class="order-title">{{ order.cargo.remark || '吊运任务' }}</text>
-          <StatusTag :status="order.status" />
-        </view>
-        <NoticeBar class="order-notice" :message="nextCopy" />
-        <view class="ops-grid">
-          <view>
-            <text class="ops-label">预算</text>
-            <MoneyText :fen="order.budgetCent" size="body" bold />
+    <view class="section console-tabs">
+      <view v-if="activePane === '当前任务'">
+        <wd-card v-if="order" class="console-card">
+          <view class="between">
+            <text class="order-title">{{ order.cargo.remark || '吊运任务' }}</text>
+            <StatusTag :status="order.status" />
           </view>
-          <view>
-            <text class="ops-label">责任方</text>
-            <text class="ops-value">{{ orderPilot }}</text>
+          <NoticeBar class="order-notice" :message="nextCopy" />
+          <wd-cell-group insert>
+            <InfoCell title="起终点" :desc="`${order.from.address} → ${order.to.address}`">
+              <template #side>
+                <wd-tag round type="primary">{{ airspaceCopy }}</wd-tag>
+              </template>
+            </InfoCell>
+            <InfoCell title="预算">
+              <template #side>
+                <MoneyText :fen="order.budgetCent" size="body" bold />
+              </template>
+            </InfoCell>
+            <InfoCell title="责任方" :value="orderPilot" />
+            <InfoCell title="预计状态" :value="etaText" />
+          </wd-cell-group>
+          <wd-steps class="wot-steps" :active="activeStep" align-center>
+            <wd-step v-for="step in homeSteps" :key="step.title" :title="step.title" :description="step.desc" />
+          </wd-steps>
+          <view class="tab-actions">
+            <wd-button type="info" plain block @click="goMatch">匹配</wd-button>
+            <wd-button type="primary" block @click="goTrack">追踪</wd-button>
           </view>
-          <view>
-            <text class="ops-label">预计到达</text>
-            <text class="ops-value">{{ etaText }}</text>
-          </view>
-          <view>
-            <text class="ops-label">空域</text>
-            <text class="ops-value">{{ airspaceCopy }}</text>
-          </view>
-        </view>
-        <StageStepper :steps="homeSteps" />
-        <view class="between summary">
-          <text class="muted">{{ order.from.address }} → {{ order.to.address }}</text>
-          <button class="link" @click="goTrack">追踪</button>
-        </view>
+        </wd-card>
+        <EmptyState v-else title="暂无订单" desc="发起一笔订单即可查看匹配与追踪" action="去发单" @action="goOrder" />
       </view>
-      <EmptyState v-else title="暂无订单" desc="发起一笔订单即可查看匹配与追踪" action="去发单" @action="goOrder" />
+      <view v-else-if="activePane === '快速发单'">
+        <wd-card class="console-card" title="发起低空吊运">
+          <wd-cell-group insert>
+            <InfoCell title="默认起点" desc="北京低空货运中心" />
+            <InfoCell title="默认终点" desc="顺义临空交付点" />
+            <InfoCell title="在线运力" :value="`${availableCount} 台`" />
+          </wd-cell-group>
+          <wd-button class="tab-primary" type="primary" block @click="goOrder">立即发单</wd-button>
+        </wd-card>
+      </view>
+      <view v-else>
+        <IconActionGrid :actions="quickActions" @select="handleQuick" />
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import EmptyState from '@/components/EmptyState.vue';
 import IconActionGrid from '@/components/IconActionGrid.vue';
+import InfoCell from '@/components/InfoCell.vue';
 import KpiStrip from '@/components/KpiStrip.vue';
 import MoneyText from '@/components/MoneyText.vue';
 import NoticeBar from '@/components/NoticeBar.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import RouteHero from '@/components/RouteHero.vue';
-import SectionHeader from '@/components/SectionHeader.vue';
-import StageStepper from '@/components/StageStepper.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import { useOrderStore } from '@/stores/order';
@@ -77,6 +82,8 @@ import { repo } from '@/utils/repo';
 
 const userStore = useUserStore();
 const orderStore = useOrderStore();
+const paneOptions = ['当前任务', '快速发单', '资产能力'];
+const activePane = ref(orderStore.activeOrder ? paneOptions[0] : paneOptions[1]);
 const user = computed(() => userStore.user.currentRole === Role.Client ? userStore.user : userStore.loginAs(Role.Client));
 const order = computed(() => orderStore.activeOrder);
 const credit = computed(() => repo.credits.find(user.value.id));
@@ -86,34 +93,6 @@ const kpis = computed(() => [
   { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
   { label: '预算', value: order.value ? `¥${(order.value.budgetCent / 100).toFixed(0)}` : '--', hint: '当前单', tone: 'neutral' as const },
 ]);
-const heroMetrics = computed(() => {
-  if (!order.value) {
-    return [
-      { label: '航线状态', value: '待发单', hint: '创建需求', tone: 'neutral' as const },
-      { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
-      { label: '预算', value: '--', hint: '未生成', tone: 'neutral' as const },
-    ];
-  }
-  if (order.value.status === 'settled' || order.value.status === 'completed') {
-    return [
-      { label: '送达状态', value: '已送达', hint: order.value.status === 'settled' ? '可评价' : '待结算', tone: 'success' as const },
-      { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '本单', tone: 'neutral' as const },
-      { label: '空域状态', value: airspaceCopy.value, hint: '留痕', tone: 'info' as const },
-    ];
-  }
-  if (order.value.status === 'inflight') {
-    return [
-      { label: '飞行状态', value: '飞行中', hint: '追踪页查看遥测', tone: 'info' as const },
-      { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '本单', tone: 'neutral' as const },
-      { label: '电量', value: '91%', hint: '演示遥测', tone: 'success' as const },
-    ];
-  }
-  return [
-    { label: '下一步', value: etaText.value, hint: '按主操作推进', tone: 'info' as const },
-    { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '预计', tone: 'neutral' as const },
-    { label: '空域状态', value: airspaceCopy.value, hint: '审批节点', tone: airspaceCopy.value === '需复核' ? 'warning' as const : 'info' as const },
-  ];
-});
 const quickActions = computed(() => [
   { key: 'auth', title: '认证', desc: '实名与货物声明', symbol: '证', status: '可补充', tone: 'info' as const },
   { key: 'credit', title: '信用', desc: `${credit.value?.level ?? '待评'}级雷达`, symbol: '信', status: '实时', tone: 'success' as const },
@@ -175,6 +154,7 @@ const homeSteps = computed(() => {
     };
   });
 });
+const activeStep = computed(() => Math.max(0, homeSteps.value.findIndex((step) => step.state === 'current')));
 
 function goOrder() {
   uni.navigateTo({ url: '/pages-client/order/index' });
@@ -206,65 +186,50 @@ function handleQuick(key: string) {
   if (key === 'credit') goCredit();
   if (key === 'insurance') goInsurance();
 }
+
+function switchPane(value: string) {
+  activePane.value = value;
+}
 </script>
 
 <style lang="scss" scoped>
-.order-card {
-  margin-top: $sp-3;
-  @include card;
-  border-left: 8rpx solid $color-primary;
-}
-
 .order-title {
   font-size: $fs-h3;
   font-weight: $fw-semibold;
   color: $ink-900;
 }
 
-.summary {
-  margin-top: $sp-3;
-  padding-top: $sp-3;
-  border-top: 2rpx solid $line;
-  gap: $sp-3;
-}
-
 .order-notice {
   margin: $sp-3 0;
 }
 
-.ops-grid {
+.console-switch {
+  margin-bottom: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $sp-2;
-  margin: $sp-3 0;
 }
 
-.ops-grid > view {
-  padding: $sp-3;
-  border-radius: $r-md;
-  background: $bg-sunken;
+.console-tabs {
+  margin-top: $sp-3;
 }
 
-.ops-label,
-.ops-value {
-  display: block;
+.console-card {
+  margin-top: $sp-3;
 }
 
-.ops-label {
-  color: $ink-500;
-  font-size: $fs-cap;
-  line-height: 1.4;
+.wot-steps {
+  margin-top: $sp-4;
 }
 
-.ops-value {
-  margin-top: $sp-1;
-  color: $ink-900;
-  font-size: $fs-sm;
-  line-height: 1.45;
-  font-weight: $fw-semibold;
+.tab-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $sp-2;
+  margin-top: $sp-4;
 }
 
-.hero {
+.tab-primary {
   margin-top: $sp-4;
 }
 </style>

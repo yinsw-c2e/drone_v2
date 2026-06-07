@@ -1,16 +1,16 @@
 <template>
-  <view :class="['command-panel', tone]">
+  <wd-card :class="['command-panel', tone]">
     <view class="copy">
       <text v-if="eyebrow" class="eyebrow">{{ eyebrow }}</text>
       <text class="title">{{ title }}</text>
       <text v-if="desc" class="desc">{{ desc }}</text>
     </view>
     <view class="actions">
-      <button v-if="secondary" class="secondary-button panel-button" @click="$emit('secondary')">{{ secondary }}</button>
-      <button class="primary-button panel-button" :disabled="disabled" @click="$emit('primary')">{{ primary }}</button>
+      <wd-button v-if="secondary" type="info" plain block @click="$emit('secondary')">{{ secondary }}</wd-button>
+      <wd-button type="primary" block :disabled="disabled" @click="$emit('primary')">{{ primary }}</wd-button>
     </view>
     <text v-if="reason" class="reason">{{ reason }}</text>
-  </view>
+  </wd-card>
 </template>
 
 <script setup lang="ts">
@@ -35,7 +35,6 @@ defineEmits<{ (e: 'primary'): void; (e: 'secondary'): void }>();
 
 <style lang="scss" scoped>
 .command-panel {
-  @include card;
   display: grid;
   gap: $sp-3;
   border-left: 8rpx solid $color-primary;
