@@ -62,9 +62,13 @@ export const useOrderStore = defineStore('order', {
     async confirmSelected() {
       const order = this.activeOrder ?? this.ensureOrder();
       const candidate = this.selectedCandidate ?? this.candidates[0];
-      if (!candidate) throw new Error('没有可用运力');
+      if (!candidate) {
+        this.error = '当前没有在线合规运力，请等待机主投放或返回调整预算/时间';
+        throw new Error(this.error);
+      }
       this.loading = true;
       try {
+        this.error = '';
         await providers.insurance.quote(order.id, order.cargo.valueCent);
         await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
         const confirmed = confirmCandidate(order.id, candidate);

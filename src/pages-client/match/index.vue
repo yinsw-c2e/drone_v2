@@ -3,7 +3,7 @@
     <view class="between">
       <view>
         <text class="title">为你匹配到 {{ candidates.length }} 个方案</text>
-        <text class="desc">过滤顺序：距离、载重、适航、保险、预约、预算。</text>
+        <text class="desc">{{ action.description }}</text>
       </view>
       <StatusTag v-if="order" :status="order.status" />
     </view>
@@ -21,7 +21,8 @@
         :selected="selectedId === candidate.capacityId"
         @select="select"
       />
-      <EmptyState v-if="!candidates.length" title="当前无可用运力" desc="可调高预算或等待机主投放运力" action="返回发单" @action="goOrder" />
+      <EmptyState v-if="!candidates.length" title="当前无可用运力" desc="当前没有在线合规运力，请等待机主投放或返回调整预算/时间" action="返回修改订单" @action="goOrder" />
+      <text v-if="message" class="message">{{ message }}</text>
     </view>
 
     <view v-if="selected" class="card section breakdown">
@@ -32,12 +33,12 @@
       <view class="line"><text>保险</text><MoneyText :fen="selected.priceBreakdown.insuranceCent" /></view>
     </view>
 
-    <BottomActionBar primary="确认下单" secondary="发单" :disabled="!selected" :loading="orderStore.loading" @secondary="goOrder" @primary="confirm" />
+    <BottomActionBar :primary="action.primaryLabel" :secondary="action.secondaryLabel" :loading="orderStore.loading" @secondary="goOrder" @primary="confirm" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import BottomActionBar from '@/components/BottomActionBar.vue';
 import EmptyState from '@/components/EmptyState.vue';
 import MatchCandidateCard from '@/components/MatchCandidateCard.vue';
@@ -45,14 +46,17 @@ import MoneyText from '@/components/MoneyText.vue';
 import StatusTag from '@/components/StatusTag.vue';
 import { DispatchStrategy } from '@/models';
 import type { MatchCandidate } from '@/models';
+import { matchConfirmAction } from '@/services/action-plans';
 import { useOrderStore } from '@/stores/order';
 import { repo } from '@/utils/repo';
 
 const orderStore = useOrderStore();
+const message = ref('');
 const order = computed(() => orderStore.ensureOrder());
 const candidates = computed(() => orderStore.candidates);
 const selectedId = computed(() => orderStore.selectedCapacityId || candidates.value[0]?.capacityId || '');
 const selected = computed(() => candidates.value.find((c) => c.capacityId === selectedId.value));
+const action = computed(() => matchConfirmAction(candidates.value.length, Boolean(selected.value)));
 const strategies = [
   { label: '最近', value: DispatchStrategy.Nearest },
   { label: '利润', value: DispatchStrategy.MaxProfit },
@@ -65,13 +69,23 @@ function pilotName(id: string) {
 }
 
 function select(candidate: MatchCandidate) {
+  message.value = '';
   orderStore.chooseCandidate(candidate);
 }
 
 async function confirm() {
-  if (selected.value) orderStore.chooseCandidate(selected.value);
-  await orderStore.confirmSelected();
-  uni.navigateTo({ url: '/pages-client/track/index' });
+  if (!action.value.canConfirm) {
+    message.value = action.value.description;
+    return;
+  }
+  try {
+    message.value = '';
+    if (selected.value) orderStore.chooseCandidate(selected.value);
+    await orderStore.confirmSelected();
+    uni.navigateTo({ url: '/pages-client/track/index' });
+  } catch (e) {
+    message.value = e instanceof Error ? e.message : '确认下单失败，请重新选择方案或返回修改订单。';
+  }
 }
 
 function goOrder() {
@@ -121,6 +135,17 @@ function goOrder() {
 
 .breakdown {
   margin-bottom: $sp-4;
+}
+
+.message {
+  display: block;
+  margin-top: $sp-3;
+  padding: $sp-2;
+  border-radius: $r-sm;
+  background: $warning-bg;
+  color: $warning-ink;
+  font-size: $fs-sm;
+  line-height: 1.45;
 }
 
 .line {

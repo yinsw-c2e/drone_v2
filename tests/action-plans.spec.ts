@@ -7,6 +7,7 @@ import {
   canTriggerEmergency,
   claimAction,
   emergencyClosedReason,
+  matchConfirmAction,
   ownerCapacityAction,
   ownerDroneAction,
   reviewSettlementAction,
@@ -83,5 +84,13 @@ describe('action plans', () => {
     expect(ownerCapacityAction(CapacityStatus.Offline).primaryLabel).toBe('投放');
     expect(ownerCapacityAction(CapacityStatus.Online).secondaryLabel).toBe('撤回');
     expect(ownerCapacityAction(CapacityStatus.Busy).description).toContain('忙碌');
+  });
+
+  it('0 候选匹配页不允许确认下单并给出明确动作', () => {
+    const action = matchConfirmAction(0, false);
+    expect(action.canConfirm).toBe(false);
+    expect(action.primaryLabel).toBe('等待运力');
+    expect(action.secondaryLabel).toBe('修改订单');
+    expect(action.description).toContain('当前没有在线合规运力');
   });
 });

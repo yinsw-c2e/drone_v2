@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { AuditStatus, CargoType, NotificationType, OrderStatus, PaymentMode } from '@/models';
+import { AuditStatus, CapacityStatus, CargoType, NotificationType, OrderStatus, PaymentMode } from '@/models';
 import { resetDB } from '@/utils/db';
 import { repo } from '@/utils/repo';
 import { computeCredit } from '@/utils/credit';
@@ -226,4 +226,22 @@ it('确认订单时 payment provider 使用订单选择的支付模式', async (
   await store.confirmSelected();
   expect(spy).toHaveBeenCalledWith(order.id, candidate.quoteCent, PaymentMode.Installment);
   expect(repo.auditLogs.where((log) => log.targetId === order.id && log.detail.includes(PaymentMode.Installment))).toHaveLength(1);
+});
+
+it('无匹配候选时确认下单给出业务错误且不调用支付', async () => {
+  repo.capacity.all().forEach((unit) => repo.capacity.update(unit.id, { status: CapacityStatus.Offline }));
+  const store = useOrderStore();
+  store.createOrderDraft({
+    clientId: repo.clients.all()[0].userId,
+    cargoType: CargoType.Normal,
+    weightKg: 5,
+    valueCent: 50000,
+    budgetCent: 300000,
+    insured: false,
+    shockProof: false,
+  });
+  const spy = vi.spyOn(providers.payment, 'prepay');
+  await expect(store.confirmSelected()).rejects.toThrow('当前没有在线合规运力');
+  expect(spy).not.toHaveBeenCalled();
+  expect(store.error).toContain('当前没有在线合规运力');
 });

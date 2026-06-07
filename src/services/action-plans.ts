@@ -32,6 +32,13 @@ export interface OwnerResourceAction {
   description: string;
 }
 
+export interface MatchConfirmAction {
+  primaryLabel: string;
+  secondaryLabel: string;
+  canConfirm: boolean;
+  description: string;
+}
+
 export function isOrderTerminal(status: OrderStatus): boolean {
   return status === OrderStatus.Settled || status === OrderStatus.Cancelled || status === OrderStatus.Exception;
 }
@@ -91,6 +98,31 @@ export function reviewSettlementAction(order?: Order): ReviewSettlementAction {
     return { secondaryLabel: '', description: '结算已完成，可直接提交评价。', canFinish: false };
   }
   return { secondaryLabel: '完成结算', description: '订单尚未结算，可先生成结算分账。', canFinish: true };
+}
+
+export function matchConfirmAction(candidateCount: number, hasSelected: boolean): MatchConfirmAction {
+  if (candidateCount === 0) {
+    return {
+      primaryLabel: '等待运力',
+      secondaryLabel: '修改订单',
+      canConfirm: false,
+      description: '当前没有在线合规运力，请等待机主投放或返回调整预算/时间。',
+    };
+  }
+  if (!hasSelected) {
+    return {
+      primaryLabel: '请选择方案',
+      secondaryLabel: '修改订单',
+      canConfirm: false,
+      description: '请选择一个匹配方案后再确认下单。',
+    };
+  }
+  return {
+    primaryLabel: '确认下单',
+    secondaryLabel: '发单',
+    canConfirm: true,
+    description: '已选中推荐方案，可确认下单并进入追踪。',
+  };
 }
 
 export function claimAction(claim: Claim): ClaimAction {

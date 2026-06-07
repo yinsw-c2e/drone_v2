@@ -73,7 +73,13 @@ const checklist = reactive([
   { key: 'route', label: '空域批复与航线围栏确认', done: true },
   { key: 'insurance', label: '三者险与货物险有效', done: true },
 ]);
-const order = computed(() => orderStore.activeOrder ?? orderStore.ensureOrder());
+const order = computed(() => {
+  const active = orderStore.activeOrder;
+  if (active?.pilotId) return active;
+  const latestAssigned = repo.orders.all().reverse().find((item) => item.pilotId);
+  if (latestAssigned) return latestAssigned;
+  return active ?? orderStore.ensureOrder();
+});
 const latest = computed(() => telemetryStore.latest);
 const allChecked = computed(() => checklist.every((item) => item.done));
 const checkedCount = computed(() => checklist.filter((item) => item.done).length);
@@ -113,6 +119,7 @@ async function advance() {
     feedback.value = '';
     const before = current.status;
     orderStore.loading = true;
+    orderStore.activeOrderId = current.id;
     const next = await orderStore.advance();
     if (next.status === OrderStatus.InFlight) telemetryStore.start(next.id);
     if (next.status === before) {
