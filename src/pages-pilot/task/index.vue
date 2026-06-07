@@ -153,7 +153,8 @@ function exception() {
     transition(current.id, OrderStatus.Exception, { actor: Role.Pilot, note: '飞手触发应急' });
     feedback.value = '订单已进入异常状态，后台和业主端可同步看到。';
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '应急流转失败';
+    const message = e instanceof Error ? e.message : '';
+    error.value = message.includes('非法流转') ? '当前阶段不能发起应急处置，请查看阶段说明或联系后台。' : '应急处置失败，请联系后台处理。';
   }
 }
 </script>

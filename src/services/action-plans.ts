@@ -1,5 +1,6 @@
 import { CapacityStatus, OrderStatus } from '@/models';
 import type { AirspaceRequest, Claim, Drone, Order } from '@/models';
+import { canTransition } from '@/utils/order-machine';
 
 export interface ButtonAction {
   label: string;
@@ -36,15 +37,16 @@ export function isOrderTerminal(status: OrderStatus): boolean {
 }
 
 export function canTriggerEmergency(status: OrderStatus): boolean {
-  return !isOrderTerminal(status) && status !== OrderStatus.Completed;
+  return canTransition(status, OrderStatus.Exception);
 }
 
 export function emergencyClosedReason(status: OrderStatus): string {
+  if (status === OrderStatus.Confirmed) return '任务尚未进入飞行执行阶段，请先提交空域申请；如需取消请联系后台。';
   if (status === OrderStatus.Settled) return '任务已结算，应急处置已关闭；如有纠纷请走理赔或客服。';
   if (status === OrderStatus.Cancelled) return '订单已取消，应急处置已关闭。';
   if (status === OrderStatus.Exception) return '订单已处于异常处理中，请等待后台处置。';
   if (status === OrderStatus.Completed) return '任务已完成，飞行应急处置已关闭；如有货损请走理赔。';
-  return '';
+  return canTriggerEmergency(status) ? '' : '当前阶段不能发起应急处置，请查看阶段说明或联系后台。';
 }
 
 export function adminOrderAction(order: Order, airspace?: AirspaceRequest): AdminOrderAction {

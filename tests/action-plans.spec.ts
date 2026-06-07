@@ -49,6 +49,8 @@ describe('action plans', () => {
   it('飞手终态关闭应急处置并显示业务解释', () => {
     expect(canTriggerEmergency(OrderStatus.Settled)).toBe(false);
     expect(emergencyClosedReason(OrderStatus.Settled)).toContain('应急处置已关闭');
+    expect(canTriggerEmergency(OrderStatus.Confirmed)).toBe(false);
+    expect(emergencyClosedReason(OrderStatus.Confirmed)).toContain('请先提交空域申请');
     expect(canTriggerEmergency(OrderStatus.InFlight)).toBe(true);
   });
 
