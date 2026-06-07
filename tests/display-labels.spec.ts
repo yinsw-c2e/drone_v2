@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
-import { auditActionLabel, auditDetailLabel, auditLogDetailLabel, auditStatusLabel, capacityStatusLabel, cargoTypeLabel, claimStatusLabel, droneDisplayName, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, paymentModeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
+import { auditActionLabel, auditDetailLabel, auditLogDetailLabel, auditStatusLabel, capacityHeatmapLabel, capacityStatusLabel, cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, droneDisplayName, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, orderDisplayTitle, paymentModeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
 
 describe('display labels', () => {
   it('maps role and cargo enums to Chinese business labels', () => {
@@ -54,5 +54,14 @@ describe('display labels', () => {
     expect(auditLogDetailLabel({ id: 'log', at: '', action: AuditAction.Payment, actorId: 'u', actorRole: Role.Client, targetType: 'order', detail: '理赔流转到 paid' })).toBe('理赔流转到 已赔付');
     expect(droneDisplayName({ brand: 'Other', model: 'Cheap' })).toBe('低保额轻载机 A8');
     expect(droneDisplayName({ brand: 'Other', model: 'DJI FlyCart 30' })).toBe('DJI FlyCart 30');
+  });
+
+  it('sanitizes legacy claim liability, order fallback and heatmap labels', () => {
+    expect(claimLiabilityLabel('平台仲裁 + Mock 保险定损')).toBe('平台仲裁 + 演示保险定损');
+    expect(claimLiabilityLabel('o_legacy_1234')).toBe('关联订单已记录');
+    expect(claimLiabilityLabel()).toBe('关联订单已记录，等待责任认定');
+    expect(orderDisplayTitle({ cargo: { type: CargoType.Normal, weightKg: 1, valueCent: 100, photos: [] }, from: { lng: 1, lat: 2, address: '北京低空货运中心' } })).toBe('北京低空货运中心订单');
+    expect(capacityHeatmapLabel({ id: 'cap_Uhm90Vqv', location: { lng: 1, lat: 2 } }, 0)).toBe('合规运力1');
+    expect(capacityHeatmapLabel({ id: 'cap1', location: { lng: 1, lat: 2 } }, 1, { brand: 'DJI', model: 'FlyCart 30' }, { nickname: '飞手1' })).toBe('DJI FlyCart 30 · 飞手1');
   });
 });

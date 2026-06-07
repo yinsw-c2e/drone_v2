@@ -36,7 +36,7 @@
         <view>
           <text class="name">{{ claimStatusLabel(claim.status) }}</text>
           <text class="muted">{{ claimActionPlan(claim).description }}</text>
-          <text class="muted">{{ claim.liability || '等待责任认定' }}</text>
+          <text class="muted">{{ claimLiabilityLabel(claim.liability) }}</text>
         </view>
         <view class="claim-actions">
           <button v-if="claimActionPlan(claim).secondaryLabel" class="secondary-button small" :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrate(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</button>
@@ -59,7 +59,7 @@ import SectionHeader from '@/components/SectionHeader.vue';
 import { Role } from '@/models';
 import type { Claim } from '@/models';
 import { claimAction } from '@/services/action-plans';
-import { cargoTypeLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
+import { cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
 import { INSURANCE_PLANS } from '@/stores/config-data';
 import { useOrderStore } from '@/stores/order';
 import { advanceClaim, arbitrationClaim, createClaim } from '@/services/app-flow';

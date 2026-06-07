@@ -11,6 +11,7 @@ import {
   advanceClaim,
   decideMockAirspace,
   deployOwnerDrone,
+  analyticsReport,
   approveCertification,
   createClaim,
   matchingOrdersForPilot,
@@ -244,4 +245,11 @@ it('无匹配候选时确认下单给出业务错误且不调用支付', async (
   await expect(store.confirmSelected()).rejects.toThrow('当前没有在线合规运力');
   expect(spy).not.toHaveBeenCalled();
   expect(store.error).toContain('当前没有在线合规运力');
+});
+
+it('后台运力热力图只返回业务标签，不暴露内部运力编号', () => {
+  repo.capacity.insert({ id: 'cap_Uhm90Vqv', pilotId: 'u_p1', droneId: 'd1', ownerId: 'u_o1', location: { lng: 116.41, lat: 39.91 }, status: CapacityStatus.Online });
+  const visibleText = analyticsReport().heatmap.map((point) => point.label).join(' ');
+  expect(visibleText).toContain('DJI FlyCart 30');
+  expect(visibleText).not.toMatch(/\bcap[_A-Za-z0-9-]*\b/);
 });

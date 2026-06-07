@@ -2,7 +2,7 @@ import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, 
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review } from '@/models';
 import { createCapacity, createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
-import { cargoTypeLabel, claimStatusLabel, paymentModeLabel } from '@/services/display-labels';
+import { capacityHeatmapLabel, cargoTypeLabel, claimStatusLabel, paymentModeLabel } from '@/services/display-labels';
 import { INSURANCE_PLANS, PRICE_CONFIG } from '@/stores/config-data';
 import { match } from '@/utils/match';
 import { notify } from '@/utils/notify';
@@ -433,7 +433,13 @@ export function analyticsReport() {
     completed: Math.max(completed.length - index, 0),
     incomeCent: Math.max(revenue - index * 5000, 0),
   }));
-  const heatmap = repo.capacity.all().map((c) => ({ id: c.id, lng: c.location.lng, lat: c.location.lat, status: c.status }));
+  const heatmap = repo.capacity.all().map((c, index) => ({
+    id: c.id,
+    label: capacityHeatmapLabel(c, index, repo.drones.find(c.droneId), repo.users.find(c.pilotId)),
+    lng: c.location.lng,
+    lat: c.location.lat,
+    status: c.status,
+  }));
   const suggestions = [
     orders.length === 0 ? '冷启动阶段：优先生成示范订单校验三端链路' : '',
     repo.capacity.where((c) => c.status === 'online').length < 2 ? '在线运力不足：建议机主投放更多合规设备' : '',

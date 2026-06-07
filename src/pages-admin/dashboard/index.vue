@@ -52,7 +52,7 @@
           <SectionHeader title="订单管理" desc="每行只显示当前可用动作，终态不再推进。" />
           <view v-for="item in orders" :key="item.id" class="order-line">
             <view>
-              <text class="name">{{ item.cargo.remark || item.id }}</text>
+              <text class="name">{{ orderDisplayTitle(item) }}</text>
               <text class="muted">{{ item.from.address }} → {{ item.to.address }}</text>
               <text class="muted">{{ orderAction(item).description }}</text>
             </view>
@@ -77,7 +77,7 @@
             <view>
               <text class="name">理赔 {{ claimStatusName(claim.status) }}</text>
               <text class="muted">{{ claimActionPlan(claim).description }}</text>
-              <text class="muted">{{ claim.liability || claim.orderId }}</text>
+              <text class="muted">{{ claimLiabilityLabel(claim.liability) }}</text>
             </view>
             <view class="audit-actions">
               <button v-if="claimActionPlan(claim).secondaryLabel" class="secondary-button small" :disabled="claimActionPlan(claim).secondaryDisabled" @click="arbitrateClaim(claim.id)">{{ claimActionPlan(claim).secondaryLabel }}</button>
@@ -99,7 +99,7 @@
             <text class="muted">订单 {{ row.orders }} · 完成 {{ row.completed }} · 收入 ¥{{ (row.incomeCent / 100).toFixed(2) }}</text>
           </view>
           <view class="heatmap">
-            <text v-for="point in report.heatmap" :key="point.id" :class="['heat-dot', point.status]">{{ point.id }}</text>
+            <text v-for="point in report.heatmap" :key="point.id" :class="['heat-dot', point.status]">{{ point.label }}</text>
           </view>
           <text v-for="tip in report.suggestions" :key="tip" class="tip">{{ tip }}</text>
         </view>
@@ -127,7 +127,7 @@ import StatusTag from '@/components/StatusTag.vue';
 import { Role } from '@/models';
 import type { Claim, Order } from '@/models';
 import { adminOrderAction, adminRunFlowAction, claimAction } from '@/services/action-plans';
-import { auditActionLabel, auditLogDetailLabel, auditStatusLabel, claimStatusLabel, roleLabel } from '@/services/display-labels';
+import { auditActionLabel, auditLogDetailLabel, auditStatusLabel, claimLiabilityLabel, claimStatusLabel, orderDisplayTitle, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { advanceClaim, advanceOrder, analyticsReport, approveCertification, approvePilotQualification, arbitrationClaim, dashboardMetrics, decideMockAirspace, rejectCertification, rejectPilotQualification, setUserBlacklist } from '@/services/app-flow';

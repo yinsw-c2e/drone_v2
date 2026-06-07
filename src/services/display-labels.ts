@@ -1,5 +1,5 @@
 import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
-import type { AirspaceStatus, AuditLog, Claim, Drone, InsurancePolicy } from '@/models';
+import type { AirspaceStatus, AuditLog, CapacityUnit, Claim, Drone, InsurancePolicy, Order, User } from '@/models';
 
 export function roleLabel(role: Role | string) {
   const map: Record<string, string> = {
@@ -129,6 +129,7 @@ export function auditActionLabel(action: AuditAction | string) {
 
 export function auditDetailLabel(detail: string) {
   return detail
+    .replace(/Mock 保险定损/g, '演示保险定损')
     .replace(/Mock provider/g, '演示支付通道')
     .replace(/Mock 空域审批/g, '演示环境空域审批')
     .replace(/mock-insurance/g, '演示保险服务')
@@ -161,4 +162,33 @@ export function droneDisplayName(drone: Pick<Drone, 'brand' | 'model'>) {
     .replace(/^DJI FlyCart 30$/i, 'DJI FlyCart 30');
   if (drone.brand === 'Other') return cleanModel;
   return `${drone.brand} ${cleanModel}`;
+}
+
+export function claimLiabilityLabel(value?: string) {
+  if (!value) return '关联订单已记录，等待责任认定';
+  return auditDetailLabel(value)
+    .replace(/\bcap[_A-Za-z0-9-]*\b/g, '关联运力已记录')
+    .replace(/\b[ocp]_[A-Za-z0-9_-]{4,}\b/g, '关联订单已记录');
+}
+
+export function orderDisplayTitle(order: Pick<Order, 'cargo' | 'from'>) {
+  const remark = order.cargo.remark?.trim();
+  if (remark) return remark;
+  const address = order.from.address?.trim();
+  if (address) return `${address}订单`;
+  return '低空吊运订单';
+}
+
+export function capacityHeatmapLabel(
+  unit: Pick<CapacityUnit, 'id' | 'location'>,
+  index: number,
+  drone?: Pick<Drone, 'brand' | 'model'>,
+  pilot?: Pick<User, 'nickname'>,
+) {
+  if (drone) {
+    return `${droneDisplayName(drone)} · ${pilot?.nickname ?? `飞手${index + 1}`}`;
+  }
+  const area = unit.location.address?.trim();
+  if (area) return `${area}运力`;
+  return `合规运力${index + 1}`;
 }
