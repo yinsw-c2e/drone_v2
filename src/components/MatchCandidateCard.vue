@@ -10,6 +10,7 @@
           <text class="name">{{ droneLabel || '合规运力' }}</text>
           <text class="pilot">{{ pilotName || '认证飞手' }} · 信用 {{ candidate.creditScore }}</text>
         </view>
+        <wd-tag class="select-tag" round :type="selected ? 'success' : 'primary'">{{ selected ? '已选中' : '点击选择' }}</wd-tag>
       </view>
       <view class="price">
         <MoneyText :fen="candidate.quoteCent" size="metric" bold />
@@ -36,9 +37,8 @@
       <wd-tag round type="success">责任险校验</wd-tag>
     </view>
     <view class="reasons">
-      <wd-tag v-for="(r, i) in candidate.reasons.slice(0, 4)" :key="i" round>{{ r }}</wd-tag>
+      <wd-tag v-for="(r, i) in candidate.reasons.slice(0, 3)" :key="i" round>{{ r }}</wd-tag>
     </view>
-    <wd-button class="choose" :type="selected ? 'success' : 'primary'" block @click.stop="$emit('select', candidate)">{{ selected ? '已选中' : '选择方案' }}</wd-button>
   </wd-card>
 </template>
 <script setup lang="ts">
@@ -70,6 +70,7 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   display: flex;
   gap: $sp-3;
   min-width: 0;
+  flex: 1;
 }
 
 .asset-thumb {
@@ -109,6 +110,7 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   flex-direction: column;
   gap: $sp-1;
   min-width: 0;
+  flex: 1;
 }
 
 .name {
@@ -133,6 +135,11 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   display: block;
   color: $ink-500;
   font-size: $fs-cap;
+}
+
+.select-tag {
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .dispatch-strip {
@@ -176,10 +183,6 @@ defineEmits<{ (e: 'select', c: MatchCandidate): void }>();
   flex-wrap: wrap;
   gap: $sp-1;
   margin-top: $sp-2;
-}
-
-.choose {
-  margin-top: $sp-3;
 }
 
 </style>

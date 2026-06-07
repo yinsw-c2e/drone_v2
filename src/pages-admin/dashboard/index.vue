@@ -65,16 +65,29 @@
           </view>
         </AdminDataPanel>
 
-        <AdminDataPanel title="订单管理" desc="每行只显示当前可用动作，终态不再推进。">
-          <view class="panel-body table-list">
+        <AdminDataPanel class="admin-wide" title="订单管理" desc="每行只显示当前可用动作，终态不再推进。">
+          <view class="panel-body table-list order-board">
+            <view class="order-table-head">
+              <text>订单</text>
+              <text>航线</text>
+              <text>阶段说明</text>
+              <text>操作</text>
+            </view>
             <view v-for="item in orders" :key="item.id" class="order-line">
-              <view>
+              <view class="order-summary">
                 <text class="name">{{ orderDisplayTitle(item) }}</text>
-                <text class="muted">{{ item.from.address }} → {{ item.to.address }}</text>
+                <text class="muted">预算 ¥{{ (item.budgetCent / 100).toFixed(0) }} · {{ item.cargo.weightKg }}kg</text>
+              </view>
+              <view class="order-route-cell">
+                <text class="muted">{{ item.from.address }}</text>
+                <text class="route-arrow">→</text>
+                <text class="muted">{{ item.to.address }}</text>
+              </view>
+              <view class="order-stage">
+                <StatusTag :status="item.status" />
                 <text class="muted">{{ orderAction(item).description }}</text>
               </view>
               <view class="order-actions">
-                <StatusTag :status="item.status" />
                 <wd-button class="small" type="info" plain :disabled="orderAction(item).disabled" @click="moveOrder(item.id)">{{ orderAction(item).label }}</wd-button>
               </view>
             </view>
@@ -465,10 +478,9 @@ async function runFlow() {
 
 .order-actions {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(176rpx, 1fr);
+  display: flex;
   align-items: center;
-  gap: $sp-2;
+  justify-content: flex-end;
 }
 
 .message {
@@ -500,6 +512,37 @@ async function runFlow() {
 
 .risk-line > .small {
   flex: 1 1 100%;
+}
+
+.order-table-head {
+  display: none;
+}
+
+.order-board {
+  padding-top: $sp-2;
+  padding-bottom: $sp-2;
+}
+
+.order-summary,
+.order-route-cell,
+.order-stage {
+  min-width: 0;
+}
+
+.order-route-cell {
+  display: grid;
+  gap: $sp-1;
+}
+
+.route-arrow {
+  color: $color-primary;
+  font-size: $fs-sm;
+  font-weight: $fw-bold;
+}
+
+.order-stage {
+  display: grid;
+  gap: $sp-1;
 }
 
 .report-grid {
@@ -595,7 +638,7 @@ async function runFlow() {
 @media screen and (min-width: 900px) {
   .admin-shell {
     display: grid;
-    grid-template-columns: 240rpx minmax(0, 1fr);
+    grid-template-columns: 280rpx minmax(0, 1fr);
     gap: $sp-4;
     align-items: start;
   }
@@ -613,7 +656,7 @@ async function runFlow() {
   }
 
   .ops-header {
-    grid-template-columns: 320rpx minmax(0, 1fr) 160rpx;
+    grid-template-columns: 360rpx minmax(0, 1fr) 180rpx;
   }
 
   .ops-run {
@@ -634,6 +677,25 @@ async function runFlow() {
     padding: 0;
   }
 
+  .order-table-head {
+    min-height: 72rpx;
+    padding: 0 $sp-3;
+    display: grid;
+    grid-template-columns: minmax(240rpx, 1fr) minmax(340rpx, 1.35fr) minmax(300rpx, 1.1fr) 176rpx;
+    gap: $sp-4;
+    align-items: center;
+    border-bottom: 2rpx solid $line;
+    color: $ink-500;
+    font-size: $fs-cap;
+    font-weight: $fw-semibold;
+  }
+
+  .order-line {
+    grid-template-columns: minmax(240rpx, 1fr) minmax(340rpx, 1.35fr) minmax(300rpx, 1.1fr) 176rpx;
+    gap: $sp-4;
+    padding: $sp-3;
+  }
+
   .audit-line > view:first-child,
   .order-line > view:first-child {
     flex-basis: auto;
@@ -645,9 +707,19 @@ async function runFlow() {
     display: flex;
   }
 
+  .order-route-cell {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .order-stage {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
   .small {
-    width: 128rpx;
-    min-width: 128rpx;
+    width: 152rpx;
+    min-width: 152rpx;
   }
 
   .risk-line > .small {
