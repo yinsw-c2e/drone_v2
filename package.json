@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:h5": "uni",
+    "dev:h5": "uni --host 0.0.0.0",
     "dev:mp-weixin": "uni -p mp-weixin",
     "type-check": "vue-tsc --noEmit -p tsconfig.json",
     "lint": "eslint \"src/**/*.{ts,vue}\" --max-warnings=0",

@@ -18,6 +18,7 @@
 
 ## H5 走查记录
 
+- 本地 H5 入口：`pnpm dev:h5` 默认使用 `uni --host 0.0.0.0`，复核时 `http://localhost:5173/` 与 `http://127.0.0.1:5173/` 均应可访问；截图和浏览器走查优先使用 `127.0.0.1:5173` 以匹配用户当前预览地址。
 - 全局：新增 `PageHeader`、`SectionHeader`、`NoticeBar`、`ActionCard` 共享组件，统一页头、区块说明、状态反馈和首屏主行动；第二轮已清除面向用户页面的英文模板眉标与工程术语泄漏。
 - 全局组件库接管：页面结构、状态反馈和动作位改用 `wot-design-uni` 的 `wd-navbar`、`wd-card`、`wd-cell-group`、`wd-cell`、`wd-tag`、`wd-notice-bar`、`wd-steps`、`wd-button`、`wd-action-sheet`、`wd-checkbox` 等组件；新增 `InfoCell` 包装保证 H5/小程序可见文本稳定。
 - 全局 UI UX Pro Max 收口：按 skill 查询结果将移动端卡片统一为“身份 + 状态 / 关键指标 / 保障或风险 / 操作”的稳定结构；关键触控目标保持不低于 88rpx，分段控件等宽且选中态清楚。
