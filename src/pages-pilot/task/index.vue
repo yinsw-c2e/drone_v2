@@ -9,8 +9,7 @@
       :to="order?.to.address"
       :frame="latest"
       :status="emergencyAvailable ? '执行阶段可应急' : '应急关闭'"
-      :eta="order?.status === OrderStatus.Settled ? '已结算' : action.stage"
-      :distance="latest ? '飞行中' : '待起飞'"
+      :metrics="heroMetrics"
       tone="pilot"
       compact
     />
@@ -107,6 +106,22 @@ const order = computed(() => {
   return active ?? orderStore.ensureOrder();
 });
 const latest = computed(() => telemetryStore.latest);
+const flightState = computed(() => {
+  if (!order.value) return '待处理';
+  if (order.value.status === OrderStatus.Settled) return '已结算';
+  if (order.value.status === OrderStatus.Completed) return '已完成';
+  if (order.value.status === OrderStatus.Exception) return '异常';
+  if (order.value.status === OrderStatus.InFlight) return '飞行中';
+  if (order.value.status === OrderStatus.Unloading) return '卸货中';
+  if (order.value.status === OrderStatus.Loading) return '装货中';
+  if (order.value.status === OrderStatus.Preparing) return '准备中';
+  return '待起飞';
+});
+const heroMetrics = computed(() => [
+  { label: '当前阶段', value: action.value.stage, hint: action.value.terminal ? '终态' : '流程节点', tone: action.value.terminal ? 'success' as const : 'info' as const },
+  { label: '飞行状态', value: flightState.value, hint: latest.value ? '遥测在线' : '按阶段判断', tone: flightState.value === '飞行中' ? 'info' as const : flightState.value === '异常' ? 'danger' as const : 'neutral' as const },
+  { label: '电量', value: latest.value && latest.value.batteryPct > 0 ? `${latest.value.batteryPct}%` : '--', hint: latest.value ? '遥测' : '暂无遥测', tone: latest.value && latest.value.batteryPct > 0 && latest.value.batteryPct <= 30 ? 'danger' as const : 'success' as const },
+]);
 const telemetryItems = computed(() => [
   { label: '高度', value: latest.value?.altM ?? '--', hint: '米', tone: 'info' as const },
   { label: '速度', value: latest.value?.speedMs ?? '--', hint: '米/秒', tone: 'neutral' as const },

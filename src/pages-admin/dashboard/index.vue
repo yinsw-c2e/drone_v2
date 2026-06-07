@@ -445,9 +445,17 @@ async function runFlow() {
   min-height: 112rpx;
   border-bottom: 2rpx solid $line;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: $sp-3;
+  flex-wrap: wrap;
+  padding: $sp-3 0;
+}
+
+.audit-line > view:first-child,
+.order-line > view:first-child {
+  flex: 1 1 100%;
+  min-width: 0;
 }
 
 .table-list {
@@ -456,7 +464,9 @@ async function runFlow() {
 }
 
 .order-actions {
-  display: flex;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(176rpx, 1fr);
   align-items: center;
   gap: $sp-2;
 }
@@ -473,14 +483,23 @@ async function runFlow() {
 }
 
 .audit-actions {
-  display: flex;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $sp-2;
 }
 
 .small {
-  width: 112rpx;
+  width: 100%;
+  min-width: 176rpx;
   min-height: 72rpx;
   font-size: $fs-sm;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.risk-line > .small {
+  flex: 1 1 100%;
 }
 
 .report-grid {
@@ -611,6 +630,28 @@ async function runFlow() {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 96rpx;
+    align-items: center;
+    padding: 0;
+  }
+
+  .audit-line > view:first-child,
+  .order-line > view:first-child {
+    flex-basis: auto;
+  }
+
+  .audit-actions,
+  .order-actions {
+    width: auto;
+    display: flex;
+  }
+
+  .small {
+    width: 128rpx;
+    min-width: 128rpx;
+  }
+
+  .risk-line > .small {
+    flex: 0 0 auto;
   }
 
   .report-grid {

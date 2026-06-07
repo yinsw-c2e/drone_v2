@@ -9,9 +9,7 @@
       title="合规运力池"
       subtitle="适航、载荷、三者险和维护记录通过后进入匹配池。"
       status="设备合规门"
-      :eta="`${onlineCapacity}在线`"
-      :distance="`${drones.length}设备`"
-      battery="T+7"
+      :metrics="heroMetrics"
       primary="调度"
       secondary="钱包"
       @primary="openDevices"
@@ -37,6 +35,11 @@ const userStore = useUserStore();
 const user = computed(() => userStore.user.currentRole === Role.Owner ? userStore.user : userStore.loginAs(Role.Owner));
 const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));
 const onlineCapacity = computed(() => repo.capacity.where((c) => c.ownerId === user.value.id && c.status === 'online').length);
+const heroMetrics = computed(() => [
+  { label: '在线运力', value: onlineCapacity.value, hint: '可匹配', tone: onlineCapacity.value ? 'success' as const : 'warning' as const },
+  { label: '设备资产', value: drones.value.length, hint: '已绑定', tone: 'neutral' as const },
+  { label: '分账周期', value: 'T+7', hint: '机主入账', tone: 'info' as const },
+]);
 const kpis = computed(() => [
   { label: '设备数', value: drones.value.length, hint: '绑定资产', tone: 'neutral' as const },
   { label: '在线运力', value: onlineCapacity.value, hint: '可匹配', tone: 'success' as const },

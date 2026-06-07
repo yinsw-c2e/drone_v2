@@ -11,9 +11,7 @@
       :from="order?.from.address ?? '北京低空货运中心'"
       :to="order?.to.address ?? '顺义临空交付点'"
       :status="order ? '任务已锁定' : '待命在线'"
-      :eta="notifications.length ? `${notifications.length}条` : '待命'"
-      :distance="order ? '任务中' : '5km'"
-      battery="96%"
+      :metrics="heroMetrics"
       primary="接单"
       secondary="钱包"
       @primary="openHall"
@@ -62,6 +60,11 @@ const user = computed(() => userStore.user.currentRole === Role.Pilot ? userStor
 const credit = computed(() => repo.credits.find(user.value.id));
 const notifications = computed(() => repo.notifications.where((n) => n.userId === user.value.id && !n.read));
 const order = computed(() => orderStore.activeOrder ?? repo.orders.where((o) => o.pilotId === user.value.id)[0]);
+const heroMetrics = computed(() => [
+  { label: '未读派单', value: notifications.value.length ? `${notifications.value.length}条` : '0条', hint: notifications.value.length ? '待处理' : '暂无', tone: notifications.value.length ? 'warning' as const : 'neutral' as const },
+  { label: '任务状态', value: order.value ? '任务中' : '待命', hint: order.value ? '进入驾驶舱' : '大厅接单', tone: order.value ? 'info' as const : 'success' as const },
+  { label: '最近电量', value: '96%', hint: '演示遥测', tone: 'success' as const },
+]);
 const kpis = computed(() => [
   { label: '信用分', value: credit.value?.total ?? 0, hint: credit.value ? `${credit.value.level}级` : '实时计算', tone: 'success' as const },
   { label: '通知', value: notifications.value.length, hint: '未读派单', tone: notifications.value.length ? 'warning' as const : 'neutral' as const },

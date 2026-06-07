@@ -14,9 +14,7 @@
       :from="order.from.address"
       :to="order.to.address"
       :status="candidates.length ? '候选已生成' : '等待运力'"
-      :eta="selected ? `约${selected.etaMin}分` : '--'"
-      :distance="selected ? `${selected.distanceKm}km` : '5km'"
-      :battery="selected ? '合规' : '--'"
+      :metrics="dispatchMetrics"
       compact
     />
 
@@ -78,6 +76,11 @@ const candidates = computed(() => orderStore.candidates);
 const selectedId = computed(() => orderStore.selectedCapacityId || candidates.value[0]?.capacityId || '');
 const selected = computed(() => candidates.value.find((c) => c.capacityId === selectedId.value));
 const action = computed(() => matchConfirmAction(candidates.value.length, Boolean(selected.value)));
+const dispatchMetrics = computed(() => [
+  { label: '预计接单', value: selected.value ? `约${selected.value.etaMin}分` : '--', hint: selected.value ? '推荐方案' : '待匹配', tone: selected.value ? 'info' as const : 'neutral' as const },
+  { label: '接近距离', value: selected.value ? `${selected.value.distanceKm}km` : '--', hint: '飞手到起点', tone: 'neutral' as const },
+  { label: '合规状态', value: selected.value ? '合规' : '待确认', hint: selected.value ? '保额/载荷通过' : '无候选', tone: selected.value ? 'success' as const : 'warning' as const },
+]);
 const strategies = [
   { label: '最近', value: DispatchStrategy.Nearest },
   { label: '利润', value: DispatchStrategy.MaxProfit },

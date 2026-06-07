@@ -26,9 +26,10 @@
         <text>{{ to }}</text>
       </view>
       <view class="hero-kpis">
-        <view v-for="item in metrics" :key="item.label" class="hero-kpi">
+        <view v-for="item in heroMetrics" :key="item.label" :class="['hero-kpi', item.tone || 'neutral']">
           <text class="hero-value">{{ item.value }}</text>
           <text class="hero-label">{{ item.label }}</text>
+          <text v-if="item.hint" class="hero-hint">{{ item.hint }}</text>
         </view>
       </view>
       <view v-if="primary" class="hero-actions">
@@ -42,6 +43,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Telemetry } from '@/models';
+import { routeHeroMetrics } from '@/services/route-hero';
+import type { RouteHeroMetric } from '@/services/route-hero';
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -54,6 +57,7 @@ const props = withDefaults(defineProps<{
   eta?: string;
   distance?: string;
   battery?: string;
+  metrics?: RouteHeroMetric[];
   primary?: string;
   secondary?: string;
   tone?: 'client' | 'pilot' | 'owner' | 'admin';
@@ -68,6 +72,7 @@ const props = withDefaults(defineProps<{
   eta: '--',
   distance: '5km',
   battery: '',
+  metrics: () => [],
   primary: '',
   secondary: '',
   tone: 'client',
@@ -76,12 +81,13 @@ const props = withDefaults(defineProps<{
 
 defineEmits<{ (e: 'primary'): void; (e: 'secondary'): void }>();
 
-const displayBattery = computed(() => props.battery || (props.frame && props.frame.batteryPct > 0 ? `${props.frame.batteryPct}%` : '--'));
-const metrics = computed(() => [
-  { label: 'ETA', value: props.eta },
-  { label: '距离', value: props.distance },
-  { label: '电量', value: displayBattery.value },
-]);
+const heroMetrics = computed(() => routeHeroMetrics({
+  metrics: props.metrics,
+  eta: props.eta,
+  distance: props.distance,
+  battery: props.battery,
+  frame: props.frame,
+}));
 const progress = computed(() => {
   const pct = props.frame ? (100 - props.frame.batteryPct) / 42 : 0.24;
   return Math.max(0.16, Math.min(0.84, pct));
@@ -226,9 +232,10 @@ const craftTop = computed(() => `${Math.round((0.68 - progress.value * 0.36) * 1
 .eyebrow,
 .title,
 .subtitle,
-.route-points text,
-.hero-value,
-.hero-label {
+  .route-points text,
+  .hero-value,
+  .hero-label,
+  .hero-hint {
   display: block;
 }
 
@@ -293,6 +300,29 @@ const craftTop = computed(() => `${Math.round((0.68 - progress.value * 0.36) * 1
   margin-top: $sp-1;
   color: $ink-500;
   font-size: $fs-cap;
+}
+
+.hero-hint {
+  margin-top: $sp-1;
+  color: $ink-500;
+  font-size: $fs-cap;
+  line-height: 1.35;
+}
+
+.hero-kpi.success {
+  background: $success-bg;
+}
+
+.hero-kpi.warning {
+  background: $warning-bg;
+}
+
+.hero-kpi.danger {
+  background: $danger-bg;
+}
+
+.hero-kpi.info {
+  background: $info-bg;
 }
 
 .hero-actions {

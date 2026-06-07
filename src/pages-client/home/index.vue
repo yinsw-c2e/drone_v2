@@ -10,9 +10,7 @@
       :from="order?.from.address ?? '北京低空货运中心'"
       :to="order?.to.address ?? '顺义临空交付点'"
       :status="airspaceCopy"
-      :eta="etaText"
-      distance="5km"
-      :battery="order?.status === 'inflight' ? '91%' : '--'"
+      :metrics="heroMetrics"
       primary="发单"
       secondary="追踪"
       @primary="goOrder"
@@ -88,6 +86,34 @@ const kpis = computed(() => [
   { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
   { label: '预算', value: order.value ? `¥${(order.value.budgetCent / 100).toFixed(0)}` : '--', hint: '当前单', tone: 'neutral' as const },
 ]);
+const heroMetrics = computed(() => {
+  if (!order.value) {
+    return [
+      { label: '航线状态', value: '待发单', hint: '创建需求', tone: 'neutral' as const },
+      { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
+      { label: '预算', value: '--', hint: '未生成', tone: 'neutral' as const },
+    ];
+  }
+  if (order.value.status === 'settled' || order.value.status === 'completed') {
+    return [
+      { label: '送达状态', value: '已送达', hint: order.value.status === 'settled' ? '可评价' : '待结算', tone: 'success' as const },
+      { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '本单', tone: 'neutral' as const },
+      { label: '空域状态', value: airspaceCopy.value, hint: '留痕', tone: 'info' as const },
+    ];
+  }
+  if (order.value.status === 'inflight') {
+    return [
+      { label: '飞行状态', value: '飞行中', hint: '追踪页查看遥测', tone: 'info' as const },
+      { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '本单', tone: 'neutral' as const },
+      { label: '电量', value: '91%', hint: '演示遥测', tone: 'success' as const },
+    ];
+  }
+  return [
+    { label: '下一步', value: etaText.value, hint: '按主操作推进', tone: 'info' as const },
+    { label: '航线距离', value: order.value.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km', hint: '预计', tone: 'neutral' as const },
+    { label: '空域状态', value: airspaceCopy.value, hint: '审批节点', tone: airspaceCopy.value === '需复核' ? 'warning' as const : 'info' as const },
+  ];
+});
 const quickActions = computed(() => [
   { key: 'auth', title: '认证', desc: '实名与货物声明', symbol: '证', status: '可补充', tone: 'info' as const },
   { key: 'credit', title: '信用', desc: `${credit.value?.level ?? '待评'}级雷达`, symbol: '信', status: '实时', tone: 'success' as const },

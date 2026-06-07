@@ -6,9 +6,7 @@
       title="无人机货物吊运"
       subtitle="业主、飞手、机主与后台围绕同一航线协同。"
       status="演示环境"
-      eta="三端"
-      distance="全流程"
-      battery="本地"
+      :metrics="heroMetrics"
       compact
     />
     <NoticeBar tone="info" title="演示环境" message="登录用于角色切换体验；实名、人脸、短信与 CAAC 真实核验待生产环境接入。" />
@@ -36,6 +34,11 @@ import { useUserStore } from '@/stores/user';
 import { roleHome } from '@/services/app-flow';
 
 const userStore = useUserStore();
+const heroMetrics = [
+  { label: '协同端口', value: '三端', hint: '含后台', tone: 'info' as const },
+  { label: '流程范围', value: '全流程', hint: 'MVP 自测', tone: 'success' as const },
+  { label: '数据环境', value: '本地演示', hint: '待接生产', tone: 'neutral' as const },
+];
 const roles = [
   { role: Role.Client, title: '业主端', phone: '13800000001', desc: '发单、比价、追踪、评价' },
   { role: Role.Pilot, title: '飞手端', phone: '13800000002', desc: '接单、安检、飞行监控、钱包' },

@@ -11,8 +11,7 @@
       :to="order?.to.address"
       :frame="latest"
       :status="alerts.length ? '告警需关注' : '空域可控'"
-      :eta="eta"
-      :distance="distance"
+      :metrics="heroMetrics"
       compact
     />
 
@@ -57,6 +56,20 @@ const alerts = computed(() => telemetryStore.alerts);
 const subtitle = computed(() => order.value ? `${order.value.from.address} → ${order.value.to.address}` : '起终点与围栏实时联动');
 const eta = computed(() => order.value?.status === OrderStatus.Settled ? '已送达' : latest.value ? '飞行中' : '--');
 const distance = computed(() => order.value?.distanceKm ? `${order.value.distanceKm.toFixed(1)}km` : '5km');
+const heroMetrics = computed(() => {
+  if (order.value?.status === OrderStatus.Settled || order.value?.status === OrderStatus.Completed) {
+    return [
+      { label: '送达状态', value: '已送达', hint: order.value.status === OrderStatus.Settled ? '已结算' : '待结算', tone: 'success' as const },
+      { label: '航线距离', value: distance.value, hint: '本单', tone: 'neutral' as const },
+      { label: '空域状态', value: '已留痕', hint: '审批记录', tone: 'info' as const },
+    ];
+  }
+  return [
+    { label: '航线状态', value: eta.value === '飞行中' ? '飞行中' : '待执行', hint: eta.value === '飞行中' ? '遥测更新中' : '按阶段推进', tone: eta.value === '飞行中' ? 'info' as const : 'neutral' as const },
+    { label: '航线距离', value: distance.value, hint: '预计', tone: 'neutral' as const },
+    { label: '电量', value: latest.value && latest.value.batteryPct > 0 ? `${latest.value.batteryPct}%` : '--', hint: latest.value ? '遥测' : '暂无遥测', tone: latest.value && latest.value.batteryPct > 0 && latest.value.batteryPct <= 30 ? 'danger' as const : 'success' as const },
+  ];
+});
 const telemetryItems = computed(() => [
   { label: '高度', value: latest.value?.altM ?? '--', hint: '米', tone: 'info' as const },
   { label: '速度', value: latest.value?.speedMs ?? '--', hint: '米/秒', tone: 'neutral' as const },
