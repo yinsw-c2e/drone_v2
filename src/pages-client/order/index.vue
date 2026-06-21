@@ -231,7 +231,7 @@ const ORDER_COPY = {
     originPendingTitle: 'Loading point pending',
     originConcreteToast: 'Confirm a specific loading point first',
     locatingOriginToast: 'Locating origin...',
-    locationFailedToast: 'Location unavailable, using demo origin',
+    locationFailedToast: 'Location unavailable',
     originLabel: 'ORIGIN_POINT',
     originTitle: 'Sector 4 Storage Facility',
     originMeta: 'LAT: 34.0522 N / LNG: 118.2437 W',
@@ -291,7 +291,7 @@ const ORDER_COPY = {
     originPendingTitle: '装货点待确认',
     originConcreteToast: '请先确认具体装货点',
     locatingOriginToast: '正在定位起点...',
-    locationFailedToast: '无法获取当前位置，已使用演示起点',
+    locationFailedToast: '无法获取当前位置',
     originLabel: '起点坐标',
     originTitle: '4区仓储设施',
     originMeta: '纬度: 34.0522 N / 经度: 118.2437 W',
@@ -360,7 +360,7 @@ const draft = reactive({
   scheduledTime: defaultScheduleTime(),
   insured: true,
   special: '',
-  from: DEFAULT_ROUTE_POINTS[0],
+  from: undefined as GeoPoint | undefined,
   to: undefined as GeoPoint | undefined,
 });
 
@@ -369,9 +369,9 @@ const mapPicker = reactive({
   field: 'to' as 'from' | 'to',
   initial: DEFAULT_ROUTE_POINTS[1],
 });
-const originMeta = computed(() => `LNG ${draft.from.lng.toFixed(3)} / LAT ${draft.from.lat.toFixed(3)}`);
+const originMeta = computed(() => draft.from && hasConfirmedAddress(draft.from.address) ? `LNG ${draft.from.lng.toFixed(3)} / LAT ${draft.from.lat.toFixed(3)}` : '');
 const routeMeta = computed(() => {
-  if (!draft.to) return '';
+  if (!draft.from || !hasConfirmedAddress(draft.from.address) || !draft.to) return '';
   const km = distanceKm(draft.from, draft.to);
   return `LNG ${draft.to.lng.toFixed(3)} / LAT ${draft.to.lat.toFixed(3)} · ${km.toFixed(1)} km · ETA ${etaMinutes(km)} min`;
 });
@@ -388,7 +388,7 @@ const estimateDrone = computed(() => {
 
 const estimateCent = computed(() => {
   const drone = estimateDrone.value;
-  if (!drone) return 0;
+  if (!drone || !draft.from || !hasConfirmedAddress(draft.from.address)) return 0;
   const to = draft.to ?? estimatePlaceholderDestination(draft.from);
   const km = distanceKm(draft.from, to);
   const estimateOrder = {
@@ -425,6 +425,11 @@ function pickLocation(field: 'from' | 'to', options: { preserveError?: boolean }
   if (!options.preserveError) clearError();
   if (field === 'to' && locatingOrigin) {
     showError(copy.value.locatingOriginToast);
+    return;
+  }
+  if (field === 'to' && (!draft.from || !hasConfirmedAddress(draft.from.address))) {
+    showError(copy.value.originConcreteToast);
+    pickLocation('from', { preserveError: true });
     return;
   }
   if (isH5Runtime()) {
@@ -502,9 +507,16 @@ async function resolveNativePickedLocation(field: 'from' | 'to', point: GeoPoint
 
 function applyLocation(field: 'from' | 'to', point: GeoPoint) {
   const picked = { ...point, address: readableAddress(point.address) ? point.address : formatPickedAddress(point) };
-  if (field === 'to' && distanceKm(draft.from, picked) < 0.05) {
-    showError(copy.value.samePointError);
-    return false;
+  if (field === 'to') {
+    const from = draft.from;
+    if (!from || !hasConfirmedAddress(from.address)) {
+      showError(copy.value.originConcreteToast);
+      return false;
+    }
+    if (distanceKm(from, picked) < 0.05) {
+      showError(copy.value.samePointError);
+      return false;
+    }
   }
   if (field === 'from') {
     if (draft.to && distanceKm(picked, draft.to) < 0.05) {
@@ -519,8 +531,8 @@ function applyLocation(field: 'from' | 'to', point: GeoPoint) {
 }
 
 function currentPointFor(field: 'from' | 'to') {
-  if (field === 'from') return draft.from;
-  return draft.to ?? draft.from;
+  if (field === 'from') return draft.from ?? DEFAULT_ROUTE_POINTS[0];
+  return draft.to ?? draft.from ?? DEFAULT_ROUTE_POINTS[1];
 }
 
 function estimatePlaceholderDestination(from: GeoPoint): GeoPoint {
@@ -552,8 +564,10 @@ function pointFromSuggestion(suggestion: LocationSuggestion | undefined): GeoPoi
   return suggestion?.entrance ?? suggestion?.location;
 }
 
-function locationTitle(point: GeoPoint) {
+function locationTitle(point: GeoPoint | undefined) {
+  if (!point) return '';
   if (isPendingLocationAddress(point.address)) return point.address;
+  if (!point.address) return '';
   return readableAddress(point.address) ? point.address : formatPickedAddress(point);
 }
 
@@ -614,7 +628,7 @@ async function locateOrigin() {
 async function resolveLocatedOriginAddress(point: GeoPoint) {
   const resolved = await reverseGeocode(point, localeStore.locale);
   if (readableAddress(resolved)) return resolved;
-  return copy.value.originPendingTitle;
+  return '';
 }
 
 function getCurrentGeoPoint(): Promise<GeoPoint | undefined> {
@@ -670,7 +684,8 @@ function goClientHome() {
 
 async function submit() {
   if (loading.value) return;
-  if (!hasConfirmedAddress(draft.from.address)) {
+  const from = draft.from;
+  if (!from || !hasConfirmedAddress(from.address)) {
     showError(copy.value.originConcreteToast);
     pickLocation('from', { preserveError: true });
     return;
@@ -701,7 +716,7 @@ async function submit() {
       scheduledAt: draft.timeMode === 'scheduled' ? scheduledAtIso() : undefined,
       paymentMode: PaymentMode.Escrow,
       invoiceTitle: copy.value.invoiceTitle,
-      from: draft.from,
+      from,
       to: draft.to,
       remark: copy.value.remark,
     });
