@@ -196,6 +196,7 @@ import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { distanceKm } from '@/utils/geo';
+import { configureH5MapProvider } from '@/utils/native-map';
 import { etaMinutes, priceOrder } from '@/utils/price';
 
 const orderStore = useOrderStore();
@@ -427,8 +428,10 @@ function pickLocation(field: 'from' | 'to', options: { preserveError?: boolean }
     return;
   }
   if (isH5Runtime()) {
-    // H5 下 uni.chooseLocation 依赖宿主地图插件，选中 POI 的回调在浏览器调试中不可控。
-    // 统一使用内置选点弹层，推荐地址仍通过后端/高德/Osm 解析链路生成。
+    if (configureH5MapProvider()) {
+      openNativeLocationPicker(field);
+      return;
+    }
     openMapPicker(field);
     return;
   }
