@@ -1,0 +1,209 @@
+[
+  {
+    "file": "00-pages-index-index.png",
+    "title": "启动重定向",
+    "route": "pages/index/index",
+    "width": 390,
+    "height": 852,
+    "actualUrl": "http://127.0.0.1:5173/#/pages/login/index",
+    "docHeight": 852
+  },
+  {
+    "file": "01-pages-login-index.png",
+    "title": "角色登录",
+    "route": "pages/login/index",
+    "width": 390,
+    "height": 852,
+    "actualUrl": "http://127.0.0.1:5173/#/pages/login/index",
+    "docHeight": 852
+  },
+  {
+    "file": "02-pages-client-home-index.png",
+    "title": "业主指挥台",
+    "route": "pages-client/home/index",
+    "width": 390,
+    "height": 1552,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/home/index",
+    "docHeight": 1596
+  },
+  {
+    "file": "03-pages-client-order-index.png",
+    "title": "发起吊运",
+    "route": "pages-client/order/index",
+    "width": 390,
+    "height": 2047,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/order/index",
+    "docHeight": 2091
+  },
+  {
+    "file": "04-pages-client-publish-index.png",
+    "title": "发单重定向",
+    "route": "pages-client/publish/index",
+    "width": 390,
+    "height": 2047,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/order/index",
+    "docHeight": 2091
+  },
+  {
+    "file": "05-pages-client-match-index.png",
+    "title": "智能匹配",
+    "route": "pages-client/match/index",
+    "width": 390,
+    "height": 1036,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/match/index",
+    "docHeight": 1080
+  },
+  {
+    "file": "06-pages-client-track-index.png",
+    "title": "飞行监控",
+    "route": "pages-client/track/index",
+    "width": 390,
+    "height": 1074,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/track/index",
+    "docHeight": 1074
+  },
+  {
+    "file": "07-pages-client-review-index.png",
+    "title": "评价结算",
+    "route": "pages-client/review/index",
+    "width": 390,
+    "height": 975,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/review/index",
+    "docHeight": 1019
+  },
+  {
+    "file": "08-pages-client-insurance-index.png",
+    "title": "保险理赔",
+    "route": "pages-client/insurance/index",
+    "width": 390,
+    "height": 1184,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-client/insurance/index",
+    "docHeight": 1228
+  },
+  {
+    "file": "09-pages-credit-index.png",
+    "title": "信用风控",
+    "route": "pages/credit/index",
+    "width": 390,
+    "height": 896,
+    "actualUrl": "http://127.0.0.1:5173/#/pages/credit/index",
+    "docHeight": 940
+  },
+  {
+    "file": "10-pages-auth-index.png",
+    "title": "认证中心",
+    "route": "pages/auth/index",
+    "width": 390,
+    "height": 896,
+    "actualUrl": "http://127.0.0.1:5173/#/pages/auth/index",
+    "docHeight": 940
+  },
+  {
+    "file": "11-pages-pilot-home-index.png",
+    "title": "飞手驾驶舱",
+    "route": "pages-pilot/home/index",
+    "width": 390,
+    "height": 1048,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-pilot/home/index",
+    "docHeight": 1092
+  },
+  {
+    "file": "12-pages-pilot-hall-index.png",
+    "title": "接单大厅",
+    "route": "pages-pilot/hall/index",
+    "width": 390,
+    "height": 1477,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-pilot/hall/index",
+    "docHeight": 1521
+  },
+  {
+    "file": "13-pages-pilot-task-index.png",
+    "title": "任务执行",
+    "route": "pages-pilot/task/index",
+    "width": 390,
+    "height": 1409,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-pilot/task/index",
+    "docHeight": 1409
+  },
+  {
+    "file": "14-pages-pilot-wallet-index.png",
+    "title": "飞手钱包",
+    "route": "pages-pilot/wallet/index",
+    "width": 390,
+    "height": 1219,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-pilot/wallet/index",
+    "docHeight": 1263
+  },
+  {
+    "file": "15-pages-owner-home-index.png",
+    "title": "机主管理台",
+    "route": "pages-owner/home/index",
+    "width": 390,
+    "height": 1284,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-owner/home/index",
+    "docHeight": 1328
+  },
+  {
+    "file": "16-pages-owner-devices-index.png",
+    "title": "设备与运力",
+    "route": "pages-owner/devices/index",
+    "width": 390,
+    "height": 1098,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-owner/devices/index",
+    "docHeight": 1142
+  },
+  {
+    "file": "17-pages-owner-drones-index.png",
+    "title": "设备管理",
+    "route": "pages-owner/drones/index",
+    "width": 390,
+    "height": 975,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-owner/drones/index",
+    "docHeight": 1019
+  },
+  {
+    "file": "18-pages-owner-dispatch-index.png",
+    "title": "运力调度",
+    "route": "pages-owner/dispatch/index",
+    "width": 390,
+    "height": 896,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-owner/dispatch/index",
+    "docHeight": 940
+  },
+  {
+    "file": "19-pages-owner-wallet-index.png",
+    "title": "机主钱包",
+    "route": "pages-owner/wallet/index",
+    "width": 390,
+    "height": 974,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-owner/wallet/index",
+    "docHeight": 1018
+  },
+  {
+    "file": "20-pages-admin-dashboard-index-mobile.png",
+    "title": "管理后台移动",
+    "route": "pages-admin/dashboard/index",
+    "width": 390,
+    "height": 6000,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-admin/dashboard/index",
+    "docHeight": 9827
+  },
+  {
+    "file": "21-pages-admin-index-index.png",
+    "title": "后台重定向",
+    "route": "pages-admin/index/index",
+    "width": 390,
+    "height": 6000,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-admin/dashboard/index",
+    "docHeight": 9827
+  },
+  {
+    "file": "22-pages-admin-dashboard-index-desktop.png",
+    "title": "管理后台桌面",
+    "route": "pages-admin/dashboard/index",
+    "width": 1280,
+    "height": 4203,
+    "actualUrl": "http://127.0.0.1:5173/#/pages-admin/dashboard/index",
+    "docHeight": 4195
+  }
+]

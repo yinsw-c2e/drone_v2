@@ -27,7 +27,21 @@ export function clientCredit(uid: string, m: ClientStats): CreditScore {
   const total = idv + pay + coop + quality;
   return { userId: uid, role: Role.Client, total, level: level(total), dimensions: [{ name: '身份认证', score: idv, max: 200 }, { name: '支付能力', score: pay, max: 300 }, { name: '合作态度', score: coop, max: 300 }, { name: '订单质量', score: quality, max: 200 }] };
 }
-function upsert(cs: CreditScore) { const ex = repo.credits.where((c) => c.userId === cs.userId)[0]; if (ex) repo.credits.update(cs.userId, cs); else repo.credits.insert(cs); }
+function sameCredit(a: CreditScore, b: CreditScore) {
+  return a.role === b.role
+    && a.total === b.total
+    && a.level === b.level
+    && JSON.stringify(a.dimensions) === JSON.stringify(b.dimensions);
+}
+
+function upsert(cs: CreditScore) {
+  const ex = repo.credits.where((c) => c.userId === cs.userId)[0];
+  if (ex) {
+    if (!sameCredit(ex, cs)) repo.credits.update(cs.userId, cs);
+    return;
+  }
+  repo.credits.insert(cs);
+}
 export function computeCredit(userId: string, role: Role): CreditScore {
   let cs: CreditScore | undefined;
   if (role === Role.Pilot) { const p = repo.pilots.find(userId); if (p) cs = pilotCredit(userId, p.stats); }

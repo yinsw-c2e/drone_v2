@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Owner Dashboard - SkyLink Logistics</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-fixed": "#221b00",
+                        "tertiary-fixed": "#ffe173",
+                        "surface-tint": "#00dbe7",
+                        "primary": "#e1fdff",
+                        "surface": "#0f131d",
+                        "secondary-container": "#0566d9",
+                        "on-secondary-fixed": "#001a42",
+                        "status-warning": "#F59E0B",
+                        "on-surface": "#dfe2f0",
+                        "on-primary-fixed-variant": "#004f54",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-surface-variant": "#b9cacb",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-dim": "#0f131d",
+                        "tertiary-container": "#fed83a",
+                        "tertiary-fixed-dim": "#e8c423",
+                        "surface-variant": "#313540",
+                        "primary-container": "#00f2ff",
+                        "telemetry-blue": "#3B82F6",
+                        "telemetry-cyan": "#00F2FF",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#d8e2ff",
+                        "outline": "#849495",
+                        "tertiary": "#fff6e4",
+                        "bg-elevated": "#1E2433",
+                        "surface-container-high": "#262a34",
+                        "bg-base": "#0B0E14",
+                        "on-tertiary-container": "#725e00",
+                        "on-tertiary": "#3b2f00",
+                        "on-secondary": "#002e6a",
+                        "on-primary": "#00363a",
+                        "bg-surface": "#141822",
+                        "inverse-surface": "#dfe2f0",
+                        "surface-bright": "#353944",
+                        "surface-container": "#1b1f2a",
+                        "on-secondary-container": "#e6ecff",
+                        "status-success": "#10B981",
+                        "surface-container-low": "#171b26",
+                        "outline-variant": "#3a494b",
+                        "on-primary-fixed": "#002022",
+                        "on-background": "#dfe2f0",
+                        "primary-fixed": "#74f5ff",
+                        "background": "#0f131d",
+                        "inverse-on-surface": "#2c303b",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "inverse-primary": "#00696f",
+                        "on-primary-container": "#006a71",
+                        "status-critical": "#EF4444",
+                        "surface-container-highest": "#313540",
+                        "secondary": "#adc6ff",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-lowest": "#0a0e18",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "primary-fixed-dim": "#00dbe7"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "container-max-width": "1440px",
+                        "base-unit": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    fontFamily: {
+                        "display-lg": ["Hanken Grotesk"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"]
+                    },
+                    fontSize: {
+                        "display-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "data-mono": ["14px", { lineHeight: "20px", letterSpacing: "0.05em", fontWeight: "500" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.1em", fontWeight: "700" }],
+                        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+                        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom Radar Animation */
+        @keyframes scan {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .radar-scan {
+            background: conic-gradient(from 0deg, transparent 70%, rgba(0, 242, 255, 0.4) 100%);
+            animation: scan 3s linear infinite;
+        }
+        
+        /* Subtle Grid Pattern */
+        .bg-grid-pattern {
+            background-size: 20px 20px;
+            background-image: linear-gradient(to right, rgba(132, 148, 149, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(132, 148, 149, 0.05) 1px, transparent 1px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-bg-base text-on-surface font-body-md bg-grid-pattern min-h-screen pt-16 pb-24 md:pb-8">
+<!-- TopAppBar JSON Component -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base dark:bg-bg-base border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant">
+<span class="material-symbols-outlined text-primary dark:text-primary text-[20px]">person</span>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan tracking-tight">SkyLink Logistics</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-primary dark:text-primary group-active:scale-95 duration-100">signal_cellular_alt</span>
+</button>
+</header>
+<main class="max-w-container-max-width mx-auto">
+<!-- Top Status Bar (Telemetry Style Metrics) -->
+<section class="px-margin-mobile mt-6">
+<div class="grid grid-cols-3 gap-3">
+<!-- Credit Score -->
+<div class="bg-surface rounded-xl p-3 border border-outline-variant relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="absolute inset-0 bg-gradient-to-br from-status-success/5 to-transparent pointer-events-none"></div>
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">shield</span> 信用分
+                    </h2>
+<div class="text-headline-sm font-headline-sm text-status-success mt-1 font-data-mono tracking-wider">956</div>
+</div>
+<!-- Online Capacity -->
+<div class="bg-surface rounded-xl p-3 border border-outline-variant relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="absolute inset-0 bg-gradient-to-br from-telemetry-cyan/5 to-transparent pointer-events-none"></div>
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">flight_takeoff</span> 在线运力
+                    </h2>
+<div class="flex items-baseline gap-1 mt-1">
+<div class="text-headline-sm font-headline-sm text-telemetry-cyan font-data-mono">01</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant">台</span>
+</div>
+</div>
+<!-- Available Budget -->
+<div class="bg-surface rounded-xl p-3 border border-outline-variant relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="absolute inset-0 bg-gradient-to-br from-tertiary-fixed/5 to-transparent pointer-events-none"></div>
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">account_balance_wallet</span> 可用预算
+                    </h2>
+<div class="text-headline-sm font-headline-sm text-tertiary-fixed mt-1 font-data-mono">¥2600</div>
+</div>
+</div>
+</section>
+<!-- "Current Lift" Status Card with Radar -->
+<section class="px-margin-mobile mt-6">
+<div class="bg-bg-elevated rounded-xl p-5 border border-outline-variant relative overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+<!-- Radar Background Element -->
+<div class="absolute top-0 right-0 w-48 h-48 -mr-12 -mt-12 opacity-30 pointer-events-none">
+<div class="w-full h-full rounded-full border border-telemetry-cyan/30 relative flex items-center justify-center">
+<div class="w-2/3 h-2/3 rounded-full border border-telemetry-cyan/20"></div>
+<div class="w-1/3 h-1/3 rounded-full border border-telemetry-cyan/10"></div>
+<!-- Scanning beam -->
+<div class="absolute inset-0 rounded-full radar-scan"></div>
+<div class="absolute w-1 h-1 bg-telemetry-cyan rounded-full top-1/4 left-1/3 shadow-[0_0_8px_#00F2FF] animate-pulse"></div>
+</div>
+</div>
+<!-- Header -->
+<div class="flex justify-between items-start mb-6 relative z-10">
+<div>
+<h2 class="text-label-caps font-label-caps text-telemetry-cyan uppercase flex items-center gap-2 mb-1">
+<div class="w-2 h-2 rounded-full bg-telemetry-cyan animate-pulse shadow-[0_0_4px_#00F2FF]"></div>
+                            当前吊运扫描
+                        </h2>
+<div class="text-data-mono font-data-mono text-on-surface-variant text-[12px]">TRK-882-X9</div>
+</div>
+<span class="text-label-caps font-label-caps text-status-warning bg-status-warning/10 px-2 py-1 border border-status-warning/30 rounded shadow-[0_0_8px_rgba(245,158,11,0.2)]">
+                        空域待确认
+                    </span>
+</div>
+<!-- Route Timeline -->
+<div class="relative z-10 pl-2 border-l border-dashed border-outline-variant ml-2 mb-6 space-y-4">
+<!-- Origin -->
+<div class="relative">
+<div class="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mb-0.5">起吊点 ORIGIN</div>
+<div class="text-body-md font-body-md text-on-surface">前海深港物流枢纽 A区</div>
+</div>
+<!-- Destination -->
+<div class="relative">
+<div class="absolute -left-[13px] top-1 w-2 h-2 rounded-full bg-telemetry-cyan shadow-[0_0_4px_#00F2FF]"></div>
+<div class="text-label-caps font-label-caps text-telemetry-cyan mb-0.5">降落点 DEST</div>
+<div class="text-body-md font-body-md text-on-surface">宝安国际机场 货运C站</div>
+</div>
+</div>
+<!-- Telemetry Data Row -->
+<div class="grid grid-cols-2 gap-4 mb-6 relative z-10 bg-surface-container p-3 rounded-lg border border-outline-variant/50">
+<div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mb-1">预计到达 (ETA)</div>
+<div class="text-headline-sm font-headline-sm text-on-surface font-data-mono">03:00 <span class="text-body-md text-on-surface-variant font-body-md">MIN</span></div>
+</div>
+<div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mb-1">预估预算</div>
+<div class="text-headline-sm font-headline-sm text-tertiary-fixed font-data-mono">¥1,250</div>
+</div>
+</div>
+<!-- "Next Step" Guide Component -->
+<div class="relative z-10">
+<button class="w-full bg-telemetry-cyan hover:bg-primary-fixed text-bg-base transition-colors py-3 px-4 rounded-lg flex items-center justify-between group">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+<span class="text-body-md font-headline-sm font-bold">下一步：确认航线方案</span>
+</div>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Frequent Routes List -->
+<section class="px-margin-mobile mt-8">
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase mb-4 tracking-widest border-b border-outline-variant pb-2">常用航线与预算</h2>
+<div class="space-y-3">
+<!-- Route Item 1 -->
+<div class="bg-surface p-3 rounded-lg border border-outline-variant flex items-center justify-between hover:border-telemetry-cyan/50 transition-colors cursor-pointer group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-telemetry-cyan transition-colors">route</span>
+</div>
+<div>
+<div class="text-body-md font-body-md text-on-surface font-medium flex items-center gap-2">
+                                科技园 <span class="material-symbols-outlined text-[14px] text-outline">arrow_forward</span> 蛇口港
+                            </div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mt-1">标准件 | 约15分钟</div>
+</div>
+</div>
+<div class="text-right">
+<div class="text-body-md font-data-mono text-tertiary-fixed">¥800</div>
+<div class="text-label-caps font-label-caps text-on-surface-variant">基准价</div>
+</div>
+</div>
+<!-- Route Item 2 -->
+<div class="bg-surface p-3 rounded-lg border border-outline-variant flex items-center justify-between hover:border-telemetry-cyan/50 transition-colors cursor-pointer group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-telemetry-cyan transition-colors">route</span>
+</div>
+<div>
+<div class="text-body-md font-body-md text-on-surface font-medium flex items-center gap-2">
+                                龙华中心 <span class="material-symbols-outlined text-[14px] text-outline">arrow_forward</span> 盐田港
+                            </div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mt-1">重型件 | 约32分钟</div>
+</div>
+</div>
+<div class="text-right">
+<div class="text-body-md font-data-mono text-tertiary-fixed">¥1,850</div>
+<div class="text-label-caps font-label-caps text-on-surface-variant">基准价</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Orders Simple List -->
+<section class="px-margin-mobile mt-8 mb-6">
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase mb-4 tracking-widest border-b border-outline-variant pb-2">最近订单</h2>
+<div class="bg-surface rounded-xl border border-outline-variant overflow-hidden">
+<!-- List Item -->
+<div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-status-success text-[18px]">check_circle</span>
+<div>
+<div class="text-data-mono font-data-mono text-on-surface text-[13px]">ORD-20231024-01</div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mt-0.5">已完成 | 昨天 14:30</div>
+</div>
+</div>
+<div class="text-body-md font-data-mono text-on-surface">¥1,100</div>
+</div>
+<!-- List Item -->
+<div class="p-3 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-status-success text-[18px]">check_circle</span>
+<div>
+<div class="text-data-mono font-data-mono text-on-surface text-[13px]">ORD-20231023-88</div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mt-0.5">已完成 | 10/23 09:15</div>
+</div>
+</div>
+<div class="text-body-md font-data-mono text-on-surface">¥950</div>
+</div>
+<!-- View All -->
+<button class="w-full py-3 text-label-caps font-label-caps text-telemetry-cyan hover:bg-surface-variant transition-colors flex justify-center items-center gap-1">
+                    查看全部历史记录 <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar JSON Component (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-2 bg-surface dark:bg-surface border-t border-outline-variant shadow-lg rounded-t-xl md:hidden">
+<!-- Home (Active State) -->
+<button class="flex flex-col items-center justify-center text-primary-container bg-secondary-container/20 rounded-full px-4 py-1 scale-90 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+</button>
+<!-- Tasks (Inactive State) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">assignment</span>
+<span class="text-label-caps font-label-caps mt-1">Tasks</span>
+</button>
+<!-- Assets (Inactive State) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-caps font-label-caps mt-1">Assets</span>
+</button>
+<!-- Profile (Inactive State) -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-caps font-label-caps mt-1">Profile</span>
+</button>
+</nav>
+</body></html>

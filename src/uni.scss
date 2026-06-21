@@ -1,10 +1,118 @@
 @import '@/styles/tokens.scss';
 
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url('/static/fonts/material-symbols-outlined-subset.woff2') format('woff2'),
+    url('/static/fonts/material-symbols-outlined-subset.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/hanken-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/hanken-grotesk-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/hanken-grotesk-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Hanken Grotesk';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/static/fonts/hanken-grotesk-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/inter-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/inter-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/inter-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/jetbrains-mono-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/jetbrains-mono-latin.woff2') format('woff2');
+}
+
 .page {
   min-height: 100vh;
   padding: $sp-4 $page-x calc($sp-10 + env(safe-area-inset-bottom));
-  background: $bg-page;
+  background-color: $bg-page;
+  background-image:
+    radial-gradient(90% 56% at 50% -10%, rgba(0, 242, 255, .13), transparent 70%),
+    radial-gradient(60% 46% at 100% 0%, rgba(59, 130, 246, .11), transparent 68%),
+    linear-gradient(0deg, rgba(132, 148, 149, .045) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(132, 148, 149, .045) 1rpx, transparent 1rpx);
+  background-size: auto, auto, 48rpx 48rpx, 48rpx 48rpx;
   box-sizing: border-box;
+  color: $ink-900;
 }
 
 .admin-page {
@@ -17,7 +125,8 @@
 }
 
 .card {
-  @include card;
+  @include surface($r-lg);
+  padding: $sp-4;
 }
 
 .card + .card {
@@ -29,6 +138,7 @@
   line-height: 1.35;
   font-weight: $fw-semibold;
   color: $ink-900;
+  letter-spacing: .4rpx;
 }
 
 .muted {
@@ -41,7 +151,7 @@
 .secondary-button,
 .danger-button {
   @include tap-min;
-  border-radius: $r-md;
+  border-radius: $r-sm;
   font-size: $fs-body;
   font-weight: $fw-semibold;
   display: flex;
@@ -51,22 +161,23 @@
 
 .primary-button {
   color: $on-primary;
-  background: $color-primary;
+  background: $grad-cta;
+  box-shadow: $shadow-glow-primary;
 }
 
 .secondary-button {
   color: $ink-700;
-  background: $bg-card;
-  border: 2rpx solid $line;
+  background: $surface-panel;
+  border: 2rpx solid $line-strong;
 }
 
 .danger-button {
   color: $on-primary;
-  background: $danger;
+  background: $grad-danger;
 }
 
 .primary-button:active {
-  background: $color-primary-press;
+  opacity: .92;
 }
 
 .secondary-button:active {
@@ -81,6 +192,17 @@
   background: $color-primary-weak;
   font-size: $fs-sm;
   font-weight: $fw-semibold;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.link::after {
+  border: 0;
 }
 
 .row {
@@ -127,6 +249,7 @@
   padding: $sp-3;
   border-radius: $r-md;
   background: $bg-sunken;
+  border: 2rpx solid $hairline;
 }
 
 .status-copy {
@@ -149,24 +272,99 @@
 
 .page :deep(.wd-card) {
   border-radius: $r-lg;
-  box-shadow: $shadow-soft;
+  box-shadow: $shadow-card;
+  background-color: $bg-card;
+  border: 2rpx solid $hairline;
 }
+
+.page :deep(.wd-card),
+.page :deep(.wd-card__content),
+.page :deep(.wd-card__title),
+.page :deep(.wd-card__footer),
+.page :deep(.wd-card__head) {
+  background-color: transparent;
+  color: $ink-900;
+}
+
+.page :deep(.wd-card) { background-color: $bg-card; }
 
 .page :deep(.wd-button) {
   min-height: 88rpx;
   font-weight: $fw-semibold;
   touch-action: manipulation;
+  border-radius: $r-sm;
 }
 
-.page :deep(.wd-tag) {
+.page :deep(.wd-button.is-primary),
+.page :deep(.wd-button--primary) {
+  color: $on-primary;
+  background: $grad-cta;
+  border-color: transparent;
+  box-shadow: $shadow-glow-primary;
+}
+
+.page :deep(.wd-button.is-info),
+.page :deep(.wd-button--info) {
+  color: $info-ink;
+  background: $info-bg;
+  border-color: $info-line;
+}
+
+.page .wd-tag,
+.wot-theme-dark .wd-tag {
   min-height: 40rpx;
+  padding: 0 $sp-2;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
   font-weight: $fw-semibold;
 }
 
 .page :deep(.wd-cell) {
   min-height: 88rpx;
+}
+
+.command-surface {
+  position: relative;
+  overflow: hidden;
+  border: 2rpx solid $hairline;
+  background:
+    radial-gradient(90% 60% at 100% 0%, rgba(0, 242, 255, .10), transparent 62%),
+    $bg-card;
+  box-shadow: $shadow-command;
+}
+
+.command-surface::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2rpx;
+  background: linear-gradient(90deg, transparent, rgba(0, 242, 255, .82), transparent);
+}
+
+.surface-metrics {
+  border: 2rpx solid rgba(0, 242, 255, .10);
+  background:
+    linear-gradient(0deg, rgba(132, 148, 149, .05) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(132, 148, 149, .05) 1rpx, transparent 1rpx),
+    rgba(10, 14, 24, .72);
+  background-size: 32rpx 32rpx;
+}
+
+.data-chip {
+  min-height: 48rpx;
+  padding: 0 $sp-2;
+  border-radius: $r-sm;
+  border: 2rpx solid $hairline;
+  background: $tint-on-dark;
+  color: $ink-700;
+  font-size: $fs-cap;
+  font-weight: $fw-bold;
+  letter-spacing: 1rpx;
+  display: inline-flex;
+  align-items: center;
 }
 
 @media screen and (min-width: 900px) {

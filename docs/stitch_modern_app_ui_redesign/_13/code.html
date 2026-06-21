@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Flight Monitoring HUD</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Custom HUD/Radar Styles */
+        .radar-grid {
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 242, 255, 0.03) 0%, transparent 60%),
+                linear-gradient(rgba(0, 242, 255, 0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 242, 255, 0.08) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            background-position: center center;
+        }
+        
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.8), transparent);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+            animation: scan 4s linear infinite;
+            opacity: 0.5;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .pulse-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(0, 242, 255, 0.6);
+            border-radius: 50%;
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; border-width: 0px; }
+        }
+
+        /* Hide scrollbar for clean HUD look */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #0B0E14; }
+        ::-webkit-scrollbar-thumb { background: #3a494b; border-radius: 4px; }
+    </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#221b00",
+                        "tertiary-fixed": "#ffe173",
+                        "surface-tint": "#00dbe7",
+                        "primary": "#e1fdff",
+                        "surface": "#0f131d",
+                        "secondary-container": "#0566d9",
+                        "on-secondary-fixed": "#001a42",
+                        "status-warning": "#F59E0B",
+                        "on-surface": "#dfe2f0",
+                        "on-primary-fixed-variant": "#004f54",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-surface-variant": "#b9cacb",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-dim": "#0f131d",
+                        "tertiary-container": "#fed83a",
+                        "tertiary-fixed-dim": "#e8c423",
+                        "surface-variant": "#313540",
+                        "primary-container": "#00f2ff",
+                        "telemetry-blue": "#3B82F6",
+                        "telemetry-cyan": "#00F2FF",
+                        "error-container": "#93000a",
+                        "secondary-fixed": "#d8e2ff",
+                        "outline": "#849495",
+                        "tertiary": "#fff6e4",
+                        "bg-elevated": "#1E2433",
+                        "surface-container-high": "#262a34",
+                        "bg-base": "#0B0E14",
+                        "on-tertiary-container": "#725e00",
+                        "on-tertiary": "#3b2f00",
+                        "on-secondary": "#002e6a",
+                        "on-primary": "#00363a",
+                        "bg-surface": "#141822",
+                        "inverse-surface": "#dfe2f0",
+                        "surface-bright": "#353944",
+                        "surface-container": "#1b1f2a",
+                        "on-secondary-container": "#e6ecff",
+                        "status-success": "#10B981",
+                        "surface-container-low": "#171b26",
+                        "outline-variant": "#3a494b",
+                        "on-primary-fixed": "#002022",
+                        "on-background": "#dfe2f0",
+                        "primary-fixed": "#74f5ff",
+                        "background": "#0f131d",
+                        "inverse-on-surface": "#2c303b",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "inverse-primary": "#00696f",
+                        "on-primary-container": "#006a71",
+                        "status-critical": "#EF4444",
+                        "surface-container-highest": "#313540",
+                        "secondary": "#adc6ff",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-lowest": "#0a0e18",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "primary-fixed-dim": "#00dbe7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-max-width": "1440px",
+                        "base-unit": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Hanken Grotesk"],
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-bg-base text-on-surface font-body-md min-h-screen flex flex-col overflow-x-hidden selection:bg-telemetry-cyan selection:text-bg-base">
+<!-- TopAppBar JSON Component Mapping -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base border-b border-outline-variant flat no shadows transition-all duration-300">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">person</span>
+</div>
+<span class="text-headline-md font-headline-md font-bold text-telemetry-cyan tracking-tight">SkyLink Logistics</span>
+</div>
+<button class="text-primary hover:bg-surface-variant transition-colors p-2 rounded-full active:scale-95 duration-100 flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">signal_cellular_alt</span>
+</button>
+</nav>
+<!-- Main Content Canvas (Navigation Shell Suppressed for focused task) -->
+<main class="flex-1 pt-16 pb-24 w-full max-w-container-max-width mx-auto flex flex-col gap-4 px-4 md:px-margin-desktop">
+<!-- Top: HUD Map/Radar View -->
+<section class="relative w-full h-[397px] min-h-[300px] mt-4 rounded-xl border border-outline-variant overflow-hidden bg-bg-surface group">
+<!-- Background Map Image -->
+<div class="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-screen" data-alt="A highly detailed, dark-mode satellite map view from directly above, showcasing a dense urban grid with glowing cyan and blue arterial routes. The aesthetic is extremely technical, industrial, and high-contrast, resembling an advanced military or aviation monitoring HUD. Deep blacks and charcoal greys dominate the terrain, accented by sharp, luminescent data overlays and precision tracking markers." data-location="Tokyo" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBLOYa3c881b6aZq72QEftmnxOuQ494iMECdtGXCAtzlirxSAXR_x2G0VwVslqK3LdWB9y_SYjLnn4k4w5V038C_UkQpjyq0GIMpQDf-ugyD3Td9A-AjXTintsuRhvwiN9aygVDY1UHfTZk4PYB0cRd6s9dzdmDDbyj3u1FUaxzUVMy_F-c1O9B6vAceDQW0V_bbQPXMyxpkoTtenRUoveVyAiI60GZM-EFeTWowPfYjo-Ap_UEO96tW7RIwv3Ox8lO-ldtABd57nBD');">
+</div>
+<!-- Radar Grid Overlay -->
+<div class="absolute inset-0 radar-grid"></div>
+<div class="scan-line"></div>
+<!-- Route Trajectory SVG -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 1000 500">
+<!-- Path Line -->
+<path d="M 100 400 C 300 400, 400 200, 600 150 S 800 200, 900 100" fill="none" stroke="rgba(0, 242, 255, 0.4)" stroke-dasharray="8 8" stroke-width="3"></path>
+<path d="M 100 400 C 300 400, 400 200, 600 150" fill="none" filter="drop-shadow(0 0 6px rgba(0, 242, 255, 0.8))" stroke="#00F2FF" stroke-width="4"></path>
+<!-- Start Point -->
+<circle cx="100" cy="400" fill="#3B82F6" r="6" stroke="#0B0E14" stroke-width="2"></circle>
+<!-- End Point -->
+<circle cx="900" cy="100" fill="none" r="6" stroke="#849495" stroke-width="2"></circle>
+</svg>
+<!-- Current Asset Location (Glassmorphism Overlay) -->
+<div class="absolute left-[58%] top-[28%] transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="relative w-8 h-8 flex items-center justify-center">
+<div class="pulse-ring"></div>
+<div class="w-3 h-3 bg-telemetry-cyan rounded-full shadow-[0_0_12px_#00F2FF]"></div>
+<span class="material-symbols-outlined absolute text-bg-base text-[14px]" style="font-variation-settings: 'FILL' 1;">flight</span>
+</div>
+<!-- Floating Info Tag -->
+<div class="mt-2 bg-bg-elevated/80 backdrop-blur-[12px] border border-outline-variant rounded-lg px-3 py-1.5 shadow-lg flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">UAV-07A</span>
+</div>
+</div>
+<!-- Top Overlay Indicators -->
+<div class="absolute top-4 left-4 flex gap-2">
+<div class="bg-bg-elevated/60 backdrop-blur-md border border-outline-variant rounded px-2 py-1 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-status-warning text-[16px]">satellite_alt</span>
+<span class="text-label-caps font-label-caps text-on-surface">GPS: FIX</span>
+</div>
+<div class="bg-bg-elevated/60 backdrop-blur-md border border-outline-variant rounded px-2 py-1 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-telemetry-cyan text-[16px]">wifi_tethering</span>
+<span class="text-label-caps font-label-caps text-on-surface">LINK: 98%</span>
+</div>
+</div>
+</section>
+<!-- Middle: Real-time Telemetry Bento Grid -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+<!-- Metric Card 1: Altitude -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between hover:border-telemetry-cyan hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] transition-all group">
+<div class="flex justify-between items-start mb-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase">Altitude (AGL)</span>
+<span class="material-symbols-outlined text-outline text-[18px]">height</span>
+</div>
+<div class="flex items-end gap-1 mb-2">
+<span class="text-display-lg font-data-mono text-telemetry-cyan tracking-tight" id="val-alt">1,240</span>
+<span class="text-body-md font-body-md text-on-surface-variant mb-1">m</span>
+</div>
+<!-- Small sparkline visualization -->
+<div class="w-full h-6 flex items-end gap-[2px]">
+<div class="w-full bg-surface-variant h-[20%] rounded-t-sm"></div>
+<div class="w-full bg-surface-variant h-[30%] rounded-t-sm"></div>
+<div class="w-full bg-surface-variant h-[50%] rounded-t-sm"></div>
+<div class="w-full bg-surface-variant h-[70%] rounded-t-sm"></div>
+<div class="w-full bg-telemetry-cyan h-[85%] rounded-t-sm shadow-[0_0_4px_#00F2FF]"></div>
+<div class="w-full bg-surface-variant h-[80%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Metric Card 2: Speed -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between hover:border-telemetry-cyan hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] transition-all">
+<div class="flex justify-between items-start mb-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase">Ground Speed</span>
+<span class="material-symbols-outlined text-outline text-[18px]">speed</span>
+</div>
+<div class="flex items-end gap-1 mb-2">
+<span class="text-display-lg font-data-mono text-on-surface tracking-tight" id="val-spd">85.4</span>
+<span class="text-body-md font-body-md text-on-surface-variant mb-1">km/h</span>
+</div>
+<!-- Linear Gauge -->
+<div class="w-full h-1.5 bg-surface-container-high rounded-full overflow-hidden mt-auto">
+<div class="h-full bg-telemetry-blue w-[65%] rounded-full relative">
+<div class="absolute right-0 top-0 bottom-0 w-4 bg-white/30 rounded-full blur-[1px]"></div>
+</div>
+</div>
+</div>
+<!-- Metric Card 3: Battery (Critical Logic Demo) -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between hover:border-status-critical hover:shadow-[0_0_12px_rgba(239,68,68,0.15)] transition-all">
+<div class="flex justify-between items-start mb-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase">Energy Level</span>
+<span class="material-symbols-outlined text-status-critical text-[18px] animate-pulse" style="font-variation-settings: 'FILL' 1;">battery_alert</span>
+</div>
+<div class="flex items-end gap-1 mb-2">
+<span class="text-display-lg font-data-mono text-status-critical tracking-tight" id="val-bat">14.2</span>
+<span class="text-body-md font-body-md text-on-surface-variant mb-1">%</span>
+</div>
+<div class="text-label-caps font-label-caps text-status-critical mt-auto flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-critical"></span>
+                    RTL RECOMMENDED
+                </div>
+</div>
+<!-- Metric Card 4: Attitude (Pitch/Roll) -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between hover:border-telemetry-cyan hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] transition-all">
+<div class="flex justify-between items-start mb-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant uppercase">Attitude</span>
+<span class="material-symbols-outlined text-outline text-[18px]">explore</span>
+</div>
+<div class="flex flex-col gap-2 mt-1">
+<div class="flex justify-between items-center border-b border-surface-container-high pb-1">
+<span class="text-body-md font-body-md text-on-surface-variant">Pitch</span>
+<span class="text-body-md font-data-mono text-on-surface" id="val-pitch">+2.4°</span>
+</div>
+<div class="flex justify-between items-center border-b border-surface-container-high pb-1">
+<span class="text-body-md font-body-md text-on-surface-variant">Roll</span>
+<span class="text-body-md font-data-mono text-on-surface" id="val-roll">-0.8°</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Yaw</span>
+<span class="text-body-md font-data-mono text-on-surface">145°</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom: Mission Phase Timeline -->
+<section class="bg-bg-surface border border-outline-variant rounded-xl p-6 mt-2">
+<h3 class="text-headline-sm font-headline-sm text-on-surface mb-6">Mission Phase</h3>
+<div class="relative flex justify-between items-center w-full max-w-3xl mx-auto">
+<!-- Connecting Line Base -->
+<div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-0.5 bg-surface-container-high -z-10"></div>
+<!-- Connecting Line Active Progress -->
+<div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-1/2 h-0.5 bg-telemetry-blue -z-10 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+<!-- Node 1: Completed -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-telemetry-blue flex items-center justify-center border border-telemetry-blue z-10 shadow-[0_0_8px_rgba(59,130,246,0.4)]">
+<span class="material-symbols-outlined text-bg-base text-[14px]">check</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface">Pre-Flight</span>
+</div>
+<!-- Node 2: Completed -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-telemetry-blue flex items-center justify-center border border-telemetry-blue z-10 shadow-[0_0_8px_rgba(59,130,246,0.4)]">
+<span class="material-symbols-outlined text-bg-base text-[14px]">check</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface">Takeoff</span>
+</div>
+<!-- Node 3: Active -->
+<div class="flex flex-col items-center gap-2 relative">
+<div class="absolute w-10 h-10 rounded-full border border-telemetry-cyan animate-ping opacity-50 z-0"></div>
+<div class="w-6 h-6 rounded-full bg-bg-surface border-2 border-telemetry-cyan flex items-center justify-center z-10 shadow-[0_0_12px_rgba(0,242,255,0.8)]">
+<div class="w-2.5 h-2.5 bg-telemetry-cyan rounded-full"></div>
+</div>
+<span class="text-label-caps font-label-caps text-telemetry-cyan font-bold tracking-widest">In Flight</span>
+</div>
+<!-- Node 4: Pending -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-bg-surface border-2 border-outline z-10"></div>
+<span class="text-label-caps font-label-caps text-outline">Landing</span>
+</div>
+<!-- Node 5: Pending -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-bg-surface border-2 border-outline z-10"></div>
+<span class="text-label-caps font-label-caps text-outline">Complete</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Functional Action Bar (Task Context) -->
+<div class="fixed bottom-0 left-0 w-full bg-bg-elevated/95 backdrop-blur-lg border-t border-outline-variant z-50 p-4 pb-safe flex gap-4 justify-between md:justify-end">
+<button class="flex-1 md:flex-none px-6 py-3 rounded-lg border border-outline text-on-surface hover:bg-surface-variant transition-colors flex items-center justify-center gap-2 font-headline-sm font-semibold text-[14px]">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Return to Task List
+        </button>
+<button class="flex-1 md:flex-none px-6 py-3 rounded-lg bg-telemetry-cyan text-bg-base hover:bg-primary-fixed transition-colors shadow-[0_0_16px_rgba(0,242,255,0.2)] flex items-center justify-center gap-2 font-headline-sm font-semibold text-[14px]">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+            Refresh Telemetry
+        </button>
+</div>
+<!-- Micro-interaction Script for Telemetry Fluctuation -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const altEl = document.getElementById('val-alt');
+            const spdEl = document.getElementById('val-spd');
+            const batEl = document.getElementById('val-bat');
+            const pitchEl = document.getElementById('val-pitch');
+            const rollEl = document.getElementById('val-roll');
+
+            let baseAlt = 1240;
+            let baseSpd = 85.4;
+            let baseBat = 14.2;
+
+            setInterval(() => {
+                // Fluctuate Altitude slightly
+                let newAlt = baseAlt + (Math.random() * 4 - 2);
+                altEl.innerText = newAlt.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+                // Fluctuate Speed
+                let newSpd = baseSpd + (Math.random() * 1.5 - 0.75);
+                spdEl.innerText = newSpd.toFixed(1);
+
+                // Fluctuate Pitch/Roll
+                let p = (2.4 + (Math.random() * 0.4 - 0.2)).toFixed(1);
+                let r = (-0.8 + (Math.random() * 0.4 - 0.2)).toFixed(1);
+                pitchEl.innerText = (p > 0 ? '+' : '') + p + '°';
+                rollEl.innerText = (r > 0 ? '+' : '') + r + '°';
+
+            }, 1500);
+
+            // Drain battery very slowly
+            setInterval(() => {
+                baseBat -= 0.1;
+                batEl.innerText = baseBat.toFixed(1);
+            }, 8000);
+        });
+    </script>
+</body></html>

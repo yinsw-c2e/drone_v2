@@ -1,0 +1,13 @@
+{$API_DOMAIN} {
+	handle /api/* {
+		reverse_proxy api:8088
+	}
+
+	handle {
+		root * /srv/drone-v2-frontend
+		try_files {path} /index.html
+		file_server {
+			precompressed gzip
+		}
+	}
+}

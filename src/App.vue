@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app';
+import { watch } from 'vue';
+import { isBackendSnapshotPushEnabled, queueBackendSnapshotSync, syncBackendSnapshot } from '@/api/backend';
 import { ensureDemoCredit } from '@/services/app-flow';
+import { db } from '@/utils/db';
 
 onLaunch(() => {
   ensureDemoCredit();
+  void syncBackendSnapshot().finally(() => ensureDemoCredit());
 });
+
+if (isBackendSnapshotPushEnabled()) {
+  watch(db, () => queueBackendSnapshotSync(db), { deep: true });
+}
 </script>
 
 <style lang="scss">

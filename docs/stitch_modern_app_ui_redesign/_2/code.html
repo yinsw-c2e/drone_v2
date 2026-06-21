@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SkyLink Logistics - Capacity Dispatch</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#e8c423",
+                        "telemetry-cyan": "#00F2FF",
+                        "surface-container-highest": "#313540",
+                        "on-tertiary-fixed": "#221b00",
+                        "secondary": "#adc6ff",
+                        "surface-variant": "#313540",
+                        "on-primary": "#00363a",
+                        "surface-dim": "#0f131d",
+                        "on-secondary-container": "#e6ecff",
+                        "outline-variant": "#3a494b",
+                        "on-tertiary": "#3b2f00",
+                        "on-primary-fixed": "#002022",
+                        "on-background": "#dfe2f0",
+                        "surface-bright": "#353944",
+                        "on-primary-fixed-variant": "#004f54",
+                        "primary-container": "#00f2ff",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#dfe2f0",
+                        "surface": "#0f131d",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-container-low": "#171b26",
+                        "inverse-surface": "#dfe2f0",
+                        "tertiary-fixed": "#ffe173",
+                        "bg-surface": "#141822",
+                        "tertiary-container": "#fed83a",
+                        "on-primary-container": "#006a71",
+                        "surface-container-high": "#262a34",
+                        "status-critical": "#EF4444",
+                        "primary": "#e1fdff",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed": "#74f5ff",
+                        "on-tertiary-container": "#725e00",
+                        "on-surface-variant": "#b9cacb",
+                        "on-secondary-fixed-variant": "#004395",
+                        "bg-elevated": "#1E2433",
+                        "secondary-fixed": "#d8e2ff",
+                        "status-warning": "#F59E0B",
+                        "on-secondary-fixed": "#001a42",
+                        "bg-base": "#0B0E14",
+                        "telemetry-blue": "#3B82F6",
+                        "error": "#ffb4ab",
+                        "outline": "#849495",
+                        "surface-container-lowest": "#0a0e18",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "inverse-primary": "#00696f",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "surface-tint": "#00dbe7",
+                        "tertiary": "#fff6e4",
+                        "inverse-on-surface": "#2c303b",
+                        "background": "#0f131d",
+                        "status-success": "#10B981",
+                        "surface-container": "#1b1f2a",
+                        "secondary-container": "#0566d9",
+                        "primary-fixed-dim": "#00dbe7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "container-max-width": "1440px",
+                        "margin-mobile": "16px",
+                        "base-unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0B0E14; /* bg-base */
+            color: #dfe2f0; /* on-surface */
+        }
+        /* Custom scrollbar for data tables */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f131d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a494b;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F2FF;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col md:flex-row pb-24 md:pb-0 pt-16 md:pt-0">
+<!-- TopAppBar (Mobile) / Left SideNav (Desktop) -->
+<!-- Mobile Top Nav -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base border-b border-outline-variant md:hidden flat no shadows">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">person</span>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan">SkyLink Logistics</h1>
+</div>
+<button class="text-primary hover:bg-surface-variant transition-colors p-2 rounded-full">
+<span class="material-symbols-outlined">signal_cellular_alt</span>
+</button>
+</header>
+<!-- Desktop Side Nav -->
+<nav class="hidden md:flex flex-col w-[240px] fixed top-0 left-0 h-screen bg-bg-base border-r border-outline-variant z-40">
+<div class="px-margin-desktop h-16 flex items-center gap-3 border-b border-outline-variant">
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan">SkyLink Logistics</h1>
+</div>
+<div class="flex-1 py-6 px-4 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">grid_view</span>
+<span class="text-body-md font-body-md">Home</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary bg-secondary-container/20 group scale-95 duration-100" href="#">
+<span class="material-symbols-outlined text-primary">assignment</span>
+<span class="text-body-md font-body-md">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">account_balance_wallet</span>
+<span class="text-body-md font-body-md">Assets</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">account_balance</span>
+<span class="text-body-md font-body-md">Wallet</span>
+</a>
+</div>
+<div class="p-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant transition-colors group" href="#">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[14px]">person</span>
+</div>
+<span class="text-body-md font-body-md">Profile</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-[240px] p-margin-mobile md:p-margin-desktop max-w-container-max-width mx-auto w-full">
+<!-- Header Section -->
+<div class="mb-6 md:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h2 class="text-display-lg font-display-lg text-on-surface mb-2">Capacity Dispatch</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">Live monitoring and allocation of active drone fleet.</p>
+</div>
+<div class="flex gap-4">
+<!-- KPI Card 1 -->
+<div class="bg-bg-surface rounded-lg p-4 border border-outline-variant/50 min-w-[140px] shadow-sm flex flex-col justify-between">
+<span class="text-label-caps font-label-caps text-on-surface-variant mb-2">ONLINE DEVICES</span>
+<span class="text-headline-md font-headline-md text-telemetry-cyan font-data-mono">24</span>
+<div class="mt-2 h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-telemetry-cyan w-3/4 rounded-full"></div>
+</div>
+</div>
+<!-- KPI Card 2 -->
+<div class="bg-bg-surface rounded-lg p-4 border border-outline-variant/50 min-w-[140px] shadow-sm flex flex-col justify-between">
+<span class="text-label-caps font-label-caps text-on-surface-variant mb-2">ACTIVE MISSIONS</span>
+<span class="text-headline-md font-headline-md text-on-surface font-data-mono">18</span>
+<div class="mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-telemetry-blue">flight_takeoff</span>
+<span class="text-label-caps font-label-caps text-telemetry-blue">75% UTILIZATION</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Reference Image Container (Hidden visually, required by prompt) -->
+<div class="hidden">
+<img alt="Reference Image" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcrdvIcZn-ZdHmZJEylFkcHsxdnWQL6jJh6BZ7Im1gMTTdSKOprdUMVTi9BQfKKhroGDrHVZUkowC1aUJ48xLpP7WpQsMrgRdM8zzm_D8nvIZIw1Xd1uWxKpznG-8CLFSCMG6hAjcbl6_aUGD_QwCjL6lQ7xcyNhRIFu6LX4fGsrOoDU8mPe3ZoTaPlWqLgBb9OAHd1qBXWuN5gCjAGbb2g_67ngApkPFvsOj1_lDAsuvWapCwVSNa7JZvQ2CCdu6iyNMFDlNJwpho"/>
+</div>
+<!-- Filter/Action Bar -->
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 p-4 bg-bg-surface border border-outline-variant/30 rounded-xl">
+<div class="flex items-center gap-4 w-full md:w-auto">
+<div class="relative w-full md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-bg-base border border-outline-variant rounded-lg pl-10 pr-4 py-2 text-body-md font-body-md text-on-surface focus:border-telemetry-cyan focus:ring-1 focus:ring-telemetry-cyan transition-all outline-none" placeholder="Search device ID..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded bg-surface-container-high border border-outline-variant text-body-md font-body-md text-on-surface hover:border-telemetry-cyan transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                        Status
+                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-container-high border border-outline-variant text-body-md font-body-md text-on-surface hover:border-telemetry-cyan transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sort</span>
+                        Zone
+                    </button>
+</div>
+</div>
+<button class="w-full md:w-auto px-6 py-2 bg-telemetry-cyan text-bg-base font-headline-sm text-headline-sm rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                New Dispatch
+            </button>
+</div>
+<!-- Device Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Device Card 1: Available -->
+<div class="bg-bg-surface rounded-xl border border-outline-variant/50 hover:border-telemetry-cyan transition-colors duration-300 overflow-hidden group relative">
+<!-- Subtle glow effect on hover -->
+<div class="absolute inset-0 bg-telemetry-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+<div class="p-5 border-b border-outline-variant/30 flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-status-success text-sm">radio_button_checked</span>
+<span class="text-label-caps font-label-caps text-status-success">AVAILABLE</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">UAV-Alpha-09</h3>
+<p class="text-data-mono font-data-mono text-on-surface-variant text-xs mt-1">ID: 8492-AX</p>
+</div>
+<div class="w-12 h-12 rounded-full border-2 border-status-success flex items-center justify-center bg-surface-container">
+<span class="material-symbols-outlined text-on-surface">flight</span>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Battery Level</span>
+<div class="flex items-center gap-2">
+<span class="text-data-mono font-data-mono text-telemetry-cyan">92%</span>
+<div class="w-16 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-telemetry-cyan w-[92%]"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Current Zone</span>
+<span class="text-data-mono font-data-mono text-on-surface">Sector 4 (North)</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Payload Cap.</span>
+<span class="text-data-mono font-data-mono text-on-surface">5.0 kg / 10.0 kg</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low flex gap-3">
+<button class="flex-1 py-2 bg-telemetry-cyan text-bg-base font-headline-sm text-sm rounded hover:bg-opacity-90 transition-colors">
+                        Dispatch
+                    </button>
+<button class="px-4 py-2 border border-telemetry-blue text-telemetry-blue rounded font-headline-sm text-sm hover:bg-telemetry-blue/10 transition-colors">
+                        Ping
+                    </button>
+</div>
+</div>
+<!-- Device Card 2: Busy -->
+<div class="bg-bg-surface rounded-xl border border-outline-variant/50 hover:border-outline-variant transition-colors overflow-hidden group">
+<div class="p-5 border-b border-outline-variant/30 flex justify-between items-start bg-surface-container-highest/20">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-telemetry-blue text-sm animate-pulse">sync</span>
+<span class="text-label-caps font-label-caps text-telemetry-blue">IN TRANSIT</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">UAV-Bravo-12</h3>
+<p class="text-data-mono font-data-mono text-on-surface-variant text-xs mt-1">ID: 7731-BC</p>
+</div>
+<div class="w-12 h-12 rounded-full border-2 border-telemetry-blue flex items-center justify-center bg-surface-container">
+<span class="material-symbols-outlined text-on-surface">local_shipping</span>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Battery Level</span>
+<div class="flex items-center gap-2">
+<span class="text-data-mono font-data-mono text-status-warning">45%</span>
+<div class="w-16 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-warning w-[45%]"></div>
+</div>
+</div>
+</div>
+<!-- Micro Timeline -->
+<div class="mt-4 pt-4 border-t border-outline-variant/30">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-3">MISSION PROGRESS</p>
+<div class="relative pt-2">
+<div class="absolute top-[13px] left-2 right-2 h-[2px] bg-outline-variant/50 -z-10"></div>
+<div class="absolute top-[13px] left-2 w-1/2 h-[2px] bg-telemetry-blue -z-10"></div>
+<div class="flex justify-between">
+<div class="flex flex-col items-center gap-1">
+<div class="w-3 h-3 rounded-full bg-telemetry-blue ring-2 ring-bg-surface"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-3 h-3 rounded-full bg-telemetry-blue ring-2 ring-bg-surface animate-pulse"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-3 h-3 rounded-full bg-surface-variant ring-2 ring-bg-surface border border-outline-variant"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between mt-2">
+<span class="text-[10px] font-data-mono text-on-surface-variant">Origin</span>
+<span class="text-[10px] font-data-mono text-telemetry-blue">En Route</span>
+<span class="text-[10px] font-data-mono text-on-surface-variant">Dest</span>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low flex gap-3">
+<button class="flex-1 py-2 border border-status-critical text-status-critical font-headline-sm text-sm rounded hover:bg-status-critical/10 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">undo</span>
+                        Recall
+                    </button>
+<button class="px-4 py-2 border border-outline-variant text-on-surface rounded font-headline-sm text-sm hover:bg-surface-variant transition-colors">
+                        Details
+                    </button>
+</div>
+</div>
+<!-- Device Card 3: Returning / Low Battery -->
+<div class="bg-bg-surface rounded-xl border border-status-warning/30 hover:border-status-warning transition-colors overflow-hidden group">
+<div class="p-5 border-b border-outline-variant/30 flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-status-warning text-sm">battery_alert</span>
+<span class="text-label-caps font-label-caps text-status-warning">RETURNING</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">UAV-Charlie-04</h3>
+<p class="text-data-mono font-data-mono text-on-surface-variant text-xs mt-1">ID: 5529-RT</p>
+</div>
+<div class="w-12 h-12 rounded-full border-2 border-status-warning flex items-center justify-center bg-surface-container">
+<span class="material-symbols-outlined text-on-surface">keyboard_return</span>
+</div>
+</div>
+<div class="p-5 space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Battery Level</span>
+<div class="flex items-center gap-2">
+<span class="text-data-mono font-data-mono text-status-critical">12%</span>
+<div class="w-16 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-critical w-[12%]"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">ETA to Base</span>
+<span class="text-data-mono font-data-mono text-status-warning">04m 12s</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-surface-variant">Current Zone</span>
+<span class="text-data-mono font-data-mono text-on-surface">Sector 1 (Base)</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container-low flex gap-3">
+<button class="flex-1 py-2 bg-surface-variant text-on-surface font-headline-sm text-sm rounded cursor-not-allowed opacity-50">
+                        Dispatch Unavailable
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-2 bg-surface border-t border-outline-variant shadow-lg rounded-t-xl md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">grid_view</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary-container bg-secondary-container/20 rounded-full px-4 py-1 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">assignment</span>
+<span class="text-label-caps font-label-caps text-telemetry-cyan font-headline-md">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">account_balance_wallet</span>
+<span class="text-label-caps font-label-caps">Assets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">account_balance</span>
+<span class="text-label-caps font-label-caps">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">person</span>
+<span class="text-label-caps font-label-caps">Profile</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,28 @@
+{
+  "projectId": "14414875459866473111",
+  "screenId": "3ebf6841c1f144a39d1f1ae601199052",
+  "target": {
+    "id": "3ebf6841c1f144a39d1f1ae601199052",
+    "name": "projects/14414875459866473111/screens/3ebf6841c1f144a39d1f1ae601199052",
+    "title": "A high-tech, professional global drone fleet distribution and live tracking map. Dark mode \"Low-Altitude Command Center\" style. The map shows geographic contours of coastal regions with glowing cyan and amber data points representing active drones. Arced lines represent flight paths between logistics hubs. Semi-transparent heat map overlays indicate capacity density. UI elements include data callouts with telemetry data (altitude, speed), grid overlays, and tactical interface borders. Colors: Deep navy background, Telemetry Cyan (#00f2ff) highlights, tactical amber for alerts. Professional, clean, data-driven visualization for a high-end logistics dashboard. No generic illustrations, must look like a real operational software component.",
+    "width": 1376,
+    "height": 768,
+    "screenshotFile": "projects/14414875459866473111/files/88d1719cb13e4ead9e0424dcf0305f39",
+    "screenshotUrl": "https://lh3.googleusercontent.com/aida/AP1WRLtEpBYXUpEDFzNJsg3lseAfhRNtXxoONUh208TFHsUYB5bBDp2Gc90E1-eUDlbcTPjcNQA0ppLwoc2bpvwVkbUVN_ovcvhOhheV1usTtHiwvju9TO_Seg2ZSEHlelrdrGBo2Rhi0x79C_IE7p20QIr1EHNDkvm24H5gRoR15eLyz2FaY-G29T7Tr5j7LmbCeZMboJ6CknhuvhLhNzQW7NZGItQO58-wIvy2b2mwW2ZMrhPH_Uq4us7LwNTF",
+    "htmlFile": null,
+    "htmlUrl": null,
+    "assetRef": "assets/fb584f1ee5b644369852f0519527938a"
+  },
+  "relatedHtmlScreen": {
+    "id": "28f5058c6cd844cbace61a9501015612",
+    "name": "projects/14414875459866473111/screens/28f5058c6cd844cbace61a9501015612",
+    "title": "全球运力分布-实时态势图",
+    "width": 780,
+    "height": 2540,
+    "screenshotFile": "projects/14414875459866473111/files/eddb6163016d4166805600f91f5b37f2",
+    "screenshotUrl": "https://lh3.googleusercontent.com/aida/AP1WRLvKytcCb8_kuhzXlfa6VY0Sxu3glJpBcsnbGngqBLwjgrYFqSruzwIomTXzd-g_Uercc48d7BLMsqKBgLc-p19nk71sJgusDfjSz6ONNi_Ptm8xRzdHcTmvjAvKpRGphfND3fBD4cx8LjT1bw-Vp6wd6aUKk8jaUVY0kxbEzjo9f2JIdk_kIften7PZPfKrTEkiSvFSDn3a684l-yz9zKlZjcY7Oi0eXmB5LXJWXkIri2EdGYetgDOyePz4",
+    "htmlFile": "projects/14414875459866473111/files/15834012ae014a33a529a80284cdbb4a",
+    "htmlUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzE3NjVlMTBlMDlkYjQzZDZhN2Y0NWMyMzBmYjVmOWNmEgsSBxDDj5bMwgMYAZIBJAoKcHJvamVjdF9pZBIWQhQxNDQxNDg3NTQ1OTg2NjQ3MzExMQ&filename=&opi=89354086",
+    "assetRef": "assets/fb584f1ee5b644369852f0519527938a"
+  }
+}

@@ -1,5 +1,5 @@
 import { db, DBShape } from './db';
-import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, CreditScore, InsurancePolicy, Claim, AirspaceRequest, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
+import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, CreditScore, InsurancePolicy, Claim, AirspaceRequest, TelemetrySnapshot, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
 function makeRepo<T extends object>(coll: keyof DBShape, key: keyof T = 'id' as keyof T) {
   const arr = () => db[coll] as unknown as T[];
   const idOf = (x: T) => (x as any)[key];
@@ -24,6 +24,7 @@ export const repo = {
   policies: makeRepo<InsurancePolicy>('policies'),
   claims: makeRepo<Claim>('claims'),
   airspace: makeRepo<AirspaceRequest>('airspace'),
+  telemetry: makeRepo<TelemetrySnapshot>('telemetry'),
   reviews: makeRepo<Review>('reviews'),
   wallets: makeRepo<Wallet>('wallets'),
   ledger: makeRepo<LedgerEntry>('ledger'),

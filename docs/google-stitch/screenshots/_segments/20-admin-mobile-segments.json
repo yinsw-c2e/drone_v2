@@ -1,0 +1,15 @@
+{
+  "prefix": "20-admin-mobile",
+  "route": "pages-admin/dashboard/index",
+  "width": 390,
+  "height": 844,
+  "totalH": 9827,
+  "totalW": 390,
+  "maxY": 8983,
+  "parts": [
+    {
+      "file": "20-admin-mobile-01-0.png",
+      "y": 0
+    }
+  ]
+}

@@ -46,6 +46,7 @@ defineEmits<{ (e: 'action'): void }>();
 }
 
 .action {
+  align-self: center;
   min-height: 72rpx;
   padding: 0 $sp-3;
   border-radius: $r-pill;
@@ -53,5 +54,15 @@ defineEmits<{ (e: 'action'): void }>();
   background: $color-primary-weak;
   font-size: $fs-sm;
   font-weight: $fw-semibold;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.action::after {
+  border: 0;
 }
 </style>

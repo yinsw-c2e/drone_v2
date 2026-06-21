@@ -71,8 +71,8 @@ export function taskActionForStatus(order: Order, allChecked: boolean, airspace?
   if (order.status === OrderStatus.AirspaceApplying && airspace?.status !== 'approved') {
     return {
       stage: '待空域审批',
-      next: '等待空域审批结果。点击刷新审批结果，通过后进入飞行准备。',
-      primary: '刷新审批结果',
+      next: '等待后台空域审批结果。后台通过后点击刷新审批状态，进入飞行准备。',
+      primary: '刷新审批状态',
       disabled: false,
       reason: '',
       terminal: false,
@@ -81,10 +81,10 @@ export function taskActionForStatus(order: Order, allChecked: boolean, airspace?
   if (order.status === OrderStatus.Preparing && !allChecked) {
     return {
       stage: '准备中',
-      next: '完成 4 项安检后可放行。',
+      next: '完成全部起飞前检查后可放行。',
       primary: '开始装货',
       disabled: true,
-      reason: '完成 4 项安检后可放行',
+      reason: '完成全部起飞前检查后可放行',
       terminal: false,
     };
   }
@@ -99,8 +99,8 @@ export function taskActionForStatus(order: Order, allChecked: boolean, airspace?
       terminal: false,
     },
     [OrderStatus.AirspaceApplying]: {
-      stage: '准备中',
-      next: '空域已批准，进入起飞前合规检查。',
+      stage: '空域已批准',
+      next: '空域已批准，点击进入飞行准备后再完成起飞前检查。',
       primary: '进入飞行准备',
       disabled: false,
       reason: '',

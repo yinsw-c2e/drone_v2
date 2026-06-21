@@ -15,5 +15,5 @@ export const INSURANCE_PLANS: Record<string, { coverages: string[]; suggest: str
   agricultural: { coverages: ['机身险', '第三者责任险'], suggest: '30-50万', mustInsure: false, needApproval: false },
 };
 export const NO_FLY_ZONES: GeoPoint[][] = [
-  [{ lng: 116.30, lat: 39.95 }, { lng: 116.34, lat: 39.95 }, { lng: 116.34, lat: 39.99 }, { lng: 116.30, lat: 39.99 }],
+  [{ lng: 113.14, lat: 23.03 }, { lng: 113.15, lat: 23.03 }, { lng: 113.15, lat: 23.04 }, { lng: 113.14, lat: 23.04 }],
 ];

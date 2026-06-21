@@ -1,5 +1,5 @@
 <template>
-  <wd-card :class="['cand', { selected }]" @click="$emit('select', candidate)">
+  <view :class="['cand', { selected }]" @click="$emit('select', candidate)">
     <view class="quote-head">
       <view class="identity">
         <view class="asset-thumb">
@@ -55,7 +55,7 @@
       </view>
       <text class="capacity-copy">空域合规 · 责任险校验</text>
     </view>
-  </wd-card>
+  </view>
 </template>
 <script setup lang="ts">
 import { computed } from 'vue';
@@ -71,7 +71,11 @@ const reasonCopy = computed(() => props.candidate.reasons.slice(0, 3).join(' · 
 .cand {
   position: relative;
   margin-bottom: $sp-3;
-  border: 2rpx solid transparent;
+  padding: $sp-4;
+  border-radius: $r-lg;
+  background: $bg-card;
+  border: 2rpx solid $hairline;
+  box-shadow: $shadow-card;
   overflow: hidden;
 }
 

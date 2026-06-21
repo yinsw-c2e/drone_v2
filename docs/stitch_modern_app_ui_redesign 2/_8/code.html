@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>低空指挥中心 - 角色选择</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "telemetry-cyan": "#00F2FF",
+                        "outline-variant": "#3a494b",
+                        "secondary-fixed": "#d8e2ff",
+                        "bg-elevated": "#1E2433",
+                        "surface-container-lowest": "#0a0e18",
+                        "status-success": "#10B981",
+                        "secondary-container": "#0566d9",
+                        "on-surface": "#dfe2f0",
+                        "tertiary-fixed-dim": "#e8c423",
+                        "on-surface-variant": "#b9cacb",
+                        "on-primary-fixed": "#002022",
+                        "tertiary": "#fff6e4",
+                        "tertiary-container": "#fed83a",
+                        "bg-surface": "#141822",
+                        "error": "#ffb4ab",
+                        "telemetry-blue": "#3B82F6",
+                        "primary-container": "#00f2ff",
+                        "error-container": "#93000a",
+                        "bg-base": "#0B0E14",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed-dim": "#00dbe7",
+                        "on-background": "#dfe2f0",
+                        "surface-container-high": "#262a34",
+                        "surface": "#0f131d",
+                        "surface-container": "#1b1f2a",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-error": "#690005",
+                        "on-tertiary": "#3b2f00",
+                        "primary-fixed": "#74f5ff",
+                        "on-tertiary-container": "#725e00",
+                        "tertiary-fixed": "#ffe173",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "on-primary-fixed-variant": "#004f54",
+                        "surface-variant": "#313540",
+                        "surface-bright": "#353944",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "on-tertiary-fixed": "#221b00",
+                        "inverse-primary": "#00696f",
+                        "surface-dim": "#0f131d",
+                        "primary": "#e1fdff",
+                        "secondary": "#adc6ff",
+                        "background": "#0f131d",
+                        "surface-container-low": "#171b26",
+                        "outline": "#849495",
+                        "surface-tint": "#00dbe7",
+                        "surface-container-highest": "#313540",
+                        "on-primary-container": "#006a71",
+                        "on-error-container": "#ffdad6",
+                        "inverse-on-surface": "#2c303b",
+                        "on-secondary-container": "#e6ecff",
+                        "status-critical": "#EF4444",
+                        "on-secondary-fixed": "#001a42",
+                        "status-warning": "#F59E0B",
+                        "inverse-surface": "#dfe2f0",
+                        "on-primary": "#00363a",
+                        // Custom gradients for the specific design
+                        "grad-blue-dark": "#0A1B3F",
+                        "grad-blue-light": "#1A3B85",
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                    },
+                    "spacing": {
+                        "base-unit": "4px",
+                        "gutter": "16px",
+                        "container-max-width": "1440px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    },
+                    backgroundImage: {
+                        'hero-gradient': 'linear-gradient(180deg, #1A3B85 0%, #0B0E14 40%)',
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(20, 24, 34, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(58, 73, 75, 0.4);
+        }
+        
+        .role-card-hover {
+            transition: all 0.3s ease;
+        }
+        .role-card-hover:hover {
+            border-color: #00F2FF;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .concentric-circles {
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .concentric-circles::before {
+            content: '';
+            position: absolute;
+            top: 50px; left: 50px; right: 50px; bottom: 50px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .concentric-circles::after {
+            content: '';
+            position: absolute;
+            top: 100px; left: 100px; right: 100px; bottom: 100px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-bg-base text-on-surface font-body-md min-h-screen relative overflow-hidden flex flex-col items-center justify-center">
+<!-- Atmospheric Background -->
+<div class="absolute inset-0 bg-hero-gradient z-0 pointer-events-none"></div>
+<div class="concentric-circles"></div>
+<main class="relative z-10 w-full max-w-md px-margin-mobile flex flex-col h-[800px] max-h-screen pt-12 pb-8">
+<!-- Header Section -->
+<header class="mb-8 relative">
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-telemetry-blue rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">
+                            flight_takeoff
+                        </span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm text-white">低空指挥中心</h1>
+<p class="font-label-caps text-label-caps text-telemetry-blue mt-1 opacity-80">LOW-ALTITUDE COMMAND CENTER</p>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/50">
+<div class="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></div>
+<span class="font-label-caps text-[10px] text-on-surface-variant">演示环境</span>
+</div>
+</div>
+<h2 class="font-display-lg text-[32px] leading-tight text-white mb-3">选择身份进入系统</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[280px]">
+                同一笔订单，贯通业主·飞手·机主·管理后台四端协同
+            </p>
+<!-- Stats Row -->
+<div class="flex gap-6 mt-6">
+<div>
+<div class="font-headline-md text-headline-md text-white mb-1">实时</div>
+<div class="font-label-caps text-label-caps text-outline">智能撮合</div>
+</div>
+<div class="w-px h-10 bg-outline-variant/50"></div>
+<div>
+<div class="font-headline-md text-headline-md text-white mb-1">全链路</div>
+<div class="font-label-caps text-label-caps text-outline">飞行可测</div>
+</div>
+<div class="w-px h-10 bg-outline-variant/50"></div>
+<div>
+<div class="font-headline-md text-headline-md text-white mb-1">5 方</div>
+<div class="font-label-caps text-label-caps text-outline">分账透明</div>
+</div>
+</div>
+</header>
+<!-- Role Selection Cards -->
+<div class="flex-1 flex flex-col gap-4 overflow-y-auto pb-6 scrollbar-hide" style="scrollbar-width: none;">
+<!-- Client Card -->
+<a class="block w-full bg-surface-container-high rounded-2xl p-4 border border-outline-variant/30 role-card-hover flex items-center gap-4 relative overflow-hidden group" href="#">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-telemetry-blue rounded-l-2xl"></div>
+<div class="w-14 h-14 rounded-xl bg-gradient-to-br from-telemetry-blue to-blue-800 flex items-center justify-center flex-shrink-0 shadow-lg">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 0;">
+                        home_work
+                    </span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline-sm text-headline-sm text-white">业主端</h3>
+<span class="font-label-caps text-label-caps text-telemetry-blue">CLIENT</span>
+</div>
+<span class="font-data-mono text-xs text-on-surface-variant">13800000001</span>
+</div>
+<p class="font-body-md text-[13px] text-on-surface-variant truncate">发单 · 智能比价 · 全程追踪 · ...</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center flex-shrink-0 group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 18px;">
+                        chevron_right
+                    </span>
+</div>
+</a>
+<!-- Pilot Card -->
+<a class="block w-full bg-surface-container-high rounded-2xl p-4 border border-outline-variant/30 role-card-hover flex items-center gap-4 relative overflow-hidden group" href="#">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-status-success rounded-l-2xl"></div>
+<div class="w-14 h-14 rounded-xl bg-gradient-to-br from-status-success to-emerald-800 flex items-center justify-center flex-shrink-0 shadow-lg">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 0;">
+                        person
+                    </span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline-sm text-headline-sm text-white">飞手端</h3>
+<span class="font-label-caps text-label-caps text-status-success">PILOT</span>
+</div>
+<span class="font-data-mono text-xs text-on-surface-variant">13800000002</span>
+</div>
+<p class="font-body-md text-[13px] text-on-surface-variant truncate">接单 · 起飞安检 · 飞行监控 · ...</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center flex-shrink-0 group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 18px;">
+                        chevron_right
+                    </span>
+</div>
+</a>
+<!-- Owner Card -->
+<a class="block w-full bg-surface-container-high rounded-2xl p-4 border border-outline-variant/30 role-card-hover flex items-center gap-4 relative overflow-hidden group" href="#">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 rounded-l-2xl"></div>
+<div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-purple-800 flex items-center justify-center flex-shrink-0 shadow-lg">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 0;">
+                        deployed_code
+                    </span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline-sm text-headline-sm text-white">机主端</h3>
+<span class="font-label-caps text-label-caps text-purple-400">OWNER</span>
+</div>
+<span class="font-data-mono text-xs text-on-surface-variant">13800000003</span>
+</div>
+<p class="font-body-md text-[13px] text-on-surface-variant truncate">设备管理 · 运力投放 · T+7 分账</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center flex-shrink-0 group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 18px;">
+                        chevron_right
+                    </span>
+</div>
+</a>
+<!-- Console Card -->
+<a class="block w-full bg-surface-container-high rounded-2xl p-4 border border-outline-variant/30 role-card-hover flex items-center gap-4 relative overflow-hidden group opacity-80 hover:opacity-100" href="#">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-surface-variant rounded-l-2xl"></div>
+<div class="w-14 h-14 rounded-xl bg-surface-variant flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-surface text-3xl" style="font-variation-settings: 'FILL' 0;">
+                        speed
+                    </span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-baseline gap-2">
+<h3 class="font-headline-sm text-headline-sm text-white">管理后台</h3>
+<span class="font-label-caps text-label-caps text-outline">CONSOLE</span>
+</div>
+<span class="font-label-caps text-[10px] text-outline">后台入口</span>
+</div>
+<p class="font-body-md text-[13px] text-on-surface-variant truncate">认证审核 · 风控 · 订单 · 数据看板</p>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface flex items-center justify-center flex-shrink-0 group-hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 18px;">
+                        chevron_right
+                    </span>
+</div>
+</a>
+</div>
+<!-- Footer Note -->
+<footer class="mt-auto pt-6 text-center">
+<div class="flex items-center justify-center gap-2 text-outline">
+<span class="material-symbols-outlined" style="font-size: 14px;">lock</span>
+<span class="font-body-md text-[12px]">实名、人脸、短信与 CAAC 资质核验将在生产环境接入</span>
+</div>
+</footer>
+</main>
+</body></html>

@@ -9,25 +9,29 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "低空吊运"
+        "navigationBarTitleText": "低空吊运",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/login/index",
       "style": {
-        "navigationBarTitleText": "角色登录"
+        "navigationBarTitleText": "角色登录",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-client/home/index",
       "style": {
-        "navigationBarTitleText": "业主指挥台"
+        "navigationBarTitleText": "业主指挥台",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-client/order/index",
       "style": {
-        "navigationBarTitleText": "发起吊运"
+        "navigationBarTitleText": "发起吊运",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -39,108 +43,169 @@
     {
       "path": "pages-client/match/index",
       "style": {
-        "navigationBarTitleText": "智能匹配"
+        "navigationBarTitleText": "智能匹配",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-client/track/index",
       "style": {
-        "navigationBarTitleText": "订单追踪"
+        "navigationBarTitleText": "飞行监控",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-client/review/index",
       "style": {
-        "navigationBarTitleText": "评价结算"
+        "navigationBarTitleText": "评价结算",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-client/insurance/index",
       "style": {
-        "navigationBarTitleText": "保险理赔"
+        "navigationBarTitleText": "保险理赔",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/credit/index",
       "style": {
-        "navigationBarTitleText": "信用风控"
+        "navigationBarTitleText": "信用风控",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/auth/index",
       "style": {
-        "navigationBarTitleText": "认证中心"
+        "navigationBarTitleText": "认证中心",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-pilot/home/index",
       "style": {
-        "navigationBarTitleText": "飞手驾驶舱"
+        "navigationBarTitleText": "飞手驾驶舱",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-pilot/hall/index",
       "style": {
-        "navigationBarTitleText": "接单大厅"
+        "navigationBarTitleText": "接单大厅",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-pilot/task/index",
       "style": {
-        "navigationBarTitleText": "任务执行"
+        "navigationBarTitleText": "任务执行",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-pilot/wallet/index",
       "style": {
-        "navigationBarTitleText": "飞手钱包"
+        "navigationBarTitleText": "飞手钱包",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-owner/home/index",
       "style": {
-        "navigationBarTitleText": "机主管理台"
+        "navigationBarTitleText": "机主管理台",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-owner/devices/index",
       "style": {
-        "navigationBarTitleText": "设备与运力"
+        "navigationBarTitleText": "设备与运力",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-owner/drones/index",
       "style": {
-        "navigationBarTitleText": "设备管理"
+        "navigationBarTitleText": "设备管理",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-owner/dispatch/index",
       "style": {
-        "navigationBarTitleText": "运力调度"
+        "navigationBarTitleText": "运力调度",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-owner/mission/index",
+      "style": {
+        "navigationBarTitleText": "任务详情",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-owner/wallet/index",
       "style": {
-        "navigationBarTitleText": "机主钱包"
+        "navigationBarTitleText": "机主钱包",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-admin/dashboard/index",
       "style": {
-        "navigationBarTitleText": "管理后台"
+        "navigationBarTitleText": "运营控制台",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-admin/certifications/index",
+      "style": {
+        "navigationBarTitleText": "认证审核",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-admin/orders/index",
+      "style": {
+        "navigationBarTitleText": "订单管理",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-admin/risk/index",
+      "style": {
+        "navigationBarTitleText": "风控理赔",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-admin/reports/index",
+      "style": {
+        "navigationBarTitleText": "报表建议",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages-admin/audit/index",
+      "style": {
+        "navigationBarTitleText": "审计日志",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages-admin/index/index",
       "style": {
-        "navigationBarTitleText": "管理后台"
+        "navigationBarTitleText": "管理后台",
+        "navigationStyle": "custom"
       }
     }
   ],
   "globalStyle": {
-    "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "低空吊运"
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "低空吊运",
+    "navigationBarBackgroundColor": "#0A1124",
+    "backgroundColor": "#0A1124"
   }
 }

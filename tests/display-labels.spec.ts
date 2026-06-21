@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
-import { auditActionLabel, auditDetailLabel, auditLogDetailLabel, auditStatusLabel, capacityHeatmapLabel, capacityStatusLabel, cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, droneDisplayName, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, orderDisplayTitle, paymentModeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
+import { auditActionLabel, auditDetailLabel, auditLogDetailLabel, auditStatusLabel, capacityHeatmapAreaLabel, capacityHeatmapLabel, capacityStatusLabel, cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, droneDisplayName, droneStatusLabel, ledgerStatusLabel, ledgerTypeLabel, orderDisplayTitle, paymentModeLabel, policyStatusLabel, roleLabel } from '@/services/display-labels';
 
 describe('display labels', () => {
   it('maps role and cargo enums to Chinese business labels', () => {
@@ -47,6 +47,7 @@ describe('display labels', () => {
     expect(auditActionLabel(AuditAction.Payment)).toBe('支付');
     expect(auditActionLabel(AuditAction.Airspace)).toBe('空域');
     expect(auditActionLabel(AuditAction.Certification)).toBe('认证');
+    expect(auditActionLabel(AuditAction.Settlement)).toBe('结算');
     expect(paymentModeLabel(PaymentMode.Escrow)).toBe('担保支付');
     expect(auditDetailLabel('Mock 空域审批通过')).toBe('演示环境空域审批通过');
     expect(auditDetailLabel('escrow 模式预支付已由 Mock provider 受理')).toBe('担保支付模式预支付已由演示支付通道受理');
@@ -63,5 +64,7 @@ describe('display labels', () => {
     expect(orderDisplayTitle({ cargo: { type: CargoType.Normal, weightKg: 1, valueCent: 100, photos: [] }, from: { lng: 1, lat: 2, address: '北京低空货运中心' } })).toBe('北京低空货运中心订单');
     expect(capacityHeatmapLabel({ id: 'cap_Uhm90Vqv', location: { lng: 1, lat: 2 } }, 0)).toBe('合规运力1');
     expect(capacityHeatmapLabel({ id: 'cap1', location: { lng: 1, lat: 2 } }, 1, { brand: 'DJI', model: 'FlyCart 30' }, { nickname: '飞手1' })).toBe('DJI FlyCart 30 · 飞手1');
+    expect(capacityHeatmapAreaLabel({ location: { lng: 1, lat: 2, address: '订单起点附近演示运力1' } }, 0)).toBe('起点周边 1 号机位');
+    expect(capacityHeatmapAreaLabel({ location: { lng: 1, lat: 2, address: '经纬度点 113.12000, 23.02000' } }, 2)).toBe('低空走廊 3 号机位');
   });
 });

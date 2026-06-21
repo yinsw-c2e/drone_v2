@@ -19,15 +19,33 @@ withDefaults(defineProps<{ label: string; value: string | number; hint?: string;
 
 <style lang="scss" scoped>
 .metric-card {
+  position: relative;
+  overflow: hidden;
   @include card;
-  border: 2rpx solid $line;
-  box-shadow: $shadow-soft;
+  border: 2rpx solid $hairline;
+  box-shadow: $shadow-card;
+  background:
+    radial-gradient(80% 70% at 100% 0%, rgba(0, 242, 255, .08), transparent 62%),
+    $bg-card;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  left: $sp-3;
+  top: 0;
+  width: 72rpx;
+  height: 4rpx;
+  border-radius: $r-pill;
+  background: $color-primary;
+  box-shadow: 0 0 16rpx rgba(0, 242, 255, .55);
 }
 
 .label {
   font-size: $fs-sm;
   color: $ink-500;
   line-height: 1.45;
+  letter-spacing: 1rpx;
 }
 
 .value {

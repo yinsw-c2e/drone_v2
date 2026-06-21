@@ -19,11 +19,11 @@ export function matchPure(o: Order, views: CapacityView[], strategy: DispatchStr
     reasons.push(`信用${v.credit}`);
     out.push({ pilotId: v.pilot.userId, droneId: v.drone.id, capacityId: v.unit.id, distanceKm: dist, etaMin: eta, creditScore: v.credit, quoteCent: price.totalCent, score: 0, reasons, priceBreakdown: price });
   }
-  const maxD = Math.max(1, ...out.map((c) => c.distanceKm)), maxQ = Math.max(1, ...out.map((c) => c.quoteCent));
+  const maxD = Math.max(1, ...out.map((c) => c.distanceKm)), maxQ = Math.max(1, ...out.map((c) => c.quoteCent)), maxEta = Math.max(1, ...out.map((c) => c.etaMin));
   const ratingOf = (pid: string) => views.find((v) => v.pilot.userId === pid)?.rating ?? 5;
   for (const c of out) {
-    const dS = 1 - c.distanceKm / maxD, cS = c.creditScore / 1000, rS = ratingOf(c.pilotId) / 5;
-    c.score = strategy === 'maxProfit' ? r4(c.quoteCent / maxQ) : strategy === 'global' ? r4(0.5 * dS + 0.5 * cS) : strategy === 'chain' ? r4(0.7 * dS + 0.3 * cS) : r4(0.6 * dS + 0.25 * cS + 0.15 * rS);
+    const dS = 1 - c.distanceKm / maxD, eS = 1 - c.etaMin / maxEta, cS = c.creditScore / 1000, rS = ratingOf(c.pilotId) / 5;
+    c.score = strategy === 'maxProfit' ? r4(c.quoteCent / maxQ) : strategy === 'global' ? r4(0.5 * dS + 0.5 * cS) : strategy === 'chain' ? r4(0.75 * eS + 0.25 * cS) : r4(0.6 * dS + 0.25 * cS + 0.15 * rS);
   }
   return out.sort((a, b) => b.score - a.score);
 }

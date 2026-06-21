@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev:h5": "uni --host 0.0.0.0",
+    "backend:up": "cd backend && docker compose up -d --build mysql api",
+    "backend:mysql": "cd backend && docker compose up -d mysql",
+    "backend:dev": "cd backend && go run ./cmd/server",
+    "backend:test": "cd backend && go test ./...",
     "dev:mp-weixin": "uni -p mp-weixin",
     "type-check": "vue-tsc --noEmit -p tsconfig.json",
     "lint": "eslint \"src/**/*.{ts,vue}\" --max-warnings=0",

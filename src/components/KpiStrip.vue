@@ -1,18 +1,35 @@
 <template>
   <view class="kpi-strip">
-    <view v-for="item in items" :key="item.label" :class="['kpi-item', item.tone ?? 'info']">
-      <view class="kpi-top">
-        <text class="label">{{ item.label }}</text>
-        <text class="dot" />
-      </view>
+    <view
+      v-for="item in items"
+      :key="item.label"
+      :class="['kpi-item', item.tone ?? 'info', { interactive: Boolean(item.key) }]"
+      :hover-class="item.key ? 'kpi-item--press' : 'none'"
+      @click="select(item)"
+    >
+      <text class="label">{{ item.label }}</text>
       <text class="value">{{ item.value }}</text>
       <text v-if="item.hint" class="hint">{{ item.hint }}</text>
+      <text v-if="item.key" class="kpi-arrow">›</text>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-defineProps<{ items: Array<{ label: string; value: string | number; hint?: string; tone?: 'info' | 'success' | 'warning' | 'danger' | 'neutral' }> }>();
+type KpiItem = {
+  label: string;
+  value: string | number;
+  hint?: string;
+  tone?: 'info' | 'success' | 'warning' | 'danger' | 'neutral';
+  key?: string;
+};
+
+defineProps<{ items: KpiItem[] }>();
+const emit = defineEmits<{ select: [key: string] }>();
+
+function select(item: KpiItem) {
+  if (item.key) emit('select', item.key);
+}
 </script>
 
 <style lang="scss" scoped>
@@ -23,97 +40,87 @@ defineProps<{ items: Array<{ label: string; value: string | number; hint?: strin
 }
 
 .kpi-item {
-  min-height: 116rpx;
-  padding: $sp-2;
-  border-radius: $r-md;
-  background: $surface-raised;
-  border: 2rpx solid $line;
+  position: relative;
+  overflow: hidden;
+  min-height: 138rpx;
+  padding: $sp-4 $sp-3 $sp-3;
+  border-radius: $r-lg;
+  background:
+    radial-gradient(80% 60% at 100% 0%, rgba(0, 242, 255, .10), transparent 64%),
+    $bg-card;
+  border: 2rpx solid $hairline;
+  box-shadow: $shadow-card;
   box-sizing: border-box;
-  box-shadow: $shadow-soft;
 }
 
-.kpi-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $sp-1;
+.kpi-item.interactive {
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: $r-pill;
-  background: $info;
+.kpi-item--press {
+  transform: translateY(2rpx);
+  opacity: .9;
 }
 
-.value {
-  @include tabular;
-  display: block;
-  margin-top: $sp-1;
-  color: $ink-900;
-  font-size: $fs-h2;
-  line-height: 1.2;
-  font-weight: $fw-bold;
+.kpi-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4rpx;
 }
 
-.label,
-.hint {
-  display: block;
-  font-size: $fs-cap;
-  line-height: 1.4;
+.kpi-item::after {
+  content: '';
+  position: absolute;
+  right: -28rpx;
+  bottom: -28rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 50%;
+  border: 2rpx solid rgba(0, 242, 255, .08);
 }
 
 .label {
-  color: $ink-700;
-  font-weight: $fw-semibold;
+  display: block;
+  color: $ink-500;
+  font-size: $fs-cap;
+  font-weight: $fw-bold;
+  line-height: 1.35;
+  letter-spacing: 1rpx;
+  text-transform: uppercase;
   @include ellipsis(1);
 }
 
+.value {
+  @include metric-number($fs-metric);
+  display: block;
+  margin-top: $sp-2;
+  color: $ink-900;
+}
+
 .hint {
+  display: block;
+  margin-top: $sp-1;
+  color: $ink-400;
+  font-size: $fs-cap;
+  line-height: 1.35;
+}
+
+.kpi-arrow {
+  position: absolute;
+  right: $sp-2;
+  top: $sp-2;
   color: $ink-500;
+  font-size: $fs-h3;
+  line-height: 1;
 }
 
-.kpi-item.info {
-  background: $info-bg;
-  border-color: $info-line;
-}
-
-.kpi-item.info .dot {
-  background: $info;
-}
-
-.kpi-item.success {
-  background: $success-bg;
-  border-color: $success-line;
-}
-
-.kpi-item.success .dot {
-  background: $success;
-}
-
-.kpi-item.warning {
-  background: $warning-bg;
-  border-color: $warning-line;
-}
-
-.kpi-item.warning .dot {
-  background: $warning;
-}
-
-.kpi-item.danger {
-  background: $danger-bg;
-  border-color: $danger-line;
-}
-
-.kpi-item.danger .dot {
-  background: $danger;
-}
-
-.kpi-item.neutral {
-  background: $surface-panel;
-}
-
-.kpi-item.neutral .dot {
-  background: $ink-400;
-}
+.kpi-item.info::before { background: $grad-cta; }
+.kpi-item.success::before { background: $grad-success; }
+.kpi-item.warning::before { background: $grad-warning; }
+.kpi-item.danger::before { background: $grad-danger; }
+.kpi-item.neutral::before { background: $grad-admin; }
 </style>

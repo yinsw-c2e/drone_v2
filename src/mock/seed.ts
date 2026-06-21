@@ -1,8 +1,59 @@
-import { Role, AuditStatus, CapacityStatus } from '@/models';
+import { Role, AuditStatus, CapacityStatus, LedgerStatus, LedgerType } from '@/models';
 import type { DBShape } from '@/utils/db';
-import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit } from '@/models';
+import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Wallet, LedgerEntry, CertificationApplication } from '@/models';
 
 const future = '2031-12-31T00:00:00.000Z';
+
+function isoAgo(ms: number) {
+  return new Date(Date.now() - ms).toISOString();
+}
+
+export function buildSeedWallets(): Wallet[] {
+  return [
+    { id: 'u_p1', userId: 'u_p1', balanceCent: 452000, pendingCent: 128500 },
+    { id: 'u_o1', userId: 'u_o1', balanceCent: 245800, pendingCent: 84500 },
+    { id: 'u_c1', userId: 'u_c1', balanceCent: 260000, pendingCent: 0 },
+  ];
+}
+
+export function buildSeedLedger(): LedgerEntry[] {
+  return [
+    { id: 'le_seed_p1_settle', userId: 'u_p1', orderId: 'ORD-DEMO-088', type: LedgerType.SettleIn, amountCent: 345000, cycle: 'T+1', status: LedgerStatus.Available, note: '历史任务结算（演示初始数据）', createdAt: isoAgo(3 * 24 * 3600 * 1000) },
+    { id: 'le_seed_p1_pending', userId: 'u_p1', orderId: 'ORD-DEMO-091', type: LedgerType.SettleIn, amountCent: 128500, cycle: 'T+1', status: LedgerStatus.Pending, note: '历史任务结算（待释放）', createdAt: isoAgo(20 * 3600 * 1000) },
+    { id: 'le_seed_p1_withdraw', userId: 'u_p1', type: LedgerType.Withdraw, amountCent: -50000, cycle: '-', status: LedgerStatus.Paid, note: '提现', createdAt: isoAgo(2 * 24 * 3600 * 1000) },
+    { id: 'le_seed_o1_settle', userId: 'u_o1', orderId: 'ORD-DEMO-088', type: LedgerType.SettleIn, amountCent: 120000, cycle: 'T+7', status: LedgerStatus.Available, note: '设备使用费结算（演示初始数据）', createdAt: isoAgo(4 * 24 * 3600 * 1000) },
+    { id: 'le_seed_o1_pending', userId: 'u_o1', orderId: 'ORD-DEMO-091', type: LedgerType.SettleIn, amountCent: 84500, cycle: 'T+7', status: LedgerStatus.Pending, note: '设备使用费（待释放）', createdAt: isoAgo(20 * 3600 * 1000) },
+  ];
+}
+
+export function buildSeedCertQueue(): CertificationApplication[] {
+  return [
+    {
+      id: 'cert_seed_pilot',
+      userId: 'u_p2',
+      role: Role.Pilot,
+      status: AuditStatus.Pending,
+      submittedAt: isoAgo(5 * 60 * 1000),
+      fields: { realName: '飞手2', caacLevel: 'VLOS', noCrimeProof: '无犯罪记录证明', healthProof: '体检报告', trainingCerts: ['应急处置'] },
+    },
+    {
+      id: 'cert_seed_owner',
+      userId: 'u_o2',
+      role: Role.Owner,
+      status: AuditStatus.Pending,
+      submittedAt: isoAgo(35 * 60 * 1000),
+      fields: { realName: '机主2', droneModel: 'EHang EH-216', droneSn: 'SN-D3', insuranceAmount: 5_000_000, maintenance: '月度例检正常' },
+    },
+    {
+      id: 'cert_seed_client',
+      userId: 'u_c2',
+      role: Role.Client,
+      status: AuditStatus.Pending,
+      submittedAt: isoAgo(70 * 60 * 1000),
+      fields: { realName: '业主2', idNo: '110105********5678', cargoDeclaration: ['normal'] },
+    },
+  ];
+}
 
 export function buildSeed(): DBShape {
   const pilotIds = ['u_p1', 'u_p2', 'u_p3'];
@@ -42,5 +93,5 @@ export function buildSeed(): DBShape {
     { id: 'cap4', pilotId: 'u_p1', droneId: 'd4', ownerId: 'u_o2', location: capLoc[3], status: CapacityStatus.Online },
   ];
 
-  return { users, pilots, owners, clients, drones, capacity, orders: [], credits: [], policies: [], claims: [], airspace: [], reviews: [], wallets: [], ledger: [], notifications: [], authApplications: [], auditLogs: [], _seededAt: new Date().toISOString() };
+  return { users, pilots, owners, clients, drones, capacity, orders: [], credits: [], policies: [], claims: [], airspace: [], telemetry: [], reviews: [], wallets: buildSeedWallets(), ledger: buildSeedLedger(), notifications: [], authApplications: buildSeedCertQueue(), auditLogs: [], _seededAt: new Date().toISOString() };
 }

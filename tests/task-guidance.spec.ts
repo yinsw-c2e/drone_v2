@@ -48,13 +48,20 @@ describe('task guidance', () => {
     const plan = taskActionForStatus(order(OrderStatus.Preparing), false, airspace('approved'));
     expect(plan.disabled).toBe(true);
     expect(plan.primary).toBe('开始装货');
-    expect(plan.reason).toBe('完成 4 项安检后可放行');
+    expect(plan.reason).toBe('完成全部起飞前检查后可放行');
   });
 
   it('空域申请中且未批准时提示等待审批结果', () => {
     const plan = taskActionForStatus(order(OrderStatus.AirspaceApplying), true, airspace('submitted'));
-    expect(plan.primary).toBe('刷新审批结果');
-    expect(plan.next).toContain('等待空域审批结果');
+    expect(plan.primary).toBe('刷新审批状态');
+    expect(plan.next).toContain('等待后台空域审批结果');
+  });
+
+  it('空域已批准但订单未进入准备时不提前显示准备中', () => {
+    const plan = taskActionForStatus(order(OrderStatus.AirspaceApplying), true, airspace('approved'));
+    expect(plan.stage).toBe('空域已批准');
+    expect(plan.primary).toBe('进入飞行准备');
+    expect(plan.next).toContain('点击进入飞行准备');
   });
 
   it('飞行中引导进入卸货，StepFlow 标记当前阶段', () => {

@@ -72,6 +72,13 @@ describe('action plans', () => {
     expect(action.reason).toContain('不能继续流转');
   });
 
+  it('后台不替飞手推进现场执行阶段', () => {
+    const loading = adminOrderAction(order(OrderStatus.Loading));
+    expect(loading.disabled).toBe(true);
+    expect(loading.label).toBe('待飞手起飞执行');
+    expect(loading.reason).toContain('现场执行由飞手操作');
+  });
+
   it('paid 理赔是终态，不再重复推进', () => {
     const action = claimAction(claim('paid'));
     expect(action.disabled).toBe(true);
@@ -114,30 +121,30 @@ describe('action plans', () => {
     expect(exception.primaryLabel).toBe('重新发单');
   });
 
-  it('后台端到端跑通在 0 在线运力时给出业务阻断', () => {
+  it('后台流程演练在 0 在线运力时给出业务阻断', () => {
     const blocked = adminRunFlowAction(0);
     expect(blocked.canRun).toBe(false);
     expect(blocked.description).toContain('当前没有在线合规运力');
 
     const ready = adminRunFlowAction(1);
     expect(ready.canRun).toBe(true);
-    expect(ready.description).toContain('可一键跑通');
+    expect(ready.description).toContain('流程演练');
   });
 
-  it('后台端到端跑通成功后不同时展示无在线运力阻断', () => {
+  it('后台流程演练成功后不同时展示无在线运力阻断', () => {
     const actionAfterSuccess = adminRunFlowAction(0);
     const panel = adminRunFlowPanel(actionAfterSuccess, {
       kind: 'success',
-      message: '端到端流程已跑通，结算与分账已生成',
+      message: '流程演练已完成，结算与分账已生成',
     });
 
     expect(panel.noticeTone).toBe('success');
-    expect(panel.noticeMessage).toContain('端到端流程已跑通');
-    expect(panel.description).toContain('本次验收已完成');
+    expect(panel.noticeMessage).toContain('流程演练已完成');
+    expect(panel.description).toContain('本次流程演练已完成');
     expect(panel.description).not.toContain('当前没有在线合规运力');
   });
 
-  it('后台端到端跑通无反馈时按当前运力展示可执行说明', () => {
+  it('后台流程演练无反馈时按当前运力展示可执行说明', () => {
     const blockedPanel = adminRunFlowPanel(adminRunFlowAction(0), { kind: 'idle', message: '' });
     expect(blockedPanel.description).toContain('当前没有在线合规运力');
     expect(blockedPanel.noticeMessage).toBe('');

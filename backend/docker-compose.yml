@@ -1,0 +1,40 @@
+services:
+  api:
+    build:
+      context: .
+    container_name: drone-v2-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_DSN: drone:drone@tcp(mysql:3306)/drone_v2?parseTime=true&charset=utf8mb4&loc=Local&multiStatements=true
+      PORT: "8088"
+    ports:
+      - "8088:8088"
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: drone-v2-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: drone_root
+      MYSQL_DATABASE: drone_v2
+      MYSQL_USER: drone
+      MYSQL_PASSWORD: drone
+      TZ: Asia/Shanghai
+    ports:
+      - "3308:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - drone-v2-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-udrone", "-pdrone"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  drone-v2-mysql-data:

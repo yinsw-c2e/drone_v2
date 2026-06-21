@@ -86,28 +86,28 @@ export function adminOrderAction(order: Order, airspace?: AirspaceRequest): Admi
     return { label: '异常中', disabled: true, reason: '订单已进入异常处理，不能继续流转', description: '请处理风控、理赔或后台仲裁。', terminal: true };
   }
   if (order.status === OrderStatus.Confirmed) {
-    return { label: '提交空域', disabled: false, reason: '', description: '提交空域申请。', terminal: false };
+    return { label: '待飞手提交空域', disabled: true, reason: '空域申请由飞手端提交', description: '飞手确认任务后提交空域申请，后台只负责审批。', terminal: false };
   }
   if (order.status === OrderStatus.AirspaceApplying && airspace?.status !== 'approved') {
-    return { label: '通过审批', disabled: false, reason: '', description: '刷新空域审批，通过后进入准备。', terminal: false };
+    return { label: '通过审批', disabled: false, reason: '', description: '审核空域申请，通过后飞手可进入准备。', terminal: false };
   }
   if (order.status === OrderStatus.AirspaceApplying) {
-    return { label: '进入准备', disabled: false, reason: '', description: '空域已通过，推进到合规准备。', terminal: false };
+    return { label: '待飞手进入准备', disabled: true, reason: '空域已批准，等待飞手端继续', description: '空域已通过，飞手端刷新后可进入起飞前准备。', terminal: false };
   }
   if (order.status === OrderStatus.Preparing) {
-    return { label: '开始装货', disabled: false, reason: '', description: '合规检查后进入装货。', terminal: false };
+    return { label: '待飞手开始装货', disabled: true, reason: '现场执行由飞手操作', description: '飞手完成起飞前检查后开始装货。', terminal: false };
   }
   if (order.status === OrderStatus.Loading) {
-    return { label: '起飞执行', disabled: false, reason: '', description: '装货完成后进入飞行。', terminal: false };
+    return { label: '待飞手起飞执行', disabled: true, reason: '现场执行由飞手操作', description: '飞手确认装货完成后起飞执行。', terminal: false };
   }
   if (order.status === OrderStatus.InFlight) {
-    return { label: '确认卸货', disabled: false, reason: '', description: '飞行到达后进入卸货。', terminal: false };
+    return { label: '飞行执行中', disabled: true, reason: '飞行阶段由飞手操作', description: '后台只监控飞行状态，异常时进入风控理赔。', terminal: false };
   }
   if (order.status === OrderStatus.Unloading) {
-    return { label: '完成任务', disabled: false, reason: '', description: '卸货完成后标记任务完成。', terminal: false };
+    return { label: '待飞手完成任务', disabled: true, reason: '现场执行由飞手操作', description: '飞手确认卸货完成后结束任务。', terminal: false };
   }
   if (order.status === OrderStatus.Completed) {
-    return { label: '生成结算', disabled: false, reason: '', description: '生成分账并同步钱包。', terminal: false };
+    return { label: '待生成结算', disabled: true, reason: '结算不在订单推进中处理', description: '任务完成后由结算流程生成分账并同步钱包。', terminal: false };
   }
   return { label: '查看明细', disabled: true, reason: '当前状态不能由后台直接流转', description: '请查看订单事件或重新发起流程。', terminal: true };
 }
@@ -121,7 +121,7 @@ export function adminRunFlowAction(onlineCapacity: number): AdminRunFlowAction {
   }
   return {
     canRun: true,
-    description: '在线运力可用，可一键跑通发单、匹配、空域、飞行、卸货、结算与分账。',
+    description: '在线运力可用，可执行一次发单、匹配、空域、飞行、卸货、结算与分账流程演练。',
   };
 }
 
@@ -130,8 +130,8 @@ export function adminRunFlowPanel(action: AdminRunFlowAction, feedback: AdminRun
     if (feedback.kind === 'success') {
       return {
         description: action.canRun
-          ? '本次验收已完成；系统仍有在线运力，可再次执行演示验收。'
-          : '本次验收已完成；当前运力已被任务占用，如需再次跑通请到机主调度恢复在线运力。',
+          ? '本次流程演练已完成；系统仍有在线运力，可再次执行。'
+          : '本次流程演练已完成；当前运力已被任务占用，如需再次演练请到机主调度恢复在线运力。',
         noticeMessage: feedback.message,
         noticeTone: 'success',
       };

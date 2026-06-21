@@ -2,7 +2,7 @@ import { Role, AuditStatus, CapacityStatus } from '@/models';
 import type { DBShape } from '@/utils/db';
 import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit } from '@/models';
 
-const CENTER = { lng: 116.397, lat: 39.908 };
+const CENTER = { lng: 113.125213, lat: 23.020498 };
 const future = '2031-12-31T00:00:00.000Z';
 
 export function buildSeed(): DBShape {
@@ -18,7 +18,7 @@ export function buildSeed(): DBShape {
   ];
 
   const pStats = () => ({ orders: 120, completed: 114, cancelled: 6, onTimeRate: 0.94, complaintRate: 0.03, accidentRate: 0, violationCount: 0, flightHours: 600, onlineHours: 320, avgRespSec: 18, avgStar: 4.7 });
-  const pilots: PilotProfile[] = pilotIds.map((userId, i) => ({ userId, caacLevel: i === 0 ? 'BVLOS' : 'VLOS', caacExpire: future, noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved, trainingCerts: ['应急处置'], online: true, location: [{ lng: 116.400, lat: 39.910 }, { lng: 116.390, lat: 39.905 }, { lng: 116.405, lat: 39.912 }][i], stats: pStats() }));
+  const pilots: PilotProfile[] = pilotIds.map((userId, i) => ({ userId, caacLevel: i === 0 ? 'BVLOS' : 'VLOS', caacExpire: future, noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved, trainingCerts: ['应急处置'], online: true, location: [{ lng: 113.129413, lat: 23.022598 }, { lng: 113.121613, lat: 23.019998 }, { lng: 113.127913, lat: 23.023098 }][i], stats: pStats() }));
 
   const owners: OwnerProfile[] = ownerIds.map((userId) => ({ userId, entityType: 'company', drones: [], uomVerified: true, stats: { deviceUptime: 0.95, faultRate: 0.02, maintainTimely: 0.9, completeRate: 0.93, cancelRate: 0.05, respSec: 40, cooperation: 0.9 } }));
   const clients: ClientProfile[] = clientIds.map((userId) => ({ userId, entityType: 'person', creditBureauScore: 720, stats: { payTimely: 0.97, defaultCount: 0, infoTrust: 0.9, complaintRate: 0.02, orderAccuracy: 0.95, cancelRate: 0.04 } }));
@@ -35,7 +35,7 @@ export function buildSeed(): DBShape {
   owners[0].drones = ['d1', 'd2', 'd5'];
   owners[1].drones = ['d3', 'd4'];
 
-  const capLoc = [{ lng: 116.400, lat: 39.910 }, { lng: 116.390, lat: 39.905 }, { lng: 116.405, lat: 39.912 }, { lng: 116.395, lat: 39.900 }];
+  const capLoc = [{ lng: 113.129413, lat: 23.022598 }, { lng: 113.121613, lat: 23.019998 }, { lng: 113.127913, lat: 23.023098 }, { lng: 113.123413, lat: 23.017498 }];
   const capacity: CapacityUnit[] = [
     { id: 'cap1', pilotId: 'u_p1', droneId: 'd1', ownerId: 'u_o1', location: capLoc[0], status: CapacityStatus.Online },
     { id: 'cap2', pilotId: 'u_p2', droneId: 'd2', ownerId: 'u_o1', location: capLoc[1], status: CapacityStatus.Online },

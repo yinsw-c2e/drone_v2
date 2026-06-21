@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Credit Risk Radar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed-dim": "#e8c423", "telemetry-cyan": "#00F2FF", "surface-container-highest": "#313540",
+                        "on-tertiary-fixed": "#221b00", "secondary": "#adc6ff", "surface-variant": "#313540",
+                        "on-primary": "#00363a", "surface-dim": "#0f131d", "on-secondary-container": "#e6ecff",
+                        "outline-variant": "#3a494b", "on-tertiary": "#3b2f00", "on-primary-fixed": "#002022",
+                        "on-background": "#dfe2f0", "surface-bright": "#353944", "on-primary-fixed-variant": "#004f54",
+                        "primary-container": "#00f2ff", "on-error-container": "#ffdad6", "on-surface": "#dfe2f0",
+                        "surface": "#0f131d", "secondary-fixed-dim": "#adc6ff", "surface-container-low": "#171b26",
+                        "inverse-surface": "#dfe2f0", "tertiary-fixed": "#ffe173", "bg-surface": "#141822",
+                        "tertiary-container": "#fed83a", "on-primary-container": "#006a71", "surface-container-high": "#262a34",
+                        "status-critical": "#EF4444", "primary": "#e1fdff", "on-secondary": "#002e6a",
+                        "primary-fixed": "#74f5ff", "on-tertiary-container": "#725e00", "on-surface-variant": "#b9cacb",
+                        "on-secondary-fixed-variant": "#004395", "bg-elevated": "#1E2433", "secondary-fixed": "#d8e2ff",
+                        "status-warning": "#F59E0B", "on-secondary-fixed": "#001a42", "bg-base": "#0B0E14",
+                        "telemetry-blue": "#3B82F6", "error": "#ffb4ab", "outline": "#849495",
+                        "surface-container-lowest": "#0a0e18", "on-tertiary-fixed-variant": "#554500", "inverse-primary": "#00696f",
+                        "on-error": "#690005", "error-container": "#93000a", "surface-tint": "#00dbe7",
+                        "tertiary": "#fff6e4", "inverse-on-surface": "#2c303b", "background": "#0f131d",
+                        "status-success": "#10B981", "surface-container": "#1b1f2a", "secondary-container": "#0566d9",
+                        "primary-fixed-dim": "#00dbe7"
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                    spacing: { "margin-desktop": "32px", "gutter": "16px", "container-max-width": "1440px", "margin-mobile": "16px", "base-unit": "4px" },
+                    fontFamily: {
+                        "body-lg": ["Inter"], "data-mono": ["JetBrains Mono"], "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Inter"], "label-caps": ["JetBrains Mono"], "headline-md": ["Hanken Grotesk"], "display-lg": ["Hanken Grotesk"]
+                    },
+                    fontSize: {
+                        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "data-mono": ["14px", { lineHeight: "20px", letterSpacing: "0.05em", fontWeight: "500" }],
+                        "headline-sm": ["18px", { lineHeight: "24px", fontWeight: "600" }],
+                        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "label-caps": ["11px", { lineHeight: "16px", letterSpacing: "0.1em", fontWeight: "700" }],
+                        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+                        "display-lg": ["40px", { lineHeight: "48px", letterSpacing: "-0.02em", fontWeight: "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .radar-bg {
+            background-image: linear-gradient(to bottom, rgba(11, 14, 20, 0.2), rgba(11, 14, 20, 1)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAflmRpnEWCt8NlgwcWa-Pugnd4AB1tVdPnfD2ZL-LOfVdDB4_bXdB0_1ru_qiUsOiY3zEI03gww2tLsQ1ofVCNyrgNhV66LyEkpbmZ-k0An2K7uHgvpaTDywS1tu2D_kss8MPZqOJSbj1bWyqCpfbRKhtlS34ru9cZA98InFyRcXVF_-s3xYkELtciRmyAGLafUS6TQ3dKWKOTcZFsnFsREyjW8PKyUBoe3L9flvlciATwr6xqy00PLIa_2dd_sTlGn_eOSnZhqgwK');
+            background-size: cover;
+            background-position: center;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-bg-base text-on-background min-h-screen pb-24 font-body-md selection:bg-telemetry-cyan selection:text-bg-base">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base shadow-md">
+<div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan tracking-tight">SkyLink Logistics</h1>
+<span class="material-symbols-outlined text-primary">signal_cellular_alt</span>
+</header>
+<main class="pt-16 px-margin-mobile">
+<!-- Radar Section -->
+<section class="mt-6 relative w-full rounded-xl overflow-hidden bg-bg-elevated p-6 flex flex-col items-center border border-outline-variant/30 radar-bg">
+<h2 class="text-label-caps font-label-caps text-on-surface-variant mb-8 tracking-[0.2em]">SYSTEM TRUST LEVEL</h2>
+<!-- Central Score -->
+<div class="relative w-48 h-48 rounded-full border border-telemetry-cyan/50 flex flex-col items-center justify-center glow-cyan bg-bg-base/80 backdrop-blur-sm z-10">
+<div class="absolute inset-2 rounded-full border-2 border-dashed border-telemetry-cyan/30 animate-[spin_30s_linear_infinite]"></div>
+<span class="text-label-caps font-label-caps text-telemetry-cyan mb-1">CREDIT SCORE</span>
+<span class="text-display-lg font-display-lg text-white" style="font-size: 64px; line-height: 1;">956</span>
+<span class="text-status-success font-label-caps mt-2 text-[10px] bg-status-success/20 px-2 py-0.5 rounded-DEFAULT">OPTIMAL</span>
+</div>
+<!-- Grid Overlays / Decoration -->
+<div class="absolute inset-0 bg-[linear-gradient(rgba(0,242,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,242,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none z-0"></div>
+</section>
+<!-- Dimensions -->
+<section class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Dimension Card 1 -->
+<div class="bg-bg-surface p-4 rounded-xl border border-surface-variant flex flex-col gap-2 relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-telemetry-cyan text-[18px]">verified_user</span>
+                        身份认证 (Identity)
+                    </span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">100%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden mt-1">
+<div class="h-full bg-telemetry-cyan w-full"></div>
+</div>
+</div>
+<!-- Dimension Card 2 -->
+<div class="bg-bg-surface p-4 rounded-xl border border-surface-variant flex flex-col gap-2 relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-telemetry-cyan text-[18px]">payments</span>
+                        支付能力 (Payment)
+                    </span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">92%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden mt-1">
+<div class="h-full bg-telemetry-cyan w-[92%]"></div>
+</div>
+</div>
+<!-- Dimension Card 3 -->
+<div class="bg-bg-surface p-4 rounded-xl border border-surface-variant flex flex-col gap-2 relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-telemetry-cyan text-[18px]">handshake</span>
+                        合作态度 (Attitude)
+                    </span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">95%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden mt-1">
+<div class="h-full bg-telemetry-cyan w-[95%]"></div>
+</div>
+</div>
+<!-- Dimension Card 4 -->
+<div class="bg-bg-surface p-4 rounded-xl border border-surface-variant flex flex-col gap-2 relative overflow-hidden group hover:border-telemetry-cyan/50 transition-colors">
+<div class="flex justify-between items-center">
+<span class="text-body-md font-body-md text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-telemetry-cyan text-[18px]">star_rate</span>
+                        订单质量 (Quality)
+                    </span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">88%</span>
+</div>
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden mt-1">
+<div class="h-full bg-telemetry-cyan w-[88%]"></div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-2 bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.5)] md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1">grid_view</span>
+<span class="text-label-caps font-label-caps">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1">assignment</span>
+<span class="text-label-caps font-label-caps">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary-container bg-secondary-container/20 rounded-full px-4 py-1 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="text-label-caps font-label-caps">Assets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1">account_balance</span>
+<span class="text-label-caps font-label-caps">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="text-label-caps font-label-caps">Profile</span>
+</a>
+</nav>
+</body></html>

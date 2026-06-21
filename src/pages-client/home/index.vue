@@ -1,476 +1,976 @@
 <template>
-  <view class="page">
-    <PageHeader title="今日吊运态势" :desc="`${user.nickname} · 发单、匹配、追踪、结算一屏掌控`" :role="Role.Client" />
-
-    <KpiStrip class="section" :items="kpis" />
-
-    <view class="section mission-console">
-      <view class="mission-map command-surface">
-        <view class="mission-head">
-          <view>
-            <text class="console-label">{{ order ? '当前吊运' : '常用航线' }}</text>
-            <text class="mission-title">{{ missionTitle }}</text>
-          </view>
-          <StatusTag v-if="order" :status="order.status" />
-          <wd-tag v-else round type="primary">可发单</wd-tag>
-        </view>
-        <view class="route-lane">
-          <view class="route-line" />
-          <view class="route-node start" />
-          <view class="route-node end" />
-          <view class="drone-dot" />
-        </view>
-        <view class="route-copy">
-          <text>{{ routeStart }}</text>
-          <text>{{ routeEnd }}</text>
-        </view>
-        <view class="mission-metrics surface-metrics">
-          <view v-for="item in missionMetrics" :key="item.label" class="mission-metric">
-            <text class="metric-value">{{ item.value }}</text>
-            <text class="metric-label">{{ item.label }}</text>
-          </view>
-        </view>
+  <view class="skylink-home" :class="{ 'zh-copy': localeStore.isZh }">
+    <view class="topbar">
+      <view class="brand">
+        <view class="avatar"><StitchIcon name="person" size="38rpx" /></view>
+        <text class="brand-name">{{ copy.brand }}</text>
       </view>
-
-      <view class="mission-panel command-surface">
-        <text class="panel-title">{{ order ? '下一步' : '发单准备' }}</text>
-        <NoticeBar class="order-notice" :message="nextCopy" />
-        <view class="risk-strip">
-          <view v-for="item in riskCards" :key="item.label" :class="['risk-chip', item.tone]">
-            <text class="risk-value">{{ item.value }}</text>
-            <text class="risk-label">{{ item.label }}</text>
-          </view>
+      <view class="top-actions">
+        <view class="language-switch" hover-class="tap-press" @click="toggleLocale">
+          <text>{{ localeStore.toggleLabel }}</text>
         </view>
-        <view v-if="order" class="mini-flow">
-          <wd-steps class="wot-steps" :active="activeStep" align-center>
-            <wd-step v-for="step in homeSteps" :key="step.title" :title="step.title" :description="step.desc" />
-          </wd-steps>
-        </view>
-        <view class="command-actions">
-          <wd-button type="primary" block @click="primaryAction">{{ primaryActionLabel }}</wd-button>
-          <wd-button type="info" plain block @click="secondaryAction">{{ secondaryActionLabel }}</wd-button>
+        <view class="signal-btn" hover-class="tap-press" @click="toast(copy.signalReady)">
+          <StitchIcon name="signal_cellular_alt" size="38rpx" />
         </view>
       </view>
     </view>
 
-    <view class="section workbench-grid">
-      <wd-card class="work-card" title="常用航线与预算">
-        <view class="route-row">
-          <view>
-            <text class="order-title">北京低空货运中心</text>
-            <text class="muted">顺义临空交付点 · 约 38 分钟 · 6-12kg</text>
-          </view>
-          <wd-tag round type="success">合规池 {{ availableCount }} 台</wd-tag>
+    <view class="content">
+      <view class="metric-grid">
+        <view class="metric-card success">
+          <view class="metric-label"><StitchIcon name="shield" size="22rpx" /> <text>{{ copy.creditScore }}</text></view>
+          <text class="metric-value">{{ creditScore }}</text>
         </view>
-        <view class="budget-band">
-          <view>
-            <text class="metric-value">¥260-360</text>
-            <text class="metric-label">预估吊运费</text>
-          </view>
-          <view>
-            <text class="metric-value">500万</text>
-            <text class="metric-label">三者险门槛</text>
-          </view>
+        <view class="metric-card cyan">
+          <view class="metric-label"><StitchIcon name="flight_takeoff" size="22rpx" /> <text>{{ copy.onlineCapacity }}</text></view>
+          <view class="metric-inline"><text>{{ onlineCapacityText }}</text><text class="unit">{{ copy.unitDrone }}</text></view>
         </view>
-      </wd-card>
+        <view class="metric-card amber">
+          <view class="metric-label"><StitchIcon name="account_balance_wallet" size="22rpx" /> <text>{{ copy.availableBudget }}</text></view>
+          <text class="metric-value">¥{{ budgetText }}</text>
+        </view>
+      </view>
 
-      <wd-card class="work-card" title="最近订单">
-        <view v-if="recentOrders.length" class="recent-list">
-          <view v-for="item in recentOrders" :key="item.id" class="recent-row">
+      <view class="scan-card">
+        <view class="radar">
+          <view class="radar-ring r1" />
+          <view class="radar-ring r2" />
+          <view class="radar-ring r3" />
+          <view class="radar-sweep" />
+          <view class="radar-dot" />
+        </view>
+
+        <view class="scan-head">
+          <view>
+            <view class="section-kicker active"><view class="pulse-dot" /><text>{{ scanTitle }}</text></view>
+            <text class="track-id">{{ activeOrderCode }}</text>
+          </view>
+          <view class="warn-pill">{{ activeStatusText }}</view>
+        </view>
+
+        <view class="timeline">
+          <view class="timeline-row">
+            <view class="node muted" />
             <view>
-              <text class="order-title">{{ item.cargo.remark || '低空吊运订单' }}</text>
-              <text class="muted">{{ item.from.address }} → {{ item.to.address }}</text>
+              <text class="label-small">{{ copy.originLabel }}</text>
+              <text class="route-title">{{ originName }}</text>
             </view>
-            <StatusTag :status="item.status" />
+          </view>
+          <view class="timeline-row">
+            <view class="node live" />
+            <view>
+              <text class="label-small cyan-text">{{ copy.destLabel }}</text>
+              <text class="route-title">{{ destName }}</text>
+            </view>
           </view>
         </view>
-        <view v-else class="recent-empty">
-          <text class="order-title">还没有历史订单</text>
-          <text class="muted">先从常用航线发起一笔订单，匹配、追踪和结算会自动串联。</text>
+
+        <view class="telemetry-row">
+          <view>
+            <text class="label-small">{{ etaLabelText }}</text>
+            <text class="data-value">{{ etaText }} <text v-if="etaUnit" class="data-unit">{{ etaUnit }}</text></text>
+          </view>
+          <view>
+            <text class="label-small">{{ budgetLabelText }}</text>
+            <text class="data-value amber-text">¥{{ orderBudgetText }}</text>
+          </view>
         </view>
-      </wd-card>
+
+        <view class="primary-cta" hover-class="tap-press" @click="primaryCta">
+          <view class="cta-copy">
+            <StitchIcon name="verified" size="38rpx" />
+            <text>{{ ctaText }}</text>
+          </view>
+          <StitchIcon name="arrow_forward" size="40rpx" />
+        </view>
+      </view>
+
+      <view class="list-section">
+        <view class="section-title">{{ copy.commonRoutes }}</view>
+        <view class="route-list">
+          <view class="route-item" hover-class="item-press" @click="goOrder">
+            <view class="route-left">
+              <view class="route-icon"><StitchIcon name="route" size="34rpx" /></view>
+              <view>
+                <view class="route-name"><text>{{ copy.routeAFrom }}</text><StitchIcon name="arrow_forward" size="22rpx" /><text>{{ copy.routeATo }}</text></view>
+                <text class="route-meta">{{ copy.routeAMeta }}</text>
+              </view>
+            </view>
+            <view class="route-price"><text>¥800</text><text>{{ copy.basePrice }}</text></view>
+          </view>
+          <view class="route-item" hover-class="item-press" @click="goOrder">
+            <view class="route-left">
+              <view class="route-icon"><StitchIcon name="route" size="34rpx" /></view>
+              <view>
+                <view class="route-name"><text>{{ copy.routeBFrom }}</text><StitchIcon name="arrow_forward" size="22rpx" /><text>{{ copy.routeBTo }}</text></view>
+                <text class="route-meta">{{ copy.routeBMeta }}</text>
+              </view>
+            </view>
+            <view class="route-price"><text>¥1,850</text><text>{{ copy.basePrice }}</text></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="list-section recent-section">
+        <view class="section-title">{{ copy.recentOrders }}</view>
+        <view class="recent-box">
+          <view
+            v-for="row in recentOrders"
+            :key="row.id"
+            class="order-row"
+            hover-class="item-press"
+            @click="openTrack(row.id)"
+          >
+            <view :class="['order-left', row.done ? '' : 'pending']">
+              <StitchIcon :name="row.done ? 'check_circle' : 'schedule'" size="30rpx" />
+              <view>
+                <text class="order-code">{{ row.code }}</text>
+                <text class="order-meta">{{ row.meta }}</text>
+              </view>
+            </view>
+            <text class="order-price">¥{{ row.amount }}</text>
+          </view>
+          <view v-if="!recentOrders.length" class="order-row">
+            <view class="order-left pending">
+              <StitchIcon name="info" size="30rpx" />
+              <view>
+                <text class="order-meta">{{ copy.noOrders }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="history-link" hover-class="item-press" @click="toggleHistory">
+            <text>{{ historyExpanded ? copy.collapseHistory : copy.viewHistory }}</text>
+            <StitchIcon name="chevron_right" size="24rpx" />
+          </view>
+        </view>
+      </view>
     </view>
 
-    <IconActionGrid class="section" :actions="quickActions" @select="handleQuick" />
+    <view class="bottom-nav">
+      <view class="nav-item active" @click="toast(copy.currentHome)">
+        <StitchIcon name="grid_view" size="38rpx" fill />
+        <text>{{ copy.home }}</text>
+      </view>
+      <view class="nav-item" @click="goOrder">
+        <StitchIcon name="assignment" size="38rpx" />
+        <text>{{ copy.tasks }}</text>
+      </view>
+      <view class="nav-item" @click="goInsurance">
+        <StitchIcon name="account_balance_wallet" size="38rpx" />
+        <text>{{ copy.assets }}</text>
+      </view>
+      <view class="nav-item" @click="goAuth">
+        <StitchIcon name="person" size="38rpx" />
+        <text>{{ copy.profile }}</text>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import IconActionGrid from '@/components/IconActionGrid.vue';
-import KpiStrip from '@/components/KpiStrip.vue';
-import NoticeBar from '@/components/NoticeBar.vue';
-import PageHeader from '@/components/PageHeader.vue';
-import StatusTag from '@/components/StatusTag.vue';
-import { OrderStatus, Role } from '@/models';
+import { computed, ref } from 'vue';
+import StitchIcon from '@/components/StitchIcon.vue';
+import { CapacityStatus, OrderStatus, Role } from '@/models';
+import { ensureDemoCredit, ordersNewestFirst } from '@/services/app-flow';
+import { orderStatusLabel } from '@/services/display-labels';
+import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
+import { computeCredit } from '@/utils/credit';
+import { distanceKm } from '@/utils/geo';
+import { etaMinutes } from '@/utils/price';
 import { repo } from '@/utils/repo';
 
 const userStore = useUserStore();
 const orderStore = useOrderStore();
-const user = computed(() => userStore.user.currentRole === Role.Client ? userStore.user : userStore.loginAs(Role.Client));
-const order = computed(() => orderStore.activeOrder);
-const credit = computed(() => repo.credits.find(user.value.id));
-const availableCount = computed(() => repo.capacity.where((c) => c.status === 'online').length);
-const allOrders = computed(() => repo.orders.where((item) => item.clientId === user.value.id).reverse());
-const recentOrders = computed(() => allOrders.value.slice(0, 2));
-const kpis = computed(() => [
-  { label: '信用分', value: credit.value?.total ?? 0, hint: credit.value ? `${credit.value.level}级` : '待计算', tone: 'info' as const },
-  { label: '在线运力', value: availableCount.value, hint: '合规池', tone: 'success' as const },
-  { label: '预算', value: order.value ? `¥${(order.value.budgetCent / 100).toFixed(0)}` : '¥260起', hint: order.value ? '当前单' : '常用航线', tone: 'neutral' as const },
-]);
-const missionTitle = computed(() => order.value?.cargo.remark || (order.value ? '低空吊运任务' : '精密设备即时吊运'));
-const routeStart = computed(() => order.value?.from.address || '北京低空货运中心');
-const routeEnd = computed(() => order.value?.to.address || '顺义临空交付点');
-const primaryActionLabel = computed(() => {
-  if (!order.value) return '立即发单';
-  if (order.value.status === OrderStatus.Matching) return '确认方案';
-  if (order.value.status === OrderStatus.Settled) return '提交评价';
-  return '查看追踪';
+const localeStore = useLocaleStore();
+if (userStore.user.currentRole !== Role.Client) userStore.loginAs(Role.Client);
+ensureDemoCredit();
+const HOME_COPY = {
+  en: {
+    brand: 'SkyLink Logistics',
+    signalReady: 'Link signal normal',
+    creditScore: 'Credit',
+    onlineCapacity: 'Online Capacity',
+    unitDrone: 'unit',
+    availableBudget: 'Budget',
+    currentScan: 'Active Lift Scan',
+    completedScan: 'Latest Completed Lift',
+    airspacePending: 'Airspace Pending',
+    originLabel: 'ORIGIN',
+    destLabel: 'DEST',
+    originName: 'Qianhai Logistics Hub A',
+    destName: 'Baoan Airport Cargo C',
+    etaLabel: 'ETA',
+    completedTimeLabel: 'Completed',
+    minUnit: 'MIN',
+    budgetLabel: 'Est. Budget',
+    finalAmountLabel: 'Final Amount',
+    nextStep: 'Next: Confirm Route Plan',
+    reviewCta: 'View Settlement Review',
+    completeCta: 'Generate Settlement Review',
+    commonRoutes: 'Common Routes & Budget',
+    routeAFrom: 'Tech Park',
+    routeATo: 'Shekou Port',
+    routeAMeta: 'Standard cargo | about 15 min',
+    routeBFrom: 'Longhua Center',
+    routeBTo: 'Yantian Port',
+    routeBMeta: 'Heavy cargo | about 32 min',
+    basePrice: 'Base',
+    recentOrders: 'Recent Orders',
+    noOrders: 'No orders yet. Launch your first lift.',
+    startOrder: 'Launch First Order',
+    trackCta: 'View Live Tracking',
+    viewHistory: 'View all history',
+    collapseHistory: 'Collapse history',
+    currentHome: 'Current: Home',
+    home: 'Home',
+    tasks: 'Tasks',
+    assets: 'Assets',
+    profile: 'Profile',
+    languageToast: 'Switched to English',
+  },
+  zh: {
+    brand: '天链物流',
+    signalReady: '链路信号正常',
+    creditScore: '信用分',
+    onlineCapacity: '在线运力',
+    unitDrone: '台',
+    availableBudget: '可用预算',
+    currentScan: '当前吊运扫描',
+    completedScan: '最近完成订单',
+    airspacePending: '空域待确认',
+    originLabel: '起吊点 ORIGIN',
+    destLabel: '降落点 DEST',
+    originName: '前海深港物流枢纽 A区',
+    destName: '宝安国际机场 货运C站',
+    etaLabel: '预计到达 (ETA)',
+    completedTimeLabel: '完成时间',
+    minUnit: 'MIN',
+    budgetLabel: '预估预算',
+    finalAmountLabel: '成交金额',
+    nextStep: '下一步：确认航线方案',
+    reviewCta: '查看结算评价',
+    completeCta: '生成结算评价',
+    commonRoutes: '常用航线与预算',
+    routeAFrom: '科技园',
+    routeATo: '蛇口港',
+    routeAMeta: '标准件 ｜ 约15分钟',
+    routeBFrom: '龙华中心',
+    routeBTo: '盐田港',
+    routeBMeta: '重型件 ｜ 约32分钟',
+    basePrice: '基准价',
+    recentOrders: '最近订单',
+    noOrders: '还没有订单，先去发起首单吧。',
+    startOrder: '发起首单',
+    trackCta: '查看实时追踪',
+    viewHistory: '查看全部历史记录',
+    collapseHistory: '收起历史记录',
+    currentHome: '当前：首页',
+    home: '首页',
+    tasks: '任务',
+    assets: '资产',
+    profile: '我的',
+    languageToast: '已切换为中文',
+  },
+} as const;
+const copy = computed(() => HOME_COPY[localeStore.locale]);
+
+const user = computed(() => userStore.user);
+const credit = computed(() => repo.credits.find(user.value.id) ?? computeCredit(user.value.id, Role.Client));
+const creditScore = computed(() => credit.value?.total ?? '—');
+const onlineCapacityText = computed(() => String(repo.capacity.where((c) => c.status === CapacityStatus.Online).length).padStart(2, '0'));
+const wallet = computed(() => repo.wallets.find(user.value.id));
+const budgetText = computed(() => Math.round((wallet.value?.balanceCent ?? 0) / 100).toLocaleString('en-US'));
+
+const activeOrder = computed(() => orderStore.activeOrder);
+const activeOrderCode = computed(() => activeOrder.value ? activeOrder.value.id.toUpperCase() : '—');
+const activeStatusText = computed(() => activeOrder.value ? orderStatusLabel(activeOrder.value.status, localeStore.locale) : orderStatusLabel(OrderStatus.Created, localeStore.locale));
+const originName = computed(() => activeOrder.value?.from.address || copy.value.originName);
+const destName = computed(() => activeOrder.value?.to.address || copy.value.destName);
+const isTerminalOrder = computed(() => {
+  const status = activeOrder.value?.status;
+  return status === OrderStatus.Completed || status === OrderStatus.Settled;
 });
-const secondaryActionLabel = computed(() => order.value ? '补充需求' : '保险方案');
-const missionMetrics = computed(() => [
-  { label: order.value?.status === OrderStatus.Settled ? '送达状态' : '航线状态', value: order.value ? etaText.value : '可预约' },
-  { label: '预算', value: order.value ? `¥${(order.value.budgetCent / 100).toFixed(0)}` : '¥260起' },
-  { label: '空域', value: airspaceCopy.value },
-]);
-const riskCards = computed(() => [
-  { label: '在线运力', value: `${availableCount.value}台`, tone: availableCount.value ? 'success' : 'warning' },
-  { label: '保险', value: order.value?.policyId ? '已关联' : '可投保', tone: order.value?.policyId ? 'success' : 'info' },
-  { label: '货物规则', value: order.value?.cargo.type === 'dangerous' ? '需审批' : '可承运', tone: order.value?.cargo.type === 'dangerous' ? 'warning' : 'success' },
-]);
-const quickActions = computed(() => [
-  { key: 'auth', title: '认证', desc: '实名与货物声明', symbol: '证', status: '可补充', tone: 'info' as const },
-  { key: 'credit', title: '信用', desc: `${credit.value?.level ?? '待评'}级雷达`, symbol: '信', status: '实时', tone: 'success' as const },
-  { key: 'insurance', title: '保险', desc: '投保与理赔', symbol: '保', status: order.value?.policyId ? '已关联' : '待投保', tone: 'warning' as const },
-]);
+const scanTitle = computed(() => isTerminalOrder.value ? copy.value.completedScan : copy.value.currentScan);
+const etaLabelText = computed(() => isTerminalOrder.value ? copy.value.completedTimeLabel : copy.value.etaLabel);
+const etaUnit = computed(() => isTerminalOrder.value ? '' : copy.value.minUnit);
 const etaText = computed(() => {
-  if (!order.value) return '--';
-  const candidate = order.value.status === 'matching' && !order.value.capacityId ? orderStore.candidates[0] : undefined;
-  if (candidate) return `约${candidate.etaMin}分钟`;
-  if (order.value.status === 'settled' || order.value.status === 'completed') return '已送达';
-  if (order.value.status === 'inflight') return '飞行中';
-  return '待确认';
+  const order = activeOrder.value;
+  if (!order) return '--:--';
+  if (isTerminalOrder.value) return formatEventTime(latestEventTime(order));
+  const km = order.distanceKm ?? distanceKm(order.from, order.to);
+  return `${String(etaMinutes(km)).padStart(2, '0')}:00`;
 });
-const airspaceCopy = computed(() => {
-  if (!order.value) return '待发单';
-  const item = repo.airspace.where((entry) => entry.orderId === order.value!.id)[0];
-  if (item?.status === 'approved') return '已批准';
-  if (item?.status === 'rejected') return '需复核';
-  if (order.value.status === 'confirmed') return '待申请';
-  if (order.value.status === 'matching') return '待确认';
-  return '处理中';
+const budgetLabelText = computed(() => isTerminalOrder.value ? copy.value.finalAmountLabel : copy.value.budgetLabel);
+const orderBudgetText = computed(() => {
+  const order = activeOrder.value;
+  if (!order) return '0';
+  return Math.round((order.priceBreakdown?.totalCent ?? order.budgetCent) / 100).toLocaleString('en-US');
 });
-type StepState = 'done' | 'current' | 'todo';
-const nextCopy = computed(() => {
-  if (!order.value) return '当前没有进行中订单，可按常用航线快速发单；提交后会进入智能匹配与追踪。';
-  const map: Partial<Record<string, string>> = {
-    matching: '等待选择匹配方案，确认后飞手和机主端会同步进入任务。',
-    confirmed: '下一步提交空域申请，审批通过后进入起飞前准备。',
-    airspace: '等待空域审批结果，危险品会进入人工复核流程。',
-    preparing: '空域已通过，请飞手完成安检后开始装货。',
-    loading: '正在装货，完成后进入起飞执行。',
-    inflight: '飞行中，请关注追踪页告警、电量和摆度。',
-    unloading: '到达终点，确认卸货后可完成任务。',
-    completed: '任务已完成，可生成结算与分账。',
-    settled: '订单已结算，可提交评价并查看分账。',
-    exception: '订单异常，请查看理赔或联系后台处理。',
-  };
-  return map[order.value.status] ?? '按页面主操作推进下一阶段。';
+const ctaText = computed(() => {
+  const order = activeOrder.value;
+  if (!order) return copy.value.startOrder;
+  if (order.status === OrderStatus.Created || order.status === OrderStatus.Matching) return copy.value.nextStep;
+  if (order.status === OrderStatus.Completed) return copy.value.completeCta;
+  if (order.status === OrderStatus.Settled) return copy.value.reviewCta;
+  return copy.value.trackCta;
 });
-const homeSteps = computed(() => {
-  const status = order.value?.status ?? 'created';
-  const orderMap = ['created', 'matching', 'confirmed', 'airspace', 'preparing', 'loading', 'inflight', 'unloading', 'completed', 'settled'];
-  const groups = [
-    { title: '发单', states: ['created', 'matching'] },
-    { title: '确认', states: ['confirmed', 'airspace'] },
-    { title: '执行', states: ['preparing', 'loading', 'inflight', 'unloading'] },
-    { title: '结算', states: ['completed', 'settled'] },
-  ];
-  const current = Math.max(0, orderMap.indexOf(status));
-  return groups.map((step) => {
-    const last = Math.max(...step.states.map((item) => orderMap.indexOf(item)));
-    const first = Math.min(...step.states.map((item) => orderMap.indexOf(item)));
-    const state: StepState = current > last ? 'done' : current >= first ? 'current' : 'todo';
-    return {
-      title: step.title,
-      state,
-      desc: step.title === '发单' ? '需求' : step.title === '确认' ? '运力' : step.title === '执行' ? '飞行' : '分账',
-    };
-  });
-});
-const activeStep = computed(() => Math.max(0, homeSteps.value.findIndex((step) => step.state === 'current')));
+
+const historyExpanded = ref(false);
+const clientOrders = computed(() => ordersNewestFirst(repo.orders.where((o) => o.clientId === user.value.id)));
+const recentOrders = computed(() => clientOrders.value.slice(0, historyExpanded.value ? 10 : 2).map((order) => ({
+  id: order.id,
+  code: order.id.toUpperCase(),
+  done: order.status === OrderStatus.Completed || order.status === OrderStatus.Settled,
+  meta: `${orderStatusLabel(order.status, localeStore.locale)} ｜ ${formatTime(order.createdAt)}`,
+  amount: Math.round((order.priceBreakdown?.totalCent ?? order.budgetCent) / 100).toLocaleString('en-US'),
+})));
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => `${n}`.padStart(2, '0');
+  return `${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function formatEventTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--:--';
+  const pad = (n: number) => `${n}`.padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function latestEventTime(order: NonNullable<typeof activeOrder.value>) {
+  for (let index = order.events.length - 1; index >= 0; index -= 1) {
+    const event = order.events[index];
+    if (event.status === order.status) return event.at;
+  }
+  return order.events[order.events.length - 1]?.at ?? order.createdAt;
+}
 
 function goOrder() {
   uni.navigateTo({ url: '/pages-client/order/index' });
 }
 
 function goMatch() {
-  orderStore.ensureOrder();
+  if (!activeOrder.value) {
+    goOrder();
+    return;
+  }
   uni.navigateTo({ url: '/pages-client/match/index' });
 }
 
-function goAuth() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+function goTrack() {
+  if (!activeOrder.value) {
+    goOrder();
+    return;
+  }
+  uni.navigateTo({ url: `/pages-client/track/index?orderId=${encodeURIComponent(activeOrder.value.id)}` });
 }
 
-function goCredit() {
-  uni.navigateTo({ url: '/pages/credit/index' });
+function primaryCta() {
+  const order = activeOrder.value;
+  if (!order) return goOrder();
+  if (order.status === OrderStatus.Created || order.status === OrderStatus.Matching) return goMatch();
+  if (order.status === OrderStatus.Completed || order.status === OrderStatus.Settled) {
+    uni.navigateTo({ url: `/pages-client/review/index?orderId=${encodeURIComponent(order.id)}` });
+    return;
+  }
+  return goTrack();
+}
+
+function openTrack(orderId: string) {
+  orderStore.activeOrderId = orderId;
+  uni.navigateTo({ url: `/pages-client/track/index?orderId=${encodeURIComponent(orderId)}` });
+}
+
+function toggleHistory() {
+  historyExpanded.value = !historyExpanded.value;
 }
 
 function goInsurance() {
   uni.navigateTo({ url: '/pages-client/insurance/index' });
 }
 
-function goTrack() {
-  uni.navigateTo({ url: '/pages-client/track/index' });
+function goAuth() {
+  uni.navigateTo({ url: '/pages/auth/index' });
 }
 
-function primaryAction() {
-  if (!order.value) return goOrder();
-  if (order.value.status === OrderStatus.Matching) return goMatch();
-  if (order.value.status === OrderStatus.Settled) return uni.navigateTo({ url: '/pages-client/review/index' });
-  return goTrack();
+function toast(title: string) {
+  uni.showToast({ title, icon: 'none' });
 }
 
-function secondaryAction() {
-  if (!order.value) return goInsurance();
-  return goOrder();
-}
-
-function handleQuick(key: string) {
-  if (key === 'auth') goAuth();
-  if (key === 'credit') goCredit();
-  if (key === 'insurance') goInsurance();
+function toggleLocale() {
+  localeStore.toggleLocale();
+  toast(copy.value.languageToast);
 }
 </script>
 
 <style lang="scss" scoped>
-.mission-console {
-  display: grid;
-  gap: $sp-3;
+.skylink-home {
+  min-height: 100vh;
+  color: #dfe2f0;
+  background-color: #0b0e14;
+  background-image:
+    linear-gradient(0deg, rgba(132, 148, 149, .05) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(132, 148, 149, .05) 1rpx, transparent 1rpx);
+  background-size: 38rpx 38rpx;
+  padding-bottom: 190rpx;
+  box-sizing: border-box;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.mission-map {
-  position: relative;
-  overflow: hidden;
-  padding: $sp-4;
-  border-radius: $r-lg;
-  background:
-    linear-gradient(90deg, $line 2rpx, transparent 2rpx),
-    linear-gradient(0deg, $line 2rpx, transparent 2rpx),
-    $bg-card;
-  background-size: 56rpx 56rpx;
-}
-
-.command-surface {
-  box-shadow: $shadow-command;
-  border: 2rpx solid $info-line;
-}
-
-.mission-head,
-.route-copy,
-.command-actions,
-.route-row,
-.recent-row {
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 123rpx;
+  padding: 0 31rpx;
+  background: #0b0e14;
+  border-bottom: 2rpx solid #3a494b;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $sp-3;
-}
-
-.console-label,
-.mission-title,
-.order-title {
-  display: block;
-}
-
-.console-label {
-  color: $color-primary;
-  font-size: $fs-cap;
-  font-weight: $fw-semibold;
-  line-height: 1.4;
-}
-
-.mission-title {
-  margin-top: $sp-1;
-  font-size: $fs-h3;
-  font-weight: $fw-semibold;
-  color: $ink-900;
-  line-height: 1.35;
-}
-
-.order-notice {
-  margin-top: $sp-3;
-}
-
-.route-lane {
-  position: relative;
-  height: 168rpx;
-  margin-top: $sp-4;
-}
-
-.route-line {
-  position: absolute;
-  left: 12%;
-  right: 12%;
-  top: 54%;
-  height: 8rpx;
-  border-radius: $r-pill;
-  background: $color-primary;
-  transform: rotate(-10deg);
-  transform-origin: left center;
-}
-
-.route-node,
-.drone-dot {
-  position: absolute;
-  border-radius: $r-pill;
-  box-shadow: $shadow-1;
-}
-
-.route-node {
-  width: 32rpx;
-  height: 32rpx;
-}
-
-.route-node.start {
-  left: 10%;
-  top: 50%;
-  background: $success;
-}
-
-.route-node.end {
-  right: 10%;
-  top: 32%;
-  background: $danger;
-}
-
-.drone-dot {
-  left: 48%;
-  top: 42%;
-  width: 44rpx;
-  height: 44rpx;
-  background: $bg-card;
-  border: 6rpx solid $color-primary;
-}
-
-.route-copy {
-  color: $ink-700;
-  font-size: $fs-sm;
-  font-weight: $fw-semibold;
-}
-
-.mission-metrics,
-.risk-strip,
-.budget-band {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $sp-2;
-  margin-top: $sp-3;
-}
-
-.mission-metric,
-.risk-chip {
-  min-height: 92rpx;
-  padding: $sp-2;
-  border-radius: $r-md;
-  background: $bg-sunken;
   box-sizing: border-box;
 }
 
-.metric-value,
-.metric-label,
-.risk-value,
-.risk-label {
-  display: block;
+.brand,
+.top-actions,
+.route-left,
+.order-left,
+.cta-copy,
+.route-name {
+  display: flex;
+  align-items: center;
 }
 
-.metric-value,
-.risk-value {
-  @include tabular;
-  color: $ink-900;
-  font-size: $fs-h3;
-  line-height: 1.25;
-  font-weight: $fw-bold;
+.brand {
+  gap: 23rpx;
+  min-width: 0;
+  flex: 1;
 }
 
-.metric-label,
-.risk-label {
-  margin-top: $sp-1;
-  color: $ink-500;
-  font-size: $fs-cap;
-  line-height: 1.4;
+.avatar {
+  width: 61rpx;
+  height: 61rpx;
+  border-radius: 50%;
+  background: #313540;
+  border: 2rpx solid #3a494b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e1fdff;
 }
 
-.mission-panel,
-.work-card {
-  border: 2rpx solid $line;
-  border-radius: $r-lg;
-  background: $bg-card;
-  box-shadow: $shadow-soft;
+.brand-name {
+  color: #00f2ff;
+  font-size: 46rpx;
+  line-height: 61rpx;
+  font-family: "Hanken Grotesk", "PingFang SC", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+  @include ellipsis(1);
 }
 
-.mission-panel {
-  padding: $sp-4;
+.top-actions {
+  gap: 12rpx;
+  flex: 0 0 auto;
 }
 
-.panel-title {
-  display: block;
-  color: $ink-900;
-  font-size: $fs-h3;
-  line-height: 1.35;
-  font-weight: $fw-semibold;
+.language-switch {
+  min-width: 56rpx;
+  height: 44rpx;
+  padding: 0 14rpx;
+  border: 2rpx solid #3a494b;
+  border-radius: 8rpx;
+  background: rgba(49, 53, 64, .72);
+  color: #00f2ff;
+  font-family: "JetBrains Mono", "PingFang SC", monospace;
+  font-size: 18rpx;
+  line-height: 40rpx;
+  font-weight: 700;
+  text-align: center;
+  box-sizing: border-box;
 }
 
-.risk-chip.success {
-  background: $success-bg;
+.signal-btn {
+  width: 77rpx;
+  height: 77rpx;
+  border-radius: 8rpx;
+  color: #e1fdff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.risk-chip.warning {
-  background: $warning-bg;
+.zh-copy {
+  font-family: "PingFang SC", "Source Han Sans CN", "Noto Sans CJK SC", Inter, "Microsoft YaHei", sans-serif;
 }
 
-.risk-chip.info {
-  background: $info-bg;
+.zh-copy .brand-name,
+.zh-copy .language-switch,
+.zh-copy .metric-value,
+.zh-copy .metric-inline,
+.zh-copy .track-id,
+.zh-copy .label-small,
+.zh-copy .route-meta,
+.zh-copy .order-meta,
+.zh-copy .data-value,
+.zh-copy .route-price,
+.zh-copy .nav-item {
+  font-family: "PingFang SC", "Source Han Sans CN", "Noto Sans CJK SC", Inter, sans-serif;
+  letter-spacing: 0;
 }
 
-.mini-flow {
-  margin-top: $sp-3;
+.tap-press,
+.item-press {
+  opacity: .82;
+  transform: scale(.98);
 }
 
-.command-actions {
-  margin-top: $sp-4;
+.content {
+  padding: 169rpx 31rpx 0;
+}
+
+.metric-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
-  gap: $sp-2;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 23rpx;
 }
 
-.workbench-grid {
+.metric-card {
+  min-height: 131rpx;
+  padding: 20rpx 23rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid #3a494b;
+  background: #0f131d;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+  color: #b9cacb;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+}
+
+.metric-value,
+.metric-inline {
+  display: flex;
+  align-items: baseline;
+  margin-top: 2rpx;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 35rpx;
+  line-height: 46rpx;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.metric-card.success .metric-value { color: #10b981; }
+.metric-card.cyan .metric-inline { color: #00f2ff; }
+.metric-card.amber .metric-value { color: #ffe173; }
+
+.unit {
+  margin-left: 6rpx;
+  color: #b9cacb;
+  font-size: 18rpx;
+  line-height: 31rpx;
+}
+
+.scan-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 46rpx;
+  padding: 38rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid #3a494b;
+  background: #1e2433;
+  box-shadow: 0 16rpx 62rpx rgba(0, 0, 0, .5);
+}
+
+.radar {
+  position: absolute;
+  top: -23rpx;
+  right: -92rpx;
+  width: 369rpx;
+  height: 369rpx;
+  opacity: .32;
+  pointer-events: none;
+}
+
+.radar-ring,
+.radar-sweep {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.radar-ring {
+  border: 2rpx solid rgba(0, 242, 255, .28);
+}
+
+.r1 { inset: 0; }
+.r2 { inset: 62rpx; border-color: rgba(0, 242, 255, .20); }
+.r3 { inset: 123rpx; border-color: rgba(0, 242, 255, .10); }
+
+.radar-sweep {
+  inset: 0;
+  background: conic-gradient(from 0deg, transparent 70%, rgba(0, 242, 255, .42) 100%);
+}
+
+.radar-dot {
+  position: absolute;
+  left: 123rpx;
+  top: 92rpx;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background: #00f2ff;
+  box-shadow: 0 0 15rpx #00f2ff;
+}
+
+.scan-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 23rpx;
+  margin-bottom: 46rpx;
+}
+
+.section-kicker {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  color: #00f2ff;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+}
+
+.pulse-dot {
+  width: 15rpx;
+  height: 15rpx;
+  border-radius: 50%;
+  background: #00f2ff;
+  box-shadow: 0 0 8rpx #00f2ff;
+}
+
+.track-id,
+.label-small,
+.route-meta,
+.order-meta {
+  display: block;
+  color: #b9cacb;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+}
+
+.track-id {
+  margin-top: 2rpx;
+}
+
+.warn-pill {
+  padding: 8rpx 15rpx;
+  border-radius: 4rpx;
+  border: 2rpx solid rgba(245, 158, 11, .30);
+  color: #f59e0b;
+  background: rgba(245, 158, 11, .10);
+  box-shadow: 0 0 15rpx rgba(245, 158, 11, .20);
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.timeline {
+  position: relative;
+  z-index: 1;
   display: grid;
-  gap: $sp-3;
+  gap: 31rpx;
+  margin-left: 15rpx;
+  margin-bottom: 46rpx;
+  padding-left: 15rpx;
+  border-left: 2rpx dashed #3a494b;
 }
 
-.budget-band {
+.timeline-row {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.node {
+  position: absolute;
+  left: -25rpx;
+  top: 8rpx;
+  width: 15rpx;
+  height: 15rpx;
+  border-radius: 50%;
+}
+
+.node.muted { background: #849495; }
+.node.live {
+  background: #00f2ff;
+  box-shadow: 0 0 8rpx #00f2ff;
+}
+
+.cyan-text { color: #00f2ff; }
+.amber-text { color: #ffe173; }
+
+.route-title {
+  display: block;
+  color: #dfe2f0;
+  font-size: 27rpx;
+  line-height: 38rpx;
+}
+
+.telemetry-row {
+  position: relative;
+  z-index: 1;
+  display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 31rpx;
+  margin-bottom: 38rpx;
+  padding: 23rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid rgba(58, 73, 75, .50);
+  background: #1b1f2a;
 }
 
-.recent-list {
+.data-value {
+  display: block;
+  margin-top: 8rpx;
+  color: #dfe2f0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 35rpx;
+  line-height: 46rpx;
+  font-weight: 700;
+}
+
+.data-unit {
+  color: #b9cacb;
+  font-family: Inter, "PingFang SC", sans-serif;
+  font-size: 27rpx;
+  font-weight: 400;
+}
+
+.primary-cta {
+  position: relative;
+  z-index: 1;
+  min-height: 92rpx;
+  padding: 0 31rpx;
+  border-radius: 8rpx;
+  background: #00f2ff;
+  color: #0b0e14;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 23rpx;
+  box-sizing: border-box;
+}
+
+.cta-copy {
+  min-width: 0;
+  gap: 15rpx;
+  font-size: 27rpx;
+  line-height: 38rpx;
+  font-weight: 700;
+}
+
+.list-section {
+  margin-top: 61rpx;
+}
+
+.section-title {
+  margin-bottom: 31rpx;
+  padding-bottom: 15rpx;
+  border-bottom: 2rpx solid #3a494b;
+  color: #b9cacb;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+}
+
+.route-list {
   display: grid;
-  gap: $sp-3;
+  gap: 23rpx;
 }
 
-.recent-empty {
-  padding: $sp-3;
-  border-radius: $r-md;
-  background: $bg-sunken;
+.route-item {
+  min-height: 108rpx;
+  padding: 23rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid #3a494b;
+  background: #0f131d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 23rpx;
+  box-sizing: border-box;
 }
 
-@media screen and (min-width: 900px) {
-  .mission-console,
-  .workbench-grid {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
-  }
+.route-left {
+  min-width: 0;
+  gap: 23rpx;
+}
+
+.route-icon {
+  width: 77rpx;
+  height: 77rpx;
+  border-radius: 4rpx;
+  border: 2rpx solid #3a494b;
+  background: #262a34;
+  color: #b9cacb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 77rpx;
+}
+
+.route-name {
+  gap: 15rpx;
+  color: #dfe2f0;
+  font-size: 27rpx;
+  line-height: 38rpx;
+  font-weight: 500;
+}
+
+.route-name :deep(.stitch-icon) {
+  color: #849495;
+}
+
+.route-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  color: #b9cacb;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.route-price text:first-child {
+  color: #ffe173;
+  font-size: 27rpx;
+  line-height: 38rpx;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.recent-section {
+  margin-bottom: 46rpx;
+}
+
+.recent-box {
+  overflow: hidden;
+  border-radius: 8rpx;
+  border: 2rpx solid #3a494b;
+  background: #0f131d;
+}
+
+.order-row {
+  min-height: 92rpx;
+  padding: 23rpx;
+  border-bottom: 2rpx solid #3a494b;
+  background: rgba(23, 27, 38, .50);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 23rpx;
+  box-sizing: border-box;
+}
+
+.order-left {
+  min-width: 0;
+  gap: 23rpx;
+  color: #10b981;
+}
+
+.order-left.pending {
+  color: #f59e0b;
+}
+
+.order-code {
+  display: block;
+  color: #dfe2f0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 25rpx;
+  line-height: 35rpx;
+  font-weight: 700;
+}
+
+.order-price {
+  color: #dfe2f0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 27rpx;
+  line-height: 38rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.history-link {
+  min-height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  color: #00f2ff;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  min-height: 92rpx;
+  padding: 15rpx 15rpx calc(31rpx + env(safe-area-inset-bottom));
+  border-top: 2rpx solid #3a494b;
+  border-top-left-radius: 15rpx;
+  border-top-right-radius: 15rpx;
+  background: #0f131d;
+  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, .30);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  box-sizing: border-box;
+}
+
+.nav-item {
+  min-width: 108rpx;
+  padding: 8rpx 15rpx;
+  border-radius: 999rpx;
+  color: #b9cacb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+}
+
+.nav-item.active {
+  color: #00f2ff;
+  background: rgba(5, 102, 217, .20);
+  transform: scale(.9);
+}
+
+.nav-item text {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 18rpx;
+  line-height: 31rpx;
+  font-weight: 700;
 }
 </style>

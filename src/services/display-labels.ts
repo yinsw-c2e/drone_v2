@@ -1,5 +1,40 @@
-import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, PaymentMode, Role } from '@/models';
+import { AuditAction, AuditStatus, CapacityStatus, CargoType, LedgerStatus, LedgerType, OrderStatus, PaymentMode, Role } from '@/models';
 import type { AirspaceStatus, AuditLog, CapacityUnit, Claim, Drone, InsurancePolicy, Order, User } from '@/models';
+
+const ORDER_STATUS_ZH: Record<string, string> = {
+  [OrderStatus.Created]: '待发单',
+  [OrderStatus.Matching]: '匹配中',
+  [OrderStatus.Confirmed]: '已接单',
+  [OrderStatus.AirspaceApplying]: '空域审批',
+  [OrderStatus.Preparing]: '飞行准备',
+  [OrderStatus.Loading]: '装货中',
+  [OrderStatus.InFlight]: '运输中',
+  [OrderStatus.Unloading]: '卸货中',
+  [OrderStatus.Completed]: '已完成',
+  [OrderStatus.Settled]: '已结算',
+  [OrderStatus.Cancelled]: '已取消',
+  [OrderStatus.Exception]: '异常处理',
+};
+
+const ORDER_STATUS_EN: Record<string, string> = {
+  [OrderStatus.Created]: 'Draft',
+  [OrderStatus.Matching]: 'Matching',
+  [OrderStatus.Confirmed]: 'Confirmed',
+  [OrderStatus.AirspaceApplying]: 'Airspace Review',
+  [OrderStatus.Preparing]: 'Pre-Flight',
+  [OrderStatus.Loading]: 'Loading',
+  [OrderStatus.InFlight]: 'In Flight',
+  [OrderStatus.Unloading]: 'Unloading',
+  [OrderStatus.Completed]: 'Completed',
+  [OrderStatus.Settled]: 'Settled',
+  [OrderStatus.Cancelled]: 'Cancelled',
+  [OrderStatus.Exception]: 'Exception',
+};
+
+export function orderStatusLabel(status: OrderStatus | string, locale: 'zh' | 'en' = 'zh') {
+  const map = locale === 'en' ? ORDER_STATUS_EN : ORDER_STATUS_ZH;
+  return map[status] ?? `${status}`;
+}
 
 export function roleLabel(role: Role | string) {
   const map: Record<string, string> = {
@@ -120,6 +155,7 @@ export function auditActionLabel(action: AuditAction | string) {
     [AuditAction.Airspace]: '空域',
     [AuditAction.Insurance]: '保险',
     [AuditAction.Order]: '订单',
+    [AuditAction.Settlement]: '结算',
     [AuditAction.Withdraw]: '提现',
     [AuditAction.Risk]: '风控',
     wallet: '钱包',
@@ -191,4 +227,24 @@ export function capacityHeatmapLabel(
   const area = unit.location.address?.trim();
   if (area) return `${area}运力`;
   return `合规运力${index + 1}`;
+}
+
+export function capacityHeatmapAreaLabel(unit: Pick<CapacityUnit, 'location'>, index: number) {
+  const area = unit.location.address?.trim();
+  if (area && !isGenericMapArea(area)) return cleanCapacityArea(area);
+  return `低空走廊 ${index + 1} 号机位`;
+}
+
+function isGenericMapArea(value: string) {
+  return value === '当前位置'
+    || value === '地图选点'
+    || /^经纬度点\s+-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?$/.test(value);
+}
+
+function cleanCapacityArea(value: string) {
+  const demoArea = value.match(/^(.*?)附近演示运力(\d*)$/);
+  if (!demoArea) return value;
+  const base = demoArea[1] === '订单起点' ? '起点' : demoArea[1];
+  const slot = demoArea[2] ? ` ${demoArea[2]} 号机位` : '机位';
+  return `${base}周边${slot}`;
 }

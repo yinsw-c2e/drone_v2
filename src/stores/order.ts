@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
 import { DispatchStrategy, OrderStatus, PaymentMode } from '@/models';
 import type { MatchCandidate, Order } from '@/models';
-import { advanceOrder, candidatesForOrder, confirmCandidate, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
+import { advanceOrderRemote, confirmOrderRemote, fetchCandidatesRemote, finishOrderRemote, reviewOrderRemote, submitOrderRemote } from '@/api/backend';
+import { advanceOrder, assertOrderPilotOperational, candidatesForOrder, confirmCandidate, createAirspaceRequest, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 import { providers } from '@/api/providers';
 import { matchConfirmAction } from '@/services/action-plans';
@@ -52,6 +53,16 @@ export const useOrderStore = defineStore('order', {
       this.selectedCapacityId = '';
       return order;
     },
+    async createOrderDraftWithBackend(input: Parameters<typeof submitOrderDraft>[0]) {
+      this.error = '';
+      const remote = await submitOrderRemote(input);
+      if (remote) {
+        this.activeOrderId = remote.id;
+        this.selectedCapacityId = '';
+        return remote;
+      }
+      return this.createOrderDraft(input);
+    },
     ensureOrder() {
       const order = ensureActiveOrder();
       this.activeOrderId = order.id;
@@ -76,6 +87,12 @@ export const useOrderStore = defineStore('order', {
         this.error = '';
         await providers.insurance.quote(order.id, order.cargo.valueCent);
         await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
+        const remote = await confirmOrderRemote(order.id, candidate.capacityId);
+        if (remote) {
+          this.activeOrderId = remote.id;
+          this.selectedCapacityId = remote.capacityId ?? candidate.capacityId;
+          return remote;
+        }
         const confirmed = confirmCandidate(order.id, candidate);
         this.activeOrderId = confirmed.id;
         return confirmed;
@@ -85,7 +102,7 @@ export const useOrderStore = defineStore('order', {
     },
     async applyAirspace() {
       const order = this.activeOrder ?? this.ensureOrder();
-      await providers.airspace.apply(order.id);
+      createAirspaceRequest(order.id);
       return order;
     },
     acceptForPilot(orderId: string, pilotId: string) {
@@ -96,8 +113,12 @@ export const useOrderStore = defineStore('order', {
     },
     async advance() {
       const order = this.activeOrder ?? this.ensureOrder();
-      if (order.status === OrderStatus.AirspaceApplying) {
-        await providers.airspace.apply(order.id);
+      assertOrderPilotOperational(order);
+      const remote = await advanceOrderRemote(order.id);
+      if (remote) {
+        this.activeOrderId = remote.id;
+        this.selectedCapacityId = remote.capacityId ?? this.selectedCapacityId;
+        return remote;
       }
       const next = advanceOrder(order.id);
       this.activeOrderId = next.id;
@@ -105,12 +126,19 @@ export const useOrderStore = defineStore('order', {
     },
     async finish() {
       let order = this.activeOrder ?? this.ensureOrder();
-      while (order.status !== OrderStatus.Settled && order.status !== OrderStatus.Exception) {
-        if (order.status === OrderStatus.AirspaceApplying) {
-          await providers.airspace.apply(order.id);
-        }
+      const remote = await finishOrderRemote(order.id);
+      if (remote) {
+        this.activeOrderId = remote.id;
+        this.selectedCapacityId = remote.capacityId ?? this.selectedCapacityId;
+        return remote;
+      }
+      let guard = 0;
+      while (order.status !== OrderStatus.Settled && order.status !== OrderStatus.Exception && guard < 20) {
+        guard += 1;
+        // advanceOrder 返回的是 repo 中同一个响应式对象，必须先快照旧状态再比较，否则恒等导致提前 break
+        const before = order.status;
         const next = advanceOrder(order.id);
-        if (next.status === order.status) break;
+        if (next.status === before) break;
         this.activeOrderId = next.id;
         order = next;
       }
@@ -119,6 +147,17 @@ export const useOrderStore = defineStore('order', {
     review(star: 1 | 2 | 3 | 4 | 5, text: string) {
       const order = this.activeOrder ?? this.ensureOrder();
       return recordClientReview(order.id, star, text);
+    },
+    async reviewWithBackend(star: 1 | 2 | 3 | 4 | 5, text: string) {
+      const order = this.activeOrder ?? this.ensureOrder();
+      const remote = await reviewOrderRemote(order.id, star, text);
+      if (remote) return remote;
+      return recordClientReview(order.id, star, text);
+    },
+    async refreshRemoteCandidates() {
+      const order = this.activeOrder;
+      if (!order) return this.candidates;
+      return await fetchCandidatesRemote(order.id, this.strategy) ?? this.candidates;
     },
   },
 });

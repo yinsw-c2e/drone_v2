@@ -8,7 +8,7 @@ export enum LedgerType { SettleIn='settle_in', Withdraw='withdraw', Refund='refu
 export enum LedgerStatus { Pending='pending', Available='available', Paid='paid' }
 export enum NotificationType { Dispatch='dispatch', Audit='audit', Settlement='settlement', Alert='alert', System='system' }
 export enum PaymentMode { Prepay='prepay', Escrow='escrow', Credit='credit', Installment='installment' }
-export enum AuditAction { Login='login', Certification='certification', Payment='payment', Airspace='airspace', Insurance='insurance', Order='order', Withdraw='withdraw', Risk='risk' }
+export enum AuditAction { Login='login', Certification='certification', Payment='payment', Airspace='airspace', Insurance='insurance', Order='order', Settlement='settlement', Withdraw='withdraw', Risk='risk' }
 
 export interface GeoPoint { lng: number; lat: number; address?: string }
 
@@ -38,6 +38,7 @@ export interface Claim { id: string; policyId: string; orderId: string; reported
 export type AirspaceStatus = 'draft'|'submitted'|'approved'|'rejected';
 export interface AirspaceRequest { id: string; orderId: string; area: GeoPoint[]; altitudeM: number; window: { start: string; end: string }; status: AirspaceStatus }
 export interface Telemetry { ts: string; pos: GeoPoint; altM: number; speedMs: number; batteryPct: number; heading: number; swingDeg: number }
+export interface TelemetrySnapshot { id: string; orderId: string; frame: Telemetry; source: 'simulator'|'pilot'|'client'|'backend'; updatedAt: string }
 export interface Review { id: string; orderId: string; byRole: Role; targetUserId: string; star: 1|2|3|4|5; tags: string[]; text?: string }
 export interface Notification { id: string; userId: string; type: NotificationType; title: string; body: string; read: boolean; createdAt: string; ref?: string }
 export interface CertificationApplication { id: string; userId: string; role: Role; status: AuditStatus; submittedAt: string; reviewedAt?: string; fields: Record<string, string | number | boolean | string[]> }

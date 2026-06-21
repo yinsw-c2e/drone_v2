@@ -12,6 +12,9 @@ node_modules
 dist
 coverage
 *.local
+.claude/
+.playwright-cli/
+output/
 
 # Editor directories and files
 .idea

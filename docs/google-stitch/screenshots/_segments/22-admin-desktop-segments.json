@@ -1,0 +1,15 @@
+{
+  "prefix": "22-admin-desktop",
+  "route": "pages-admin/dashboard/index",
+  "width": 1280,
+  "height": 900,
+  "totalH": 4195,
+  "totalW": 1280,
+  "maxY": 3295,
+  "parts": [
+    {
+      "file": "22-admin-desktop-01-0.png",
+      "y": 0
+    }
+  ]
+}

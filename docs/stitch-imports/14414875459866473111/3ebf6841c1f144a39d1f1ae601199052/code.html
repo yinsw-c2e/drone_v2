@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SkyLink Logistics - 运营控制台</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#353944",
+                        "telemetry-cyan": "#00F2FF",
+                        "on-primary-fixed": "#002022",
+                        "primary-fixed": "#74f5ff",
+                        "surface-container-low": "#171b26",
+                        "on-tertiary-container": "#725e00",
+                        "on-secondary": "#002e6a",
+                        "surface-container-highest": "#313540",
+                        "tertiary-fixed": "#ffe173",
+                        "surface-container-lowest": "#0a0e18",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "surface-variant": "#313540",
+                        "on-tertiary-fixed": "#221b00",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#001a42",
+                        "surface-container-high": "#262a34",
+                        "on-secondary-container": "#e6ecff",
+                        "background": "#0f131d",
+                        "telemetry-blue": "#3B82F6",
+                        "status-warning": "#F59E0B",
+                        "surface": "#0f131d",
+                        "on-secondary-fixed-variant": "#004395",
+                        "secondary-container": "#0566d9",
+                        "on-surface-variant": "#b9cacb",
+                        "on-tertiary": "#3b2f00",
+                        "on-error-container": "#ffdad6",
+                        "secondary": "#adc6ff",
+                        "bg-surface": "#141822",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-primary-fixed-variant": "#004f54",
+                        "surface-container": "#1b1f2a",
+                        "on-background": "#dfe2f0",
+                        "inverse-primary": "#00696f",
+                        "bg-elevated": "#1E2433",
+                        "tertiary-fixed-dim": "#e8c423",
+                        "primary": "#e1fdff",
+                        "error": "#ffb4ab",
+                        "outline": "#849495",
+                        "error-container": "#93000a",
+                        "tertiary": "#fff6e4",
+                        "surface-tint": "#00dbe7",
+                        "tertiary-container": "#fed83a",
+                        "primary-container": "#00f2ff",
+                        "on-surface": "#dfe2f0",
+                        "outline-variant": "#3a494b",
+                        "surface-dim": "#0f131d",
+                        "inverse-on-surface": "#2c303b",
+                        "status-critical": "#EF4444",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "inverse-surface": "#dfe2f0",
+                        "status-success": "#10B981",
+                        "on-primary": "#00363a",
+                        "on-primary-container": "#006a71",
+                        "primary-fixed-dim": "#00dbe7",
+                        "bg-base": "#0B0E14"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "container-max-width": "1280px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "base-unit": "4px"
+                    },
+                    "fontFamily": {
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0B0E14; /* bg-base */
+            color: #dfe2f0; /* on-surface */
+        }
+        /* Custom scrollbar for deep dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0E14; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #313540; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #849495; 
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden font-body-md text-body-md antialiased selection:bg-telemetry-cyan selection:text-bg-base">
+<!-- Top App Bar (Shared Component Hybrid for Admin) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop h-16 bg-bg-base border-b border-outline-variant shadow-none">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-telemetry-cyan" style="font-variation-settings: 'FILL' 1;">public</span>
+<span class="text-headline-md font-headline-md font-bold text-telemetry-cyan tracking-tight">SkyLink Logistics</span>
+<span class="text-label-caps font-label-caps text-on-surface-variant ml-4 border border-outline-variant px-2 py-0.5 rounded uppercase tracking-widest bg-surface-container-low">OP-CONSOLE / v2.4</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-surface-variant relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-status-critical rounded-full animate-pulse"></span>
+</button>
+<button class="hover:text-primary transition-colors flex items-center justify-center p-2 rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<div class="flex items-center gap-3 border-l border-outline-variant pl-6">
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-telemetry-cyan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt9Ld6T6z0BmGA6jY5DpD_B4xed8hoSlD1y1r0oY8q6oyEV_YYSB3aaFH2aPwe0kBt-rUMQDnT0PhuWSB5AEjGXUzlgMsQS5aLWeh-hsDcZgXU85_Ln0XbSeJtGRCqUU610KWyt6pV-4W3XTeV1YcIyWEx7NiegN1ZY9D_0ut2eSAA-90CtP4SJ_XVRnYZulHMRY9HXF0k7G9mZQzqYr59hMRQ522ZuoBmnIheiVnIV-Y-F19SwoyUATFS7tZXCqM1j0VWUGQKe-tp"/>
+<div class="flex flex-col">
+<span class="text-data-mono font-data-mono text-primary">OP-LEAD-01</span>
+<span class="text-label-caps font-label-caps text-on-surface-variant">Active</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Side Navigation (Fixed Desktop) -->
+<nav class="fixed top-16 left-0 w-[240px] h-[calc(100vh-64px)] bg-bg-surface border-r border-outline-variant z-40 flex flex-col pt-6 pb-4 overflow-y-auto">
+<div class="px-6 mb-4">
+<h2 class="text-label-caps font-label-caps text-on-surface-variant uppercase tracking-widest">Modules</h2>
+</div>
+<ul class="flex-1 px-4 space-y-1">
+<!-- Active State: 运营工作台 -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary-container border border-primary-container/30 transition-all hover:bg-primary-container/20 group" href="#">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-data-mono text-data-mono font-bold">运营工作台</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="font-data-mono text-data-mono">认证审核</span>
+<span class="ml-auto bg-telemetry-blue text-bg-base text-[10px] font-bold px-1.5 py-0.5 rounded-sm">12</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="font-data-mono text-data-mono">订单管理</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined">security</span>
+<span class="font-data-mono text-data-mono">风控理赔</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-data-mono text-data-mono">报表建议</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-data-mono text-data-mono">审计日志</span>
+</a>
+</li>
+</ul>
+<div class="px-6 mt-auto">
+<div class="bg-surface-container-high rounded-lg p-4 border border-outline-variant">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-status-success text-[16px]">wifi</span>
+<span class="text-label-caps font-label-caps text-status-success">SYSTEM ONLINE</span>
+</div>
+<div class="text-[10px] text-on-surface-variant font-data-mono">LATENCY: 12ms</div>
+<div class="text-[10px] text-on-surface-variant font-data-mono">UPTIME: 99.99%</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-[240px] mt-16 flex-1 h-[calc(100vh-64px)] overflow-y-auto bg-bg-base p-margin-desktop relative">
+<!-- Background Grid Pattern for industrial feel -->
+<div class="absolute inset-0 pointer-events-none opacity-5" style="background-image: linear-gradient(#3a494b 1px, transparent 1px), linear-gradient(90deg, #3a494b 1px, transparent 1px); background-size: 32px 32px;"></div>
+<div class="max-w-[1280px] mx-auto relative z-10 space-y-6">
+<!-- Page Header -->
+<div class="flex justify-between items-end border-b border-outline-variant pb-4">
+<div>
+<h1 class="text-display-lg font-display-lg text-primary">运营总览</h1>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">全局监控与实时作战指挥中心</p>
+</div>
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-transparent border border-telemetry-blue text-telemetry-blue hover:bg-telemetry-blue/10 rounded font-data-mono text-data-mono transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        导出报表
+                    </button>
+<button class="px-4 py-2 bg-telemetry-cyan text-bg-base hover:bg-primary-fixed rounded font-data-mono text-data-mono font-bold transition-colors flex items-center gap-2 shadow-[0_0_15px_rgba(0,242,255,0.3)]">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                        流程演练
+                    </button>
+</div>
+</div>
+<!-- KPI Row (Bento Grid Style) -->
+<div class="grid grid-cols-4 gap-4">
+<!-- KPI 1 -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-5 hover:border-telemetry-cyan/50 hover:shadow-[0_0_12px_rgba(0,242,255,0.1)] transition-all group relative overflow-hidden">
+<div class="absolute right-0 top-0 w-16 h-16 bg-telemetry-cyan/5 rounded-bl-full blur-xl group-hover:bg-telemetry-cyan/10 transition-colors"></div>
+<div class="text-label-caps font-label-caps text-on-surface-variant flex items-center justify-between mb-2">
+<span>今日活跃运单</span>
+<span class="material-symbols-outlined text-[16px] text-telemetry-cyan">route</span>
+</div>
+<div class="text-display-lg font-display-lg font-data-mono text-primary my-2">12,458</div>
+<div class="flex items-center gap-2 text-data-mono font-data-mono text-status-success">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+14.2%</span>
+<span class="text-on-surface-variant text-[11px] ml-1">vs 昨日</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-5 hover:border-telemetry-cyan/50 hover:shadow-[0_0_12px_rgba(0,242,255,0.1)] transition-all group relative overflow-hidden">
+<div class="absolute right-0 top-0 w-16 h-16 bg-status-warning/5 rounded-bl-full blur-xl group-hover:bg-status-warning/10 transition-colors"></div>
+<div class="text-label-caps font-label-caps text-on-surface-variant flex items-center justify-between mb-2">
+<span>待处理异常</span>
+<span class="material-symbols-outlined text-[16px] text-status-warning">warning</span>
+</div>
+<div class="text-display-lg font-display-lg font-data-mono text-status-warning my-2">84</div>
+<div class="flex items-center gap-2 text-data-mono font-data-mono text-status-warning">
+<span class="material-symbols-outlined text-[14px]">priority_high</span>
+<span>需干预</span>
+<span class="text-on-surface-variant text-[11px] ml-1">3 严重</span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-5 hover:border-telemetry-cyan/50 hover:shadow-[0_0_12px_rgba(0,242,255,0.1)] transition-all group relative overflow-hidden">
+<div class="text-label-caps font-label-caps text-on-surface-variant flex items-center justify-between mb-2">
+<span>平台日均完单率</span>
+<span class="material-symbols-outlined text-[16px] text-telemetry-blue">check_circle</span>
+</div>
+<div class="text-display-lg font-display-lg font-data-mono text-primary my-2">98.2%</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1 mt-3">
+<div class="bg-telemetry-blue h-1 rounded-full" style="width: 98.2%"></div>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-5 hover:border-telemetry-cyan/50 hover:shadow-[0_0_12px_rgba(0,242,255,0.1)] transition-all group relative overflow-hidden">
+<div class="text-label-caps font-label-caps text-on-surface-variant flex items-center justify-between mb-2">
+<span>认证排队中</span>
+<span class="material-symbols-outlined text-[16px] text-secondary">person_add</span>
+</div>
+<div class="text-display-lg font-display-lg font-data-mono text-primary my-2">342</div>
+<div class="flex items-center gap-2 text-data-mono font-data-mono text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+<span>预计审核时长: 15min</span>
+</div>
+</div>
+</div>
+<!-- Main Layout Grid (2 Columns: Main Data + Sidebar Queues) -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Charts & Maps (Spans 8 cols) -->
+<div class="col-span-8 space-y-6">
+<!-- Reference Image / Map Area -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl overflow-hidden relative">
+<div class="absolute top-4 left-4 z-20 flex gap-2">
+<div class="bg-bg-elevated/80 backdrop-blur-md border border-outline-variant px-3 py-1.5 rounded text-label-caps font-label-caps text-primary flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
+                                全球运力分布实时态势
+                            </div>
+</div>
+<div class="absolute bottom-4 right-4 z-20 flex gap-2 flex-col">
+<button class="w-8 h-8 bg-bg-elevated/80 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-on-surface hover:text-telemetry-cyan hover:border-telemetry-cyan transition-colors"><span class="material-symbols-outlined text-[18px]">add</span></button>
+<button class="w-8 h-8 bg-bg-elevated/80 backdrop-blur-md border border-outline-variant rounded flex items-center justify-center text-on-surface hover:text-telemetry-cyan hover:border-telemetry-cyan transition-colors"><span class="material-symbols-outlined text-[18px]">remove</span></button>
+</div>
+<!-- Placeholder for Reference Image 11 -->
+<div class="w-full h-[400px] bg-surface-container-lowest bg-cover bg-center opacity-80" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA4H9Z8RfS1rf_aClx2woM_DdiVktK9GDnDw6Q-Rvnm8kPnn4a_YZbm3ykEoSLPsVrCriDpWL6m_qeqJxDL83wT96S71r3nvXfj6zYzF-2cAxJfJBIA2T1CuskKE8i_j-TPCDvVTyQtX1cgtB1PQ6bN6kxFcmIa1fClQNo5n9l_B28EmrORBfgXCOfba2EVcM4xFyVnHlMvSNkn42AHdf7sQhFBtNLsE03CulUsc4611xK0_EgJm37EdVgBVLVDgKY8Viif16dbKHWZ'); background-position: top center;">
+<!-- Overlay to integrate the image into the dark theme -->
+<div class="absolute inset-0 bg-gradient-to-t from-bg-surface via-transparent to-transparent opacity-60"></div>
+<!-- Fake telemetry overlays -->
+<div class="absolute top-[40%] left-[30%] w-[120px] bg-bg-elevated/90 backdrop-blur border border-telemetry-cyan/30 p-2 rounded shadow-lg">
+<div class="text-[10px] font-data-mono text-telemetry-cyan">NODE-A49</div>
+<div class="text-data-mono font-data-mono text-primary">ACTV: 1,204</div>
+</div>
+</div>
+</div>
+<!-- Trend Chart Area (CSS Mockup) -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-5">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-headline-sm font-headline-sm text-primary">24小时订单吞吐量趋势</h3>
+<div class="flex gap-2">
+<button class="px-2 py-1 bg-surface-variant text-on-surface rounded text-[12px] font-data-mono hover:bg-surface-bright transition-colors">1H</button>
+<button class="px-2 py-1 bg-telemetry-cyan/20 text-telemetry-cyan border border-telemetry-cyan/50 rounded text-[12px] font-data-mono">24H</button>
+<button class="px-2 py-1 bg-surface-variant text-on-surface rounded text-[12px] font-data-mono hover:bg-surface-bright transition-colors">7D</button>
+</div>
+</div>
+<div class="h-[200px] relative w-full flex items-end gap-1">
+<!-- Background grid lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none border-b border-l border-outline-variant pb-[20px] pl-[30px]">
+<div class="border-t border-outline-variant/30 w-full h-0"></div>
+<div class="border-t border-outline-variant/30 w-full h-0"></div>
+<div class="border-t border-outline-variant/30 w-full h-0"></div>
+<div class="border-t border-outline-variant/30 w-full h-0"></div>
+<!-- Y Axis Labels -->
+<div class="absolute left-[-25px] top-[-8px] text-[10px] font-data-mono text-on-surface-variant">4k</div>
+<div class="absolute left-[-25px] top-[calc(33%-8px)] text-[10px] font-data-mono text-on-surface-variant">3k</div>
+<div class="absolute left-[-25px] top-[calc(66%-8px)] text-[10px] font-data-mono text-on-surface-variant">2k</div>
+<div class="absolute left-[-25px] bottom-[12px] text-[10px] font-data-mono text-on-surface-variant">1k</div>
+</div>
+<!-- Bar Chart Mockup -->
+<div class="flex-1 ml-[30px] mb-[20px] h-full flex items-end gap-[2px]">
+<!-- generating fake bars -->
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[40%] rounded-t-sm relative group"><div class="hidden group-hover:block absolute top-[-25px] left-1/2 -translate-x-1/2 bg-bg-elevated text-[10px] py-0.5 px-1 rounded border border-outline-variant">1.2k</div></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[50%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[40%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[70%] rounded-t-sm"></div>
+<div class="flex-1 bg-telemetry-blue/40 hover:bg-telemetry-blue/70 transition-colors h-[85%] rounded-t-sm border-t border-telemetry-blue"></div>
+<div class="flex-1 bg-telemetry-blue/40 hover:bg-telemetry-blue/70 transition-colors h-[90%] rounded-t-sm border-t border-telemetry-blue"></div>
+<div class="flex-1 bg-telemetry-blue/60 hover:bg-telemetry-blue transition-colors h-[100%] rounded-t-sm border-t border-telemetry-cyan shadow-[0_-4px_10px_rgba(0,242,255,0.2)]"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[80%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[60%] rounded-t-sm"></div>
+<div class="flex-1 bg-surface-variant hover:bg-telemetry-blue/50 transition-colors h-[50%] rounded-t-sm"></div>
+</div>
+<!-- X Axis Labels -->
+<div class="absolute bottom-0 left-[30px] right-0 flex justify-between text-[10px] font-data-mono text-on-surface-variant">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>Now</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Action Queues (Spans 4 cols) -->
+<div class="col-span-4 space-y-6">
+<!-- Auth Queue -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl flex flex-col h-[400px]">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50 rounded-t-xl">
+<h3 class="text-headline-sm font-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">fact_check</span>
+                                实时认证审核队列
+                            </h3>
+<span class="bg-surface-variant text-on-surface-variant text-[10px] font-data-mono px-2 py-0.5 rounded-full">12 待审</span>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-2">
+<!-- Queue Item 1 -->
+<div class="bg-surface-container border border-outline-variant p-3 rounded-lg hover:border-telemetry-cyan/40 transition-colors cursor-pointer group">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-status-critical rounded-full animate-pulse"></div>
+<span class="font-data-mono text-data-mono text-primary">USR-8829-CN</span>
+</div>
+<span class="text-[10px] font-data-mono text-on-surface-variant">2m ago</span>
+</div>
+<div class="text-body-md font-body-md text-on-surface-variant mb-3">企业资质认证 - [高优]</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface py-1 text-label-caps font-label-caps rounded hover:bg-surface-bright">驳回</button>
+<button class="flex-1 bg-telemetry-cyan/10 border border-telemetry-cyan/50 text-telemetry-cyan py-1 text-label-caps font-label-caps rounded hover:bg-telemetry-cyan/20">审查资料</button>
+</div>
+</div>
+<!-- Queue Item 2 -->
+<div class="bg-surface-container border border-outline-variant p-3 rounded-lg hover:border-telemetry-cyan/40 transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-status-warning rounded-full"></div>
+<span class="font-data-mono text-data-mono text-primary">DRV-4122-US</span>
+</div>
+<span class="text-[10px] font-data-mono text-on-surface-variant">15m ago</span>
+</div>
+<div class="text-body-md font-body-md text-on-surface-variant mb-3">承运人执照更新</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface py-1 text-label-caps font-label-caps rounded hover:bg-surface-bright">驳回</button>
+<button class="flex-1 bg-telemetry-cyan/10 border border-telemetry-cyan/50 text-telemetry-cyan py-1 text-label-caps font-label-caps rounded hover:bg-telemetry-cyan/20">审查资料</button>
+</div>
+</div>
+<!-- Queue Item 3 -->
+<div class="bg-surface-container border border-outline-variant p-3 rounded-lg hover:border-telemetry-cyan/40 transition-colors cursor-pointer opacity-70">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-surface-variant rounded-full"></div>
+<span class="font-data-mono text-data-mono text-primary">VEH-9011-EU</span>
+</div>
+<span class="text-[10px] font-data-mono text-on-surface-variant">1h ago</span>
+</div>
+<div class="text-body-md font-body-md text-on-surface-variant mb-3">载具登记审核</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-transparent border border-outline-variant text-on-surface py-1 text-label-caps font-label-caps rounded hover:bg-surface-bright">驳回</button>
+<button class="flex-1 bg-telemetry-cyan/10 border border-telemetry-cyan/50 text-telemetry-cyan py-1 text-label-caps font-label-caps rounded hover:bg-telemetry-cyan/20">审查资料</button>
+</div>
+</div>
+</div>
+<button class="w-full py-2 border-t border-outline-variant text-label-caps font-label-caps text-on-surface-variant hover:text-primary transition-colors bg-surface-container-lowest rounded-b-xl">VIEW ALL QUEUES (12)</button>
+</div>
+<!-- Recent Orders List (Mini) -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-headline-sm font-headline-sm text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-telemetry-blue text-[20px]">local_shipping</span>
+                                高危运单监控
+                            </h3>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between border-b border-outline-variant pb-2 last:border-0 last:pb-0">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-status-critical p-1 bg-status-critical/10 rounded">warning</span>
+<div>
+<div class="font-data-mono text-data-mono text-primary">ORD-992-XYZ</div>
+<div class="text-[10px] text-on-surface-variant font-data-mono">延误超时 &gt; 4H</div>
+</div>
+</div>
+<button class="text-telemetry-cyan hover:underline text-[12px] font-data-mono">干预</button>
+</div>
+<div class="flex items-center justify-between border-b border-outline-variant pb-2 last:border-0 last:pb-0">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-status-warning p-1 bg-status-warning/10 rounded">route</span>
+<div>
+<div class="font-data-mono text-data-mono text-primary">ORD-811-ABC</div>
+<div class="text-[10px] text-on-surface-variant font-data-mono">路线偏离警告</div>
+</div>
+</div>
+<button class="text-telemetry-cyan hover:underline text-[12px] font-data-mono">查看</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -23,7 +23,7 @@ it('校验：缺字段/贵重未投保报错，合法订单通过', () => {
 
 it('运力工厂默认在线', () => { const c = createCapacity({ pilotId: 'p', droneId: 'd', ownerId: 'o', location: { lng: 116.4, lat: 39.9 } }); expect(c.status).toBe(CapacityStatus.Online); expect(c.id.startsWith('cap_')).toBe(true); });
 
-it('禁飞区判定', () => { expect(insideNoFlyZone({ lng: 116.32, lat: 39.97 }, NO_FLY_ZONES)).toBe(true); expect(insideNoFlyZone({ lng: 116.50, lat: 39.90 }, NO_FLY_ZONES)).toBe(false); });
+it('禁飞区判定', () => { expect(insideNoFlyZone({ lng: 113.145, lat: 23.035 }, NO_FLY_ZONES)).toBe(true); expect(insideNoFlyZone({ lng: 113.12, lat: 23.02 }, NO_FLY_ZONES)).toBe(false); });
 
 it('机主/业主信用维度上限与总分自洽', () => {
   const o = ownerCredit('o', repo.owners.all()[0].stats);

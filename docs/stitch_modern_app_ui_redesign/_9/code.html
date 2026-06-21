@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pilot Mission Hall - SkyLink</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed-dim": "#e8c423",
+                        "telemetry-cyan": "#00F2FF",
+                        "surface-container-highest": "#313540",
+                        "on-tertiary-fixed": "#221b00",
+                        "secondary": "#adc6ff",
+                        "surface-variant": "#313540",
+                        "on-primary": "#00363a",
+                        "surface-dim": "#0f131d",
+                        "on-secondary-container": "#e6ecff",
+                        "outline-variant": "#3a494b",
+                        "on-tertiary": "#3b2f00",
+                        "on-primary-fixed": "#002022",
+                        "on-background": "#dfe2f0",
+                        "surface-bright": "#353944",
+                        "on-primary-fixed-variant": "#004f54",
+                        "primary-container": "#00f2ff",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#dfe2f0",
+                        "surface": "#0f131d",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-container-low": "#171b26",
+                        "inverse-surface": "#dfe2f0",
+                        "tertiary-fixed": "#ffe173",
+                        "bg-surface": "#141822",
+                        "tertiary-container": "#fed83a",
+                        "on-primary-container": "#006a71",
+                        "surface-container-high": "#262a34",
+                        "status-critical": "#EF4444",
+                        "primary": "#e1fdff",
+                        "on-secondary": "#002e6a",
+                        "primary-fixed": "#74f5ff",
+                        "on-tertiary-container": "#725e00",
+                        "on-surface-variant": "#b9cacb",
+                        "on-secondary-fixed-variant": "#004395",
+                        "bg-elevated": "#1E2433",
+                        "secondary-fixed": "#d8e2ff",
+                        "status-warning": "#F59E0B",
+                        "on-secondary-fixed": "#001a42",
+                        "bg-base": "#0B0E14",
+                        "telemetry-blue": "#3B82F6",
+                        "error": "#ffb4ab",
+                        "outline": "#849495",
+                        "surface-container-lowest": "#0a0e18",
+                        "on-tertiary-fixed-variant": "#554500",
+                        "inverse-primary": "#00696f",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "surface-tint": "#00dbe7",
+                        "tertiary": "#fff6e4",
+                        "inverse-on-surface": "#2c303b",
+                        "background": "#0f131d",
+                        "status-success": "#10B981",
+                        "surface-container": "#1b1f2a",
+                        "secondary-container": "#0566d9",
+                        "primary-fixed-dim": "#00dbe7"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "container-max-width": "1440px",
+                        "margin-mobile": "16px",
+                        "base-unit": "4px"
+                    },
+                    fontFamily: {
+                        "body-lg": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"]
+                    },
+                    fontSize: {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0B0E14; color: #dfe2f0; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .icon-fill { font-variation-settings: 'FILL' 1; }
+        .glass-panel { background: rgba(30, 36, 51, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(58, 73, 75, 0.5); }
+        .card-hover:hover { border-color: #00F2FF; box-shadow: 0 0 8px rgba(0, 242, 255, 0.2); }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base dark:bg-bg-base border-b border-outline-variant flat no shadows md:px-margin-desktop">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">person</span>
+</div>
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan">SkyLink Logistics</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary">signal_cellular_alt</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-on-surface-variant dark:text-on-surface-variant text-label-caps font-label-caps hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors px-3 py-1 rounded-DEFAULT" href="#">Home</a>
+<a class="text-primary dark:text-primary text-label-caps font-label-caps bg-surface-variant dark:bg-surface-variant px-3 py-1 rounded-DEFAULT" href="#">Tasks</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant text-label-caps font-label-caps hover:bg-surface-variant dark:hover:bg-surface-variant transition-colors px-3 py-1 rounded-DEFAULT" href="#">Assets</a>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow pt-20 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto w-full md:grid md:grid-cols-12 md:gap-gutter">
+<!-- Left SideNav (Desktop) -->
+<aside class="hidden md:block md:col-span-3 lg:col-span-2">
+<div class="sticky top-24 bg-bg-surface border border-outline-variant rounded-xl p-4 flex flex-col gap-2">
+<div class="text-label-caps font-label-caps text-on-surface-variant mb-2">FILTERS</div>
+<button class="flex items-center justify-between p-2 rounded-lg bg-surface-variant text-primary text-body-md font-body-md">
+<span>Available</span>
+<span class="text-data-mono font-data-mono text-telemetry-cyan">14</span>
+</button>
+<button class="flex items-center justify-between p-2 rounded-lg hover:bg-surface-variant text-on-surface-variant text-body-md font-body-md transition-colors">
+<span>In Progress</span>
+<span class="text-data-mono font-data-mono">2</span>
+</button>
+</div>
+</aside>
+<!-- Center Canvas -->
+<section class="md:col-span-9 lg:col-span-10 flex flex-col gap-gutter">
+<!-- Context Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4">
+<div>
+<h2 class="text-headline-sm font-headline-sm text-on-surface">Mission Hall</h2>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Available contracts matching your fleet capabilities.</p>
+</div>
+<div class="mt-4 md:mt-0 flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 border border-outline-variant rounded-lg bg-surface text-on-surface text-body-md font-body-md hover:border-telemetry-cyan transition-colors">
+<span class="material-symbols-outlined text-[18px]">sort</span>
+                        Sort: Urgency
+                    </button>
+</div>
+</div>
+<!-- Reference Image Display (Hidden on mobile to focus on UI, shown on desktop as a structural reference if needed, but per instructions, we just include it) -->
+<div class="hidden">
+<img alt="Reference Image" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQTJP2Ve9GI4xgk1ZhGY1dey4oYvl4hFpB3QpikxDUsdlfI-NCW2DE31vmL1epmnlL881aNI2DxLRymGs4RA-qQZ8jTcwZfuUs-2mm8_ZsyCDYdxew6PiR1hOfnI_hbI5CUjLW7j--JAmAnAGd3cwEqqtOtsBsbgJbBh5MgJio2RRaIBi3QC_tj5lMvqXnKm1_1GwpsmTPssgtLVSjDYlPnGIj3WY1PhgaAJssFaLZyNKVTj44SbsBcGVX4OXSTvg95krZWVVz8KWr"/>
+</div>
+<!-- Order Cards List -->
+<div class="flex flex-col gap-4 pb-20 md:pb-0">
+<!-- Card 1: High Priority -->
+<div class="bg-bg-surface border border-status-warning rounded-xl p-4 card-hover transition-all cursor-pointer relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-16 h-16 bg-status-warning/10 rounded-bl-full flex items-start justify-end p-2">
+<span class="material-symbols-outlined text-status-warning text-[16px]">priority_high</span>
+</div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="text-label-caps font-label-caps text-status-warning mb-1 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse"></span>
+                                URGENT DISPATCH
+                            </div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">精密设备吊运 (Medical Optics)</h3>
+</div>
+<div class="text-right mr-6">
+<div class="text-label-caps font-label-caps text-on-surface-variant">BOUNTY</div>
+<div class="text-headline-sm font-headline-sm font-data-mono text-status-warning">¥4,500</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">route</span> ROUTE</span>
+<div class="text-body-md font-body-md text-on-surface truncate">TechPark A → Hosp C</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">straighten</span> DISTANCE</span>
+<div class="text-data-mono font-data-mono text-telemetry-cyan">12.4 KM</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> ETA REQ</span>
+<div class="text-data-mono font-data-mono text-status-warning">&lt; 45 MIN</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">weight</span> PAYLOAD</span>
+<div class="text-data-mono font-data-mono text-on-surface">25 KG</div>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 pt-3 border-t border-outline-variant">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">REQ: HEAVY LIFT</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">CREDIT &gt; 95</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-status-warning text-label-caps font-label-caps border border-status-warning/30">CLASS A LIC</span>
+</div>
+</div>
+<!-- Card 2: Standard -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 card-hover transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="text-label-caps font-label-caps text-telemetry-blue mb-1">STANDARD FREIGHT</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">Industrial Component Trans</h3>
+</div>
+<div class="text-right">
+<div class="text-label-caps font-label-caps text-on-surface-variant">BOUNTY</div>
+<div class="text-headline-sm font-headline-sm font-data-mono text-telemetry-cyan">¥1,200</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">route</span> ROUTE</span>
+<div class="text-body-md font-body-md text-on-surface truncate">Zone 4 → Depot Beta</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">straighten</span> DISTANCE</span>
+<div class="text-data-mono font-data-mono text-on-surface">45.0 KM</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> ETA REQ</span>
+<div class="text-data-mono font-data-mono text-on-surface">120 MIN</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">weight</span> PAYLOAD</span>
+<div class="text-data-mono font-data-mono text-on-surface">8 KG</div>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 pt-3 border-t border-outline-variant">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">REQ: FIXED WING</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">CREDIT &gt; 80</span>
+</div>
+</div>
+<!-- Card 3: Standard -->
+<div class="bg-bg-surface border border-outline-variant rounded-xl p-4 card-hover transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div>
+<div class="text-label-caps font-label-caps text-telemetry-blue mb-1">STANDARD FREIGHT</div>
+<h3 class="text-headline-sm font-headline-sm text-on-surface">Biological Samples</h3>
+</div>
+<div class="text-right">
+<div class="text-label-caps font-label-caps text-on-surface-variant">BOUNTY</div>
+<div class="text-headline-sm font-headline-sm font-data-mono text-telemetry-cyan">¥2,800</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">route</span> ROUTE</span>
+<div class="text-body-md font-body-md text-on-surface truncate">Clinic N → Lab Central</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">straighten</span> DISTANCE</span>
+<div class="text-data-mono font-data-mono text-on-surface">8.2 KM</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> ETA REQ</span>
+<div class="text-data-mono font-data-mono text-on-surface">30 MIN</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-caps font-label-caps text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">ac_unit</span> TEMP REQ</span>
+<div class="text-data-mono font-data-mono text-telemetry-blue">-4°C</div>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 pt-3 border-t border-outline-variant">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">REQ: COLD CHAIN</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-label-caps font-label-caps border border-outline-variant">CREDIT &gt; 90</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-2 bg-surface dark:bg-surface border-t border-outline-variant shadow-lg md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-label-caps font-label-caps mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary-container bg-secondary-container/20 rounded-full px-4 py-1 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined icon-fill">assignment</span>
+<span class="text-label-caps font-label-caps mt-1">Tasks</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-caps font-label-caps mt-1">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-caps font-label-caps mt-1">Profile</span>
+</a>
+</nav>
+<!-- Floating Action Button / Fixed Bottom Action (Mobile) -->
+<div class="fixed bottom-20 md:bottom-8 left-0 w-full px-margin-mobile flex justify-center z-40 pointer-events-none">
+<div class="max-w-[400px] w-full glass-panel p-2 rounded-xl flex items-center justify-between pointer-events-auto shadow-lg">
+<div class="flex flex-col pl-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant">ACTIVE STATUS</span>
+<span class="text-body-md font-body-md text-telemetry-cyan flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-telemetry-cyan animate-pulse"></span> Ready for Dispatch</span>
+</div>
+<button class="bg-telemetry-cyan text-bg-base font-headline-sm text-headline-sm px-6 py-2 rounded-lg hover:bg-primary-fixed transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                 Auto-Match
+             </button>
+</div>
+</div>
+</body></html>

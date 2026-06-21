@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Initiate Operation - SkyLink Logistics</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter, Hanken Grotesk, JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0E14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a494b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00F2FF;
+        }
+
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(30, 36, 51, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(132, 148, 149, 0.2);
+        }
+        
+        /* High-tech grid background */
+        .bg-grid-pattern {
+            background-image: 
+                linear-gradient(to right, rgba(58, 73, 75, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(58, 73, 75, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed": "#221b00",
+                    "tertiary-fixed": "#ffe173",
+                    "surface-tint": "#00dbe7",
+                    "primary": "#e1fdff",
+                    "surface": "#0f131d",
+                    "secondary-container": "#0566d9",
+                    "on-secondary-fixed": "#001a42",
+                    "status-warning": "#F59E0B",
+                    "on-surface": "#dfe2f0",
+                    "on-primary-fixed-variant": "#004f54",
+                    "on-secondary-fixed-variant": "#004395",
+                    "on-surface-variant": "#b9cacb",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "surface-dim": "#0f131d",
+                    "tertiary-container": "#fed83a",
+                    "tertiary-fixed-dim": "#e8c423",
+                    "surface-variant": "#313540",
+                    "primary-container": "#00f2ff",
+                    "telemetry-blue": "#3B82F6",
+                    "telemetry-cyan": "#00F2FF",
+                    "error-container": "#93000a",
+                    "secondary-fixed": "#d8e2ff",
+                    "outline": "#849495",
+                    "tertiary": "#fff6e4",
+                    "bg-elevated": "#1E2433",
+                    "surface-container-high": "#262a34",
+                    "bg-base": "#0B0E14",
+                    "on-tertiary-container": "#725e00",
+                    "on-tertiary": "#3b2f00",
+                    "on-secondary": "#002e6a",
+                    "on-primary": "#00363a",
+                    "bg-surface": "#141822",
+                    "inverse-surface": "#dfe2f0",
+                    "surface-bright": "#353944",
+                    "surface-container": "#1b1f2a",
+                    "on-secondary-container": "#e6ecff",
+                    "status-success": "#10B981",
+                    "surface-container-low": "#171b26",
+                    "outline-variant": "#3a494b",
+                    "on-primary-fixed": "#002022",
+                    "on-background": "#dfe2f0",
+                    "primary-fixed": "#74f5ff",
+                    "background": "#0f131d",
+                    "inverse-on-surface": "#2c303b",
+                    "error": "#ffb4ab",
+                    "on-error": "#690005",
+                    "inverse-primary": "#00696f",
+                    "on-primary-container": "#006a71",
+                    "status-critical": "#EF4444",
+                    "surface-container-highest": "#313540",
+                    "secondary": "#adc6ff",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-lowest": "#0a0e18",
+                    "on-tertiary-fixed-variant": "#554500",
+                    "primary-fixed-dim": "#00dbe7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-max-width": "1440px",
+                    "base-unit": "4px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "display-lg": [
+                            "Hanken Grotesk"
+                    ],
+                    "data-mono": [
+                            "JetBrains Mono"
+                    ],
+                    "label-caps": [
+                            "JetBrains Mono"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "headline-sm": [
+                            "Hanken Grotesk"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "headline-md": [
+                            "Hanken Grotesk"
+                    ]
+            },
+            "fontSize": {
+                    "display-lg": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "data-mono": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "label-caps": [
+                            "11px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.1em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-sm": [
+                            "18px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-bg-base text-on-background font-body-md min-h-screen bg-grid-pattern pb-32">
+<!-- TopAppBar from JSON Rules -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-bg-base dark:bg-bg-base border-b border-outline-variant shadow-sm backdrop-blur-md bg-opacity-90">
+<div class="flex items-center gap-4">
+<button aria-label="Go Back" class="text-primary dark:text-primary hover:bg-surface-variant p-2 rounded-full transition-colors flex items-center justify-center group">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="text-headline-md font-headline-md font-bold text-telemetry-cyan tracking-tight uppercase">SkyLink Logistics</h1>
+</div>
+<div class="flex items-center">
+<button class="text-primary dark:text-primary hover:bg-surface-variant p-2 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="signal_cellular_alt">signal_cellular_alt</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
+<!-- Status Timeline (Progress Bar) -->
+<section class="w-full max-w-4xl mx-auto mb-10 mt-4 relative">
+<div class="flex items-center justify-between relative z-10">
+<!-- Step 1: Active -->
+<div class="flex flex-col items-center w-1/4 relative group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-surface-container border-2 border-telemetry-cyan flex items-center justify-center shadow-[0_0_12px_rgba(0,242,255,0.4)] z-20 transition-all group-hover:scale-110">
+<div class="w-2.5 h-2.5 rounded-full bg-telemetry-cyan animate-pulse"></div>
+</div>
+<span class="text-label-caps font-label-caps text-telemetry-cyan mt-3 tracking-widest">货物参数</span>
+<!-- Connecting Line -->
+<div class="absolute top-4 left-1/2 w-full h-0.5 bg-outline-variant z-10"></div>
+</div>
+<!-- Step 2: Pending -->
+<div class="flex flex-col items-center w-1/4 relative group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-bg-base border-2 border-outline-variant flex items-center justify-center z-20 transition-all group-hover:border-on-surface-variant">
+<span class="text-label-caps font-label-caps text-outline-variant">02</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant mt-3 tracking-widest">路由规划</span>
+<!-- Connecting Line -->
+<div class="absolute top-4 left-1/2 w-full h-px border-t border-dashed border-outline-variant z-10"></div>
+</div>
+<!-- Step 3: Pending -->
+<div class="flex flex-col items-center w-1/4 relative group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-bg-base border-2 border-outline-variant flex items-center justify-center z-20 transition-all group-hover:border-on-surface-variant">
+<span class="text-label-caps font-label-caps text-outline-variant">03</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant mt-3 tracking-widest">保障预案</span>
+<!-- Connecting Line -->
+<div class="absolute top-4 left-1/2 w-full h-px border-t border-dashed border-outline-variant z-10"></div>
+</div>
+<!-- Step 4: Pending -->
+<div class="flex flex-col items-center w-1/4 relative group cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-bg-base border-2 border-outline-variant flex items-center justify-center z-20 transition-all group-hover:border-on-surface-variant">
+<span class="text-label-caps font-label-caps text-outline-variant">04</span>
+</div>
+<span class="text-label-caps font-label-caps text-on-surface-variant mt-3 tracking-widest">预算结算</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Forms -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Module 1: Payload Specs (Goods Info) -->
+<section class="col-span-1 md:col-span-7 bg-surface rounded-xl border border-outline-variant p-6 hover:border-telemetry-cyan/50 transition-colors duration-300 relative overflow-hidden">
+<!-- Tech Accent -->
+<div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-telemetry-cyan/10 to-transparent"></div>
+<div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-telemetry-cyan opacity-50"></div>
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant pb-4">
+<span class="material-symbols-outlined text-telemetry-cyan" data-icon="category">category</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-wide">Payload Specifications</h2>
+</div>
+<!-- Type Selection -->
+<div class="mb-8">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-3">CLASSIFICATION_TYPE</label>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+<button class="bg-primary-container text-bg-base border border-primary-container rounded-DEFAULT py-2 px-3 flex flex-col items-center justify-center gap-1 shadow-[0_0_8px_rgba(0,242,255,0.2)] transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="box">box</span>
+<span class="text-label-caps font-label-caps">STANDARD</span>
+</button>
+<button class="bg-bg-base text-on-surface-variant border border-outline-variant rounded-DEFAULT py-2 px-3 flex flex-col items-center justify-center gap-1 hover:border-telemetry-cyan hover:text-telemetry-cyan transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="local_shipping">local_shipping</span>
+<span class="text-label-caps font-label-caps">OVERSIZED</span>
+</button>
+<button class="bg-bg-base text-on-surface-variant border border-outline-variant rounded-DEFAULT py-2 px-3 flex flex-col items-center justify-center gap-1 hover:border-status-warning hover:text-status-warning transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="science">science</span>
+<span class="text-label-caps font-label-caps">HAZMAT</span>
+</button>
+<button class="bg-bg-base text-on-surface-variant border border-outline-variant rounded-DEFAULT py-2 px-3 flex flex-col items-center justify-center gap-1 hover:border-secondary-container hover:text-secondary-fixed transition-all">
+<span class="material-symbols-outlined text-xl" data-icon="ac_unit">ac_unit</span>
+<span class="text-label-caps font-label-caps">CLIMATE</span>
+</button>
+</div>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+<!-- Weight -->
+<div class="relative">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-2">GROSS_MASS</label>
+<div class="flex bg-bg-base border border-outline-variant rounded-DEFAULT overflow-hidden focus-within:border-telemetry-cyan focus-within:shadow-[0_0_6px_rgba(0,242,255,0.3)] transition-all">
+<input class="w-full bg-transparent border-none text-on-surface font-data-mono text-body-lg p-3 focus:ring-0 placeholder-on-surface-variant/50" placeholder="00.00" type="number"/>
+<div class="bg-surface-variant px-4 flex items-center border-l border-outline-variant">
+<span class="text-label-caps font-label-caps text-on-surface text-telemetry-cyan">KG</span>
+</div>
+</div>
+</div>
+<!-- Volume -->
+<div class="relative">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-2">VOLUMETRIC_CUBE</label>
+<div class="flex bg-bg-base border border-outline-variant rounded-DEFAULT overflow-hidden focus-within:border-telemetry-cyan focus-within:shadow-[0_0_6px_rgba(0,242,255,0.3)] transition-all">
+<input class="w-full bg-transparent border-none text-on-surface font-data-mono text-body-lg p-3 focus:ring-0 placeholder-on-surface-variant/50" placeholder="0.00" type="number"/>
+<div class="bg-surface-variant px-4 flex items-center border-l border-outline-variant">
+<span class="text-label-caps font-label-caps text-on-surface text-telemetry-cyan">M³</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Value -->
+<div class="relative">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-2">DECLARED_VALUE (USD)</label>
+<div class="flex bg-bg-base border border-outline-variant rounded-DEFAULT overflow-hidden focus-within:border-telemetry-cyan focus-within:shadow-[0_0_6px_rgba(0,242,255,0.3)] transition-all">
+<div class="px-4 flex items-center">
+<span class="text-body-lg font-data-mono text-outline-variant">$</span>
+</div>
+<input class="w-full bg-transparent border-none text-on-surface font-data-mono text-body-lg p-3 pl-0 focus:ring-0 placeholder-on-surface-variant/50" placeholder="0.00" type="number"/>
+</div>
+</div>
+</section>
+<!-- Module 2: Location & Timing (Simulated Map Integration) -->
+<section class="col-span-1 md:col-span-5 bg-surface rounded-xl border border-outline-variant p-0 overflow-hidden relative group">
+<!-- Map Background Layer (Simulated) -->
+<div class="absolute inset-0 z-0 opacity-20 grayscale sepia-[.3] hue-rotate-[180deg] mix-blend-screen" data-alt="A highly detailed, dark-mode satellite map view of an industrial port city at night. The urban grid is illuminated by sparse, cold cyan and blue lights, reflecting off water surfaces. The aesthetic is cybernetic and tactical, suitable for a logistics command center display. High contrast, technical atmosphere." data-location="Neo-Port Sector 7" style="background-image: url('https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg'); background-size: cover; background-position: center;">
+</div>
+<!-- Glass Overlay Content -->
+<div class="relative z-10 p-6 h-full flex flex-col glass-panel border-none bg-surface/80">
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant/50 pb-4">
+<span class="material-symbols-outlined text-telemetry-blue" data-icon="route">route</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-wide">Routing Vector</h2>
+</div>
+<!-- Origin Card -->
+<div class="bg-bg-base/90 border border-outline-variant rounded-lg p-4 mb-2 hover:border-telemetry-blue transition-colors cursor-pointer flex items-start gap-4">
+<div class="mt-1 bg-surface-variant p-2 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="flight_takeoff">flight_takeoff</span>
+</div>
+<div class="flex-1">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-1">ORIGIN_POINT</p>
+<p class="text-body-md font-body-md text-on-surface font-medium truncate">Sector 4 Storage Facility</p>
+<p class="text-data-mono font-data-mono text-outline text-xs mt-1">LAT: 34.0522 N / LNG: 118.2437 W</p>
+</div>
+</div>
+<!-- Connecting Vector Line -->
+<div class="flex justify-center my-1 relative h-6">
+<div class="w-px h-full bg-gradient-to-b from-telemetry-blue to-telemetry-cyan absolute left-8"></div>
+<span class="material-symbols-outlined text-outline-variant text-sm bg-surface/80 rounded-full z-10 absolute left-[26px] top-1" data-icon="arrow_downward">arrow_downward</span>
+</div>
+<!-- Destination Card -->
+<div class="bg-bg-base/90 border border-outline-variant rounded-lg p-4 mb-6 hover:border-telemetry-cyan transition-colors cursor-pointer flex items-start gap-4">
+<div class="mt-1 bg-telemetry-cyan/20 p-2 rounded-full border border-telemetry-cyan/50 shadow-[0_0_8px_rgba(0,242,255,0.2)]">
+<span class="material-symbols-outlined text-telemetry-cyan text-sm" data-icon="location_on">location_on</span>
+</div>
+<div class="flex-1">
+<p class="text-label-caps font-label-caps text-telemetry-cyan mb-1">DESTINATION_POINT</p>
+<p class="text-body-md font-body-md text-on-surface font-medium truncate">Select Target Zone...</p>
+</div>
+</div>
+<!-- Timing Mode -->
+<div class="mt-auto pt-4 border-t border-outline-variant/50">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-3">EXECUTION_WINDOW</label>
+<div class="flex bg-bg-base rounded-DEFAULT p-1 border border-outline-variant">
+<button class="flex-1 bg-surface-variant text-on-surface rounded-sm py-2 text-label-caps font-label-caps transition-colors border border-transparent shadow-sm">IMMEDIATE</button>
+<button class="flex-1 text-on-surface-variant hover:text-on-surface rounded-sm py-2 text-label-caps font-label-caps transition-colors">SCHEDULED</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Module 3: Protection & Parameters (Spans full width below) -->
+<section class="col-span-1 md:col-span-12 bg-surface rounded-xl border border-outline-variant p-6 mt-2 relative overflow-hidden">
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant pb-4">
+<span class="material-symbols-outlined text-status-warning" data-icon="shield">shield</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface uppercase tracking-wide">Mission Parameters &amp; Protection</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Insurance Toggle -->
+<div class="col-span-1">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-3">INDEMNITY_LEVEL</label>
+<div class="space-y-3">
+<label class="flex items-start gap-4 p-4 border border-telemetry-cyan bg-telemetry-cyan/5 rounded-DEFAULT cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-telemetry-cyan"></div>
+<div class="mt-0.5">
+<div class="w-4 h-4 rounded-full border-2 border-telemetry-cyan flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-telemetry-cyan"></div>
+</div>
+</div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium mb-1">Premium Coverage</p>
+<p class="text-label-caps font-label-caps text-on-surface-variant">Full value protection + disruption compensation.</p>
+</div>
+</label>
+<label class="flex items-start gap-4 p-4 border border-outline-variant bg-bg-base rounded-DEFAULT cursor-pointer hover:border-on-surface-variant transition-colors">
+<div class="mt-0.5">
+<div class="w-4 h-4 rounded-full border-2 border-outline-variant flex items-center justify-center">
+</div>
+</div>
+<div>
+<p class="text-body-md font-body-md text-on-surface font-medium mb-1">Standard Liability</p>
+<p class="text-label-caps font-label-caps text-on-surface-variant">Statutory limits apply. High risk.</p>
+</div>
+</label>
+</div>
+</div>
+<!-- Special Needs -->
+<div class="col-span-1 md:col-span-2 flex flex-col">
+<label class="block text-label-caps font-label-caps text-on-surface-variant mb-3">SPECIAL_DIRECTIVES / REMARKS</label>
+<textarea class="w-full flex-1 bg-bg-base border border-outline-variant rounded-DEFAULT text-on-surface font-data-mono text-body-md p-4 focus:border-telemetry-cyan focus:ring-0 focus:shadow-[0_0_6px_rgba(0,242,255,0.3)] transition-all resize-none placeholder-on-surface-variant/40" placeholder="Enter specific handling instructions, access codes, or environmental requirements..."></textarea>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Fixed Action Bar -->
+<div class="fixed bottom-0 left-0 w-full bg-surface/90 backdrop-blur-xl border-t border-outline-variant p-4 md:px-8 z-50 flex justify-between items-center shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+<div class="flex items-center gap-6">
+<div class="hidden md:block">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-1">PAYMENT_METHOD</p>
+<div class="flex items-center gap-2 bg-bg-base border border-outline-variant rounded-DEFAULT px-3 py-1.5">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-data-mono font-data-mono text-on-surface text-sm">CORP_ACCT_***492</span>
+</div>
+</div>
+<div class="h-10 w-px bg-outline-variant hidden md:block"></div>
+<div class="flex flex-col">
+<span class="text-label-caps font-label-caps text-on-surface-variant tracking-widest">EST. TOTAL COMPUTATION</span>
+<div class="flex items-baseline gap-1">
+<span class="text-headline-sm font-data-mono text-outline-variant">$</span>
+<span class="text-display-lg font-data-mono text-telemetry-cyan font-bold tracking-tight">4,250<span class="text-headline-sm">.00</span></span>
+</div>
+</div>
+</div>
+<button class="bg-primary-container text-bg-base px-8 py-4 rounded-DEFAULT font-label-caps text-label-caps font-bold hover:bg-primary-fixed transition-colors shadow-[0_0_16px_rgba(0,242,255,0.4)] flex items-center gap-2 group relative overflow-hidden">
+<div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+<span class="relative z-10">INITIATE MISSION</span>
+<span class="material-symbols-outlined relative z-10 text-lg group-hover:translate-x-1 transition-transform" data-icon="rocket_launch">rocket_launch</span>
+</button>
+</div>
+</body></html>

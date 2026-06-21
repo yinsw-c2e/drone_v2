@@ -24,20 +24,23 @@ defineEmits<{ (e: 'action'): void }>();
 .admin-data-panel {
   padding: 0;
   overflow: hidden;
-  border: 2rpx solid $line;
+  border: 2rpx solid $hairline;
   border-radius: $r-lg;
-  box-shadow: $shadow-soft;
+  box-shadow: $shadow-card;
+  background: $bg-card;
 }
 
 .panel-head {
   min-height: 96rpx;
   padding: $sp-3 $sp-4;
-  border-bottom: 2rpx solid $line;
+  border-bottom: 2rpx solid $hairline;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: $sp-3;
-  background: $surface-panel;
+  background:
+    radial-gradient(80% 90% at 100% 0%, rgba(0, 242, 255, .08), transparent 60%),
+    $surface-panel;
 }
 
 .title,
@@ -50,6 +53,7 @@ defineEmits<{ (e: 'action'): void }>();
   font-size: $fs-h3;
   line-height: 1.35;
   font-weight: $fw-semibold;
+  letter-spacing: .3rpx;
 }
 
 .desc {

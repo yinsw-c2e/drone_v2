@@ -65,8 +65,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   subtitle: '',
   eyebrow: '',
-  from: '北京低空货运中心',
-  to: '顺义临空交付点',
+  from: '普君新城华府2期 · 同济东路41号',
+  to: '岭南天地东门临停点',
   status: '空域可控',
   frame: undefined,
   eta: '--',

@@ -1,26 +1,26 @@
-/* 「低空指挥中心」设计令牌 —— 唯一风格真源。页面/组件只准引用这些变量与 mixin。 */
+/* AeroCommand Pro 设计令牌 —— 唯一风格真源。页面/组件只准引用这些变量与 mixin。 */
 
 /* 品牌主色阶 */
-$blue-50:#EAF1FF; $blue-100:#D4E2FF; $blue-200:#A9C5FF; $blue-300:#7BA6FF;
-$blue-400:#4D86FF; $blue-500:#1E6FFF; $blue-600:#0E5AE6; $blue-700:#0A47B4; $blue-800:#073584; $blue-900:#052456;
-$color-primary:$blue-500; $color-primary-press:$blue-600; $color-primary-weak:$blue-50;
+$blue-50:#E1FDFF; $blue-100:#B9FAFF; $blue-200:#74F5FF; $blue-300:#00F2FF;
+$blue-400:#00DBE7; $blue-500:#00B8C4; $blue-600:#008F99; $blue-700:#006A71; $blue-800:#004F54; $blue-900:#002022;
+$color-primary:$blue-300; $color-primary-press:$blue-400; $color-primary-weak:rgba(0,242,255,.14);
 
 /* 角色色（小面积强调） */
-$role-client:#1E6FFF; $role-client-weak:#EAF1FF;
-$role-pilot:#00B894;  $role-pilot-weak:#E3FBF3;
-$role-owner:#6C5CE7;  $role-owner-weak:#EFECFE;
+$role-client:#00F2FF; $role-client-weak:rgba(0,242,255,.16);
+$role-pilot:#10B981;  $role-pilot-weak:rgba(16,185,129,.16);
+$role-owner:#FED83A;  $role-owner-weak:rgba(254,216,58,.16);
 
 /* 语义色：主/弱底/描边/文字 */
-$success:#16C784; $success-bg:#E7FAF1; $success-line:#A8ECC9; $success-ink:#0B7A4E;
-$warning:#FF9F1C; $warning-bg:#FFF4E5; $warning-line:#FFD79E; $warning-ink:#B26A00;
-$danger:#F5455C;  $danger-bg:#FEEAED;  $danger-line:#FBB4BE;  $danger-ink:#B11E33;
-$info:#3B82F6;    $info-bg:#EAF1FF;    $info-line:#BFD6FF;    $info-ink:#0A47B4;
+$success:#10B981; $success-bg:rgba(16,185,129,.14); $success-line:rgba(16,185,129,.34); $success-ink:#52E5B2;
+$warning:#F59E0B; $warning-bg:rgba(245,158,11,.15); $warning-line:rgba(245,158,11,.34); $warning-ink:#FFD166;
+$danger:#EF4444;  $danger-bg:rgba(239,68,68,.15);   $danger-line:rgba(239,68,68,.36);   $danger-ink:#FF9B94;
+$info:#3B82F6;    $info-bg:rgba(59,130,246,.15);    $info-line:rgba(59,130,246,.34);    $info-ink:#ADC6FF;
 
-/* 中性灰阶（冷调） */
-$ink-900:#0F1626; $ink-700:#303A4D; $ink-500:#6B7385; $ink-400:#9AA2B1;
-$line:#E7EAF0; $bg-page:#F4F6FA; $bg-sunken:#EEF1F6; $bg-card:#FFFFFF;
-$overlay:rgba(15,22,38,.45);
-$on-primary:#FFFFFF; /* 主色之上的文字/图标 */
+/* 中性灰阶（深色「指挥中心」主题） */
+$ink-900:#DFE2F0; $ink-700:#B9CACB; $ink-500:#849495; $ink-400:#617173;
+$line:#2B3A40; $bg-page:#0B0E14; $bg-sunken:#0A0E18; $bg-card:#141822;
+$overlay:rgba(4,8,18,.62);
+$on-primary:#061014; /* 主色之上的文字/图标 */
 
 /* 字阶 */
 $fs-display:56rpx; $fs-metric:44rpx; $fs-h1:40rpx; $fs-h2:34rpx; $fs-h3:30rpx; $fs-body:28rpx; $fs-sm:24rpx; $fs-cap:20rpx;
@@ -30,22 +30,65 @@ $fw-regular:400; $fw-medium:500; $fw-semibold:600; $fw-bold:700;
 /* 间距 / 圆角 / 阴影 / 层级 */
 $sp-1:8rpx; $sp-2:16rpx; $sp-3:24rpx; $sp-4:32rpx; $sp-5:40rpx; $sp-6:48rpx; $sp-8:64rpx; $sp-10:80rpx;
 $page-x:32rpx;
-$r-sm:12rpx; $r-md:20rpx; $r-lg:32rpx; $r-pill:999rpx;
-$shadow-1:0 2rpx 12rpx rgba(15,22,38,.06);
-$shadow-2:0 8rpx 32rpx rgba(15,22,38,.10);
-$shadow-3:0 16rpx 48rpx rgba(15,22,38,.16);
+$r-sm:8rpx; $r-md:12rpx; $r-lg:16rpx; $r-pill:999rpx;
+$shadow-1:0 2rpx 12rpx rgba(0,0,0,.20);
+$shadow-2:0 8rpx 32rpx rgba(0,0,0,.24);
+$shadow-3:0 16rpx 48rpx rgba(0,0,0,.30);
 $z-base:0; $z-sticky:10; $z-dropdown:100; $z-bottombar:200; $z-sheet:1000; $z-modal:1100; $z-toast:2000;
 
 /* Pro 工作台扩展令牌：仍属于 §13 低空指挥中心体系，供业务组件统一引用。 */
-$surface-raised:#FFFFFF;
-$surface-panel:#F8FAFD;
-$surface-command:#EDF4FF;
-$surface-ink:#14223A;
-$line-strong:#CBD5E1;
-$shadow-command:0 12rpx 40rpx rgba(30,111,255,.14);
-$shadow-soft:0 6rpx 22rpx rgba(15,22,38,.08);
+$surface-raised:#1B1F2A;
+$surface-panel:#1E2433;
+$surface-command:rgba(0,242,255,.11);
+$surface-ink:#0B0E14;
+$line-strong:#3A494B;
+$shadow-command:0 0 0 2rpx rgba(0,242,255,.10), 0 18rpx 54rpx rgba(0,0,0,.30);
+$shadow-soft:0 8rpx 26rpx rgba(0,0,0,.24);
 
-/* mixin */
+/* ─────────────────────────────────────────────────────────────
+   v2 「低空指挥中心」生产级视觉扩展（仍属 §13 体系，只新增不破坏）
+   仅声明变量与 mixin（被 additionalData 注入到每个文件，不得含裸 CSS 规则）
+   ───────────────────────────────────────────────────────────── */
+
+/* 品牌渐变（天空 / 主行动 / 角色） */
+$cyan-400:#00F2FF; $cyan-500:#00DBE7;
+$grad-brand:linear-gradient(135deg, #00F2FF 0%, #3B82F6 100%);
+$grad-cta:linear-gradient(135deg, #00F2FF 0%, #74F5FF 100%);
+$grad-sky:radial-gradient(120% 90% at 18% 0%, rgba(0,242,255,.22) 0%, rgba(59,130,246,.16) 42%, rgba(11,14,20,0) 100%), #0B0E14;
+$grad-sky-soft:linear-gradient(160deg, #141822 0%, #0B0E14 100%);
+$grad-client:linear-gradient(135deg, #00F2FF 0%, #3B82F6 100%);
+$grad-pilot:linear-gradient(135deg, #10B981 0%, #00F2FF 100%);
+$grad-owner:linear-gradient(135deg, #FED83A 0%, #F59E0B 100%);
+$grad-admin:linear-gradient(135deg, #1E2433 0%, #3B82F6 100%);
+$grad-success:linear-gradient(135deg, #10B981 0%, #52E5B2 100%);
+$grad-warning:linear-gradient(135deg, #F59E0B 0%, #FED83A 100%);
+$grad-danger:linear-gradient(135deg, #EF4444 0%, #FF9B94 100%);
+
+/* 玻璃 / 高光 / 描边 */
+$glass-fill:rgba(30,36,51,.72);
+$glass-line:rgba(0,242,255,.20);
+$hairline:rgba(132,148,149,.22);
+$tint-on-dark:rgba(255,255,255,.06);
+$tint-on-dark-2:rgba(255,255,255,.10);
+
+/* 发光与精修阴影 */
+$shadow-glow-primary:0 0 0 2rpx rgba(0,242,255,.18), 0 12rpx 36rpx rgba(0,242,255,.22);
+$shadow-glow-pilot:0 12rpx 36rpx rgba(16,185,129,.25);
+$shadow-glow-owner:0 12rpx 36rpx rgba(245,158,11,.24);
+$shadow-card:0 4rpx 18rpx rgba(0,0,0,.24);
+$shadow-float:0 18rpx 50rpx rgba(0,0,0,.34);
+$shadow-inset-top:inset 0 2rpx 0 rgba(255,255,255,.08);
+
+/* 飞行舱（深色）调色 —— 用于飞行监控 / 追踪 / 遥测 */
+$cockpit-950:#070C18; $cockpit-900:#0A1124; $cockpit-850:#0E1730; $cockpit-800:#13213F; $cockpit-700:#1B2C50;
+$cockpit-line:rgba(120,160,255,.16); $cockpit-line-strong:rgba(120,160,255,.30); $cockpit-grid:rgba(96,140,230,.10);
+$cockpit-ink:#EAF1FF; $cockpit-ink-dim:#93A4CC; $cockpit-ink-faint:#5E6F96;
+$neon-blue:#43A0FF; $neon-cyan:#22D3EE; $neon-green:#22E0A1; $neon-amber:#FFB020; $neon-red:#FF5C7A;
+$grad-cockpit:radial-gradient(130% 100% at 50% -10%, #15234A 0%, #0A1124 55%, #070C18 100%);
+$shadow-neon-blue:0 0 0 2rpx rgba(67,160,255,.35), 0 8rpx 28rpx rgba(67,160,255,.45);
+$shadow-neon-green:0 0 0 2rpx rgba(34,224,161,.30), 0 8rpx 24rpx rgba(34,224,161,.40);
+
+/* mixin（基础） */
 @mixin tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 @mixin ellipsis($lines: 1) {
   @if $lines == 1 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -53,3 +96,57 @@ $shadow-soft:0 6rpx 22rpx rgba(15,22,38,.08);
 }
 @mixin card { background: $bg-card; border-radius: $r-md; box-shadow: $shadow-1; padding: $sp-4; }
 @mixin tap-min { min-height: 88rpx; }
+
+/* mixin（v2 生产级） */
+/* 精修卡片：柔和描边 + 双层阴影 + 顶部高光，质感更高级 */
+@mixin surface($radius: $r-lg) {
+  background: $bg-card;
+  border-radius: $radius;
+  border: 2rpx solid $hairline;
+  box-shadow: $shadow-card;
+}
+/* 毛玻璃面板（H5 生效，mp 端自动降级为半透明底） */
+@mixin glass($radius: $r-lg) {
+  background: $glass-fill;
+  border-radius: $radius;
+  border: 2rpx solid $glass-line;
+  backdrop-filter: saturate(180%) blur(18rpx);
+  -webkit-backdrop-filter: saturate(180%) blur(18rpx);
+}
+/* 大号数字（指标） */
+@mixin metric-number($size: $fs-metric) {
+  @include tabular;
+  font-size: $size;
+  line-height: 1.05;
+  font-weight: $fw-bold;
+  letter-spacing: 0;
+}
+@mixin section-label {
+  font-size: $fs-cap;
+  line-height: 1.3;
+  font-weight: $fw-bold;
+  letter-spacing: 2rpx;
+  text-transform: uppercase;
+}
+/* 「指挥地图」浅色底：渐变地形 + 细网格 + 柔光，远胜单线网格 */
+@mixin command-map {
+  background-color: #0E1A33;
+  background-image:
+    radial-gradient(140% 120% at 80% -10%, rgba(67,160,255,.30) 0%, rgba(67,160,255,0) 55%),
+    radial-gradient(120% 120% at 0% 110%, rgba(34,224,161,.18) 0%, rgba(34,224,161,0) 50%),
+    linear-gradient(0deg, rgba(96,140,230,.10) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(96,140,230,.10) 1rpx, transparent 1rpx),
+    linear-gradient(160deg, #122648 0%, #0A1428 100%);
+  background-size: auto, auto, 56rpx 56rpx, 56rpx 56rpx, auto;
+}
+/* 「飞行舱」深色底：深空渐变 + 雷达网格 */
+@mixin cockpit-map {
+  background-color: $cockpit-900;
+  background-image:
+    radial-gradient(100% 80% at 50% 0%, rgba(67,160,255,.22) 0%, rgba(67,160,255,0) 60%),
+    radial-gradient(80% 80% at 50% 120%, rgba(34,224,161,.12) 0%, rgba(34,224,161,0) 55%),
+    linear-gradient(0deg, $cockpit-grid 1rpx, transparent 1rpx),
+    linear-gradient(90deg, $cockpit-grid 1rpx, transparent 1rpx),
+    $grad-cockpit;
+  background-size: auto, auto, 60rpx 60rpx, 60rpx 60rpx, auto;
+}

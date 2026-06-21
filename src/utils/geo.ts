@@ -12,6 +12,13 @@ export function bearing(a: GeoPoint, b: GeoPoint): number {
   const x = Math.cos(rad(a.lat)) * Math.sin(rad(b.lat)) - Math.sin(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.cos(rad(b.lng - a.lng));
   return (deg(Math.atan2(y, x)) + 360) % 360;
 }
+export function routeProgressRatio(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
+  const mLat = 111320, mLng = 111320 * Math.cos(rad((a.lat + b.lat) / 2));
+  const bx = (b.lng - a.lng) * mLng, by = (b.lat - a.lat) * mLat;
+  const px = (p.lng - a.lng) * mLng, py = (p.lat - a.lat) * mLat;
+  const len2 = bx * bx + by * by || 1;
+  return Math.max(0, Math.min(1, (px * bx + py * by) / len2));
+}
 function pointToSegMeters(p: GeoPoint, a: GeoPoint, b: GeoPoint): number {
   const mLat = 111320, mLng = 111320 * Math.cos(rad(a.lat));
   const bx = (b.lng - a.lng) * mLng, by = (b.lat - a.lat) * mLat;
