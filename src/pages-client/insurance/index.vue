@@ -155,6 +155,42 @@
         </view>
       </view>
 
+      <view v-if="showSupplementPanel" class="supplement-panel">
+        <view class="supplement-panel-head">
+          <view>
+            <text class="supplement-title">{{ copy.materialPanelTitle }}</text>
+            <text class="supplement-desc">{{ copy.materialPanelDesc }}</text>
+          </view>
+          <view class="supplement-close" hover-class="tap-press" @click="closeSupplementPanel">
+            <StitchIcon name="close" size="30rpx" />
+          </view>
+        </view>
+        <view class="material-list">
+          <view
+            v-for="material in materialOptions"
+            :key="material.key"
+            :class="['material-item', selectedMaterialKeys.includes(material.key) ? 'selected' : '', isMaterialSubmitted(material) ? 'submitted' : '']"
+            hover-class="tap-press"
+            @click="toggleMaterial(material.key)"
+          >
+            <view class="material-icon">
+              <StitchIcon :name="material.icon" size="30rpx" />
+            </view>
+            <view class="material-copy">
+              <text class="material-name">{{ material.name }}</text>
+              <text class="material-desc">{{ material.desc }}</text>
+            </view>
+            <view class="material-state">
+              <StitchIcon :name="isMaterialSubmitted(material) ? 'check_circle' : selectedMaterialKeys.includes(material.key) ? 'done' : 'add'" size="27rpx" />
+            </view>
+          </view>
+        </view>
+        <view class="supplement-actions">
+          <view class="supplement-secondary" hover-class="tap-press" @click="closeSupplementPanel">{{ copy.cancel }}</view>
+          <view class="supplement-primary" hover-class="tap-press" @click="submitSupplementMaterials">{{ copy.submitMaterials }}</view>
+        </view>
+      </view>
+
       <view v-if="message" class="feedback">
         <StitchIcon name="check_circle" size="29rpx" />
         <text>{{ message }}</text>
@@ -187,7 +223,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { Role } from '@/models';
 import { claimAction } from '@/services/action-plans';
-import { arbitrationClaim, bindInsurance, createClaim, supplementClaimEvidence } from '@/services/app-flow';
+import { arbitrationClaim, createClaim, supplementClaimEvidence } from '@/services/app-flow';
 import { cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
@@ -220,6 +256,14 @@ interface TimelineStep {
   action?: string;
 }
 
+interface MaterialOption {
+  key: string;
+  name: string;
+  desc: string;
+  icon: string;
+  evidence: string;
+}
+
 const userStore = useUserStore();
 const orderStore = useOrderStore();
 const localeStore = useLocaleStore();
@@ -227,6 +271,8 @@ if (userStore.user.currentRole !== Role.Client) userStore.loginAs(Role.Client);
 
 const claimKeyword = ref('');
 const message = ref('');
+const showSupplementPanel = ref(false);
+const selectedMaterialKeys = ref<string[]>([]);
 const CLAIMS_COPY = {
   en: {
     brand: 'SkyLink Logistics',
@@ -241,8 +287,9 @@ const CLAIMS_COPY = {
     policyCountSuffix: 'policies',
     noPolicyTitle: 'No policies yet',
     noPolicyDesc: 'Enable protection when launching a lift to generate one.',
+    noPolicyClaimBlocked: 'No active policy is available. Enable insurance when launching a lift before filing a claim.',
     notFound: 'No matching case found.',
-    noClaimMeta: 'No claims yet. Start a report from the current order.',
+    noClaimMeta: 'No claims yet. Start a report from the current policy.',
     startClaim: 'Start Claim',
     activeClaimLabel: 'Active Claims',
     active: 'ACTIVE',
@@ -282,9 +329,25 @@ const CLAIMS_COPY = {
     addMaterials: 'Add Materials',
     expectedAssess: 'Field assessment expected within 2 business days',
     waitingInspect: 'Waiting for Assessment',
+    reportedClaimMeta: 'Claim submitted. Waiting for insurer assessment.',
+    investigatingClaimMeta: 'Assessment is in progress. Supplemental materials can still be synced.',
     payoutPrefix: 'Expected payout ',
     claimSubmitted: 'Claim submitted; investigation is now pending.',
     materialSynced: 'Supplemental materials synced; claim stage is unchanged.',
+    materialChooseHint: 'Select at least one material to sync.',
+    materialPanelTitle: 'Supplement Materials',
+    materialPanelDesc: 'Choose the files already prepared for this claim.',
+    materialEvidencePrefix: 'Submitted materials: ',
+    materialEvidenceSuffix: ' items',
+    materialPhotoName: 'Damage Photos',
+    materialPhotoDesc: 'Cargo, package, pickup and unload site photos.',
+    materialInvoiceName: 'Value Proof',
+    materialInvoiceDesc: 'Cargo value proof, invoice or delivery note.',
+    materialTrackName: 'Flight / Handover',
+    materialTrackDesc: 'Flight path, loading receipt or handover record.',
+    materialAlreadySynced: 'All selected materials were already synced.',
+    cancel: 'Cancel',
+    submitMaterials: 'Sync Materials',
     locatePrefix: 'Case ',
     locateSuffix: ' located.',
     searchHint: 'Enter a case ID. Add Materials only syncs files and does not advance the claim stage.',
@@ -305,8 +368,9 @@ const CLAIMS_COPY = {
     policyCountSuffix: '张保单',
     noPolicyTitle: '暂无保单',
     noPolicyDesc: '发起吊运时开启保障后会在这里生成保单。',
+    noPolicyClaimBlocked: '当前没有可报案保单。请先在发起吊运时开启保障，保单生成后才能报案。',
     notFound: '未找到对应案件。',
-    noClaimMeta: '暂无理赔案件，可基于当前订单发起报案。',
+    noClaimMeta: '暂无理赔案件，可基于当前保单发起报案。',
     startClaim: '发起报案',
     activeClaimLabel: '处理中理赔',
     active: '处理中',
@@ -346,9 +410,25 @@ const CLAIMS_COPY = {
     addMaterials: '补充材料',
     expectedAssess: '预计2个工作日内完成现场勘测',
     waitingInspect: '等待勘察',
+    reportedClaimMeta: '报案已提交，等待保险处理。',
+    investigatingClaimMeta: '正在勘察定损，可继续补充资料。',
     payoutPrefix: '预计赔付 ',
     claimSubmitted: '报案已提交，理赔流程进入待调查。',
     materialSynced: '补充材料已同步，理赔阶段保持不变。',
+    materialChooseHint: '请先选择至少一项要补充的材料。',
+    materialPanelTitle: '补充理赔材料',
+    materialPanelDesc: '选择本次要同步到案件里的资料。',
+    materialEvidencePrefix: '已提交材料 ',
+    materialEvidenceSuffix: ' 项',
+    materialPhotoName: '事故现场照片',
+    materialPhotoDesc: '货损、包装、装卸现场照片。',
+    materialInvoiceName: '货值/签收凭证',
+    materialInvoiceDesc: '发票、货值证明、签收或交接单。',
+    materialTrackName: '飞行轨迹记录',
+    materialTrackDesc: '飞行轨迹、装卸节点、异常记录。',
+    materialAlreadySynced: '所选材料此前已同步。',
+    cancel: '取消',
+    submitMaterials: '同步材料',
     locatePrefix: '案件 ',
     locateSuffix: ' 已定位。',
     searchHint: '请输入案件号；补充材料只同步资料，不推进理赔阶段。',
@@ -383,6 +463,10 @@ const primaryClaim = computed(() => {
 });
 const activeClaimCount = computed(() => allClaims.value.filter((claim) => claim.status !== 'paid').length);
 const activeClaimBadge = computed(() => `${activeClaimCount.value} ${copy.value.active}`);
+const claimEvidenceSummary = computed(() => {
+  const claim = primaryClaim.value;
+  return claim ? `${copy.value.materialEvidencePrefix}${claim.evidence.length}${copy.value.materialEvidenceSuffix}` : '';
+});
 
 const allPolicies = computed(() => repo.policies.all().slice().reverse());
 const totalCoverageCent = computed(() => allPolicies.value.reduce((sum, item) => sum + item.insuredAmountCent, 0));
@@ -437,6 +521,30 @@ const planCards = computed<PlanCard[]>(() => [
   },
 ]);
 
+const materialOptions = computed<MaterialOption[]>(() => [
+  {
+    key: 'photos',
+    name: copy.value.materialPhotoName,
+    desc: copy.value.materialPhotoDesc,
+    icon: 'photo_camera',
+    evidence: copy.value.materialPhotoName,
+  },
+  {
+    key: 'invoice',
+    name: copy.value.materialInvoiceName,
+    desc: copy.value.materialInvoiceDesc,
+    icon: 'receipt_long',
+    evidence: copy.value.materialInvoiceName,
+  },
+  {
+    key: 'track',
+    name: copy.value.materialTrackName,
+    desc: copy.value.materialTrackDesc,
+    icon: 'route',
+    evidence: copy.value.materialTrackName,
+  },
+]);
+
 const policyRows = computed<PolicyRow[]>(() => allPolicies.value.slice(0, 4).map((item) => {
   const linkedOrder = repo.orders.find(item.orderId);
   const route = linkedOrder
@@ -468,7 +576,9 @@ const timelineSteps = computed<TimelineStep[]>(() => {
     {
       key: 'investigating',
       title: status === 'reported' ? copy.value.waitingInspect : claimStatusLabel(status),
-      meta: claim.liability ? claimLiabilityLabel(claim.liability) : currentAction.description,
+      meta: claim.liability
+        ? claimLiabilityLabel(claim.liability)
+        : `${status === 'reported' ? copy.value.reportedClaimMeta : copy.value.investigatingClaimMeta} · ${claimEvidenceSummary.value}`,
       state: status === 'reported' || status === 'investigating' ? 'active' : 'done',
       action: currentAction.terminal ? undefined : copy.value.addMaterials,
     },
@@ -492,17 +602,13 @@ function formatDateTime(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function ensureClaimOrder() {
-  let current = order.value ?? orderStore.ensureOrder();
-  if (!current.policyId) {
-    bindInsurance(current, 15000);
-    current = repo.orders.find(current.id) ?? current;
-  }
-  return current;
-}
-
 function startClaim() {
-  const current = ensureClaimOrder();
+  const current = order.value;
+  if (!current?.policyId) {
+    message.value = copy.value.noPolicyClaimBlocked;
+    return;
+  }
+
   if (!claims.value.length) {
     const claim = createClaim(current.id, ['现场照片入口', '飞行数据入口']);
     locatedClaimId.value = claim.id;
@@ -510,20 +616,63 @@ function startClaim() {
     return;
   }
 
-  supplementMaterials();
+  openSupplementPanel();
 }
 
-function supplementMaterials() {
+function openSupplementPanel() {
   const claim = primaryClaim.value ?? claims.value[0];
   if (!claim) {
-    startClaim();
+    message.value = copy.value.noClaimMeta;
     return;
   }
 
-  const evidenceLabel = localeStore.isZh ? '客户端补充材料入口' : 'Client supplemental material';
-  const updated = supplementClaimEvidence(claim.id, evidenceLabel);
+  selectedMaterialKeys.value = [];
+  showSupplementPanel.value = true;
+  message.value = '';
+}
+
+function isMaterialSubmitted(material: MaterialOption) {
+  const claim = primaryClaim.value ?? claims.value[0];
+  return Boolean(claim?.evidence.includes(material.evidence));
+}
+
+function toggleMaterial(key: string) {
+  const selected = new Set(selectedMaterialKeys.value);
+  if (selected.has(key)) selected.delete(key);
+  else selected.add(key);
+  selectedMaterialKeys.value = [...selected];
+}
+
+function closeSupplementPanel() {
+  showSupplementPanel.value = false;
+  selectedMaterialKeys.value = [];
+}
+
+function submitSupplementMaterials() {
+  const claim = primaryClaim.value ?? claims.value[0];
+  if (!claim) {
+    message.value = copy.value.noClaimMeta;
+    return;
+  }
+
+  const selected = materialOptions.value.filter((item) => selectedMaterialKeys.value.includes(item.key));
+  if (!selected.length) {
+    message.value = copy.value.materialChooseHint;
+    return;
+  }
+
+  let updated = claim;
+  let changed = false;
+  selected.forEach((item) => {
+    const before = updated.evidence.length;
+    updated = supplementClaimEvidence(updated.id, item.evidence);
+    if (updated.evidence.length > before) changed = true;
+  });
+
   locatedClaimId.value = updated.id;
-  message.value = copy.value.materialSynced;
+  showSupplementPanel.value = false;
+  selectedMaterialKeys.value = [];
+  message.value = changed ? `${copy.value.materialSynced} ${claimEvidenceSummary.value}` : copy.value.materialAlreadySynced;
 }
 
 function handleTimelineAction(step: TimelineStep) {
@@ -532,7 +681,7 @@ function handleTimelineAction(step: TimelineStep) {
     return;
   }
 
-  supplementMaterials();
+  openSupplementPanel();
 }
 
 function focusClaimSearch() {
@@ -700,6 +849,8 @@ defineExpose({ arbitrateCurrentClaim });
 .zh-copy .policy-id,
 .zh-copy .policy-route,
 .zh-copy .step-meta,
+.zh-copy .material-name,
+.zh-copy .material-desc,
 .zh-copy .nav-item {
   font-family: "PingFang SC", "Source Han Sans CN", "Noto Sans CJK SC", Inter, sans-serif;
   letter-spacing: 0;
@@ -1356,6 +1507,146 @@ defineExpose({ arbitrateCurrentClaim });
   line-height: 24rpx;
   font-weight: 800;
   box-sizing: border-box;
+}
+
+.supplement-panel {
+  margin: -18rpx 0 45rpx;
+  padding: 25rpx;
+  border: 2rpx solid rgba(0, 242, 255, .52);
+  background: #101721;
+  color: #dfe2f0;
+  box-sizing: border-box;
+}
+
+.supplement-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.supplement-title,
+.supplement-desc {
+  display: block;
+}
+
+.supplement-title {
+  color: #00f2ff;
+  font-size: 27rpx;
+  line-height: 35rpx;
+  font-weight: 900;
+}
+
+.supplement-desc {
+  margin-top: 6rpx;
+  color: #b9cacb;
+  font-size: 20rpx;
+  line-height: 29rpx;
+}
+
+.supplement-close {
+  width: 50rpx;
+  height: 50rpx;
+  border: 2rpx solid rgba(132, 148, 149, .58);
+  color: #b9cacb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: 0 0 50rpx;
+}
+
+.material-list {
+  margin-top: 22rpx;
+  display: grid;
+  gap: 14rpx;
+}
+
+.material-item {
+  min-height: 96rpx;
+  padding: 17rpx;
+  border: 2rpx solid rgba(58, 73, 75, .78);
+  background: #171b26;
+  display: grid;
+  grid-template-columns: 48rpx minmax(0, 1fr) 34rpx;
+  align-items: center;
+  gap: 16rpx;
+  box-sizing: border-box;
+}
+
+.material-item.selected {
+  border-color: #00f2ff;
+  background: rgba(0, 242, 255, .09);
+}
+
+.material-item.submitted {
+  border-color: rgba(16, 185, 129, .52);
+}
+
+.material-icon,
+.material-state {
+  color: #00f2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.material-copy {
+  min-width: 0;
+}
+
+.material-name,
+.material-desc {
+  display: block;
+}
+
+.material-name {
+  color: #dfe2f0;
+  font-size: 23rpx;
+  line-height: 31rpx;
+  font-weight: 800;
+}
+
+.material-desc {
+  margin-top: 3rpx;
+  color: #b9cacb;
+  font-size: 19rpx;
+  line-height: 27rpx;
+}
+
+.material-item.submitted .material-state {
+  color: #10b981;
+}
+
+.supplement-actions {
+  margin-top: 22rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.supplement-secondary,
+.supplement-primary {
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  line-height: 32rpx;
+  font-weight: 900;
+  box-sizing: border-box;
+}
+
+.supplement-secondary {
+  border: 2rpx solid #3a494b;
+  color: #dfe2f0;
+  background: #171b26;
+}
+
+.supplement-primary {
+  border: 2rpx solid #00f2ff;
+  color: #061018;
+  background: #00f2ff;
 }
 
 .feedback {
