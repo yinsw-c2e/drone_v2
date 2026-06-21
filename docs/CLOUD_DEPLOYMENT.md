@@ -194,6 +194,15 @@ H5 本地验证：
 VITE_BACKEND_URL=https://api.your-domain.com pnpm dev:h5
 ```
 
+H5 更新到服务器：
+
+```bash
+VITE_BACKEND_URL=https://api.your-domain.com VITE_DISABLE_LOCAL_DB_PERSIST=1 pnpm exec uni build -p h5
+rsync -az --delete dist/build/h5/ ubuntu@<server-ip>:/opt/drone_v2/frontend/
+```
+
+`backend/docker-compose.prod.yml` 会把主机 `/opt/drone_v2/frontend` bind mount 到 Caddy 容器的 `/srv/drone-v2-frontend`。服务运行时要原地同步目录内容，不要用 `mv frontend.new frontend` 替换整个目录；如果确实替换了目录，需要重启 Caddy 容器让 bind mount 重新挂载。
+
 微信小程序正式版还必须在微信公众平台添加 `https://api.your-domain.com` 到 request 合法域名。
 
 ## 7. 上线前必须补的生产项

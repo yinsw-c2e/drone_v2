@@ -48,7 +48,7 @@
         <view class="center-marker">
           <StitchIcon name="location_on" size="44rpx" fill />
         </view>
-        <view class="tile-credit">OpenStreetMap</view>
+        <view class="tile-credit">高德地图</view>
       </view>
 
       <view v-if="warnings.length || suggestions.length" class="recommend-panel">
@@ -90,6 +90,7 @@ import type { LocationSuggestion } from '@/services/geocoding';
 const TILE_SIZE = 256;
 const MIN_ZOOM = 11;
 const MAX_ZOOM = 17;
+const AMAP_TILE_HOSTS = 4;
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -143,7 +144,7 @@ const tiles = computed(() => {
       const wrappedX = ((x % maxTile) + maxTile) % maxTile;
       out.push({
         key: `${zoom.value}-${x}-${y}`,
-        url: `https://tile.openstreetmap.org/${zoom.value}/${wrappedX}/${y}.png`,
+        url: amapTileUrl(zoom.value, wrappedX, y),
         style: {
           left: `${Math.round(x * TILE_SIZE - center.x + viewport.width / 2)}px`,
           top: `${Math.round(y * TILE_SIZE - center.y + viewport.height / 2)}px`,
@@ -153,6 +154,11 @@ const tiles = computed(() => {
   }
   return out;
 });
+
+function amapTileUrl(z: number, x: number, y: number) {
+  const host = String((Math.abs(x + y) % AMAP_TILE_HOSTS) + 1).padStart(2, '0');
+  return `https://webrd${host}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=${x}&y=${y}&z=${z}`;
+}
 
 const counterpartStyle = computed(() => {
   if (!props.counterpart) return {};
