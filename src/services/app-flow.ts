@@ -739,6 +739,17 @@ export function createClaim(orderId: string, evidence: string[]): Claim {
   return claim;
 }
 
+export function supplementClaimEvidence(claimId: string, evidence: string): Claim {
+  const claim = repo.claims.find(claimId);
+  if (!claim) throw new Error('理赔不存在');
+  const order = repo.orders.find(claim.orderId);
+  const nextEvidence = claim.evidence.includes(evidence) ? claim.evidence : [...claim.evidence, evidence];
+  const updated = repo.claims.update(claim.id, { evidence: nextEvidence });
+  recordAudit(AuditAction.Insurance, order?.clientId ?? 'client', Role.Client, 'claim', claim.id, `补充理赔材料：${evidence}`);
+  persistBackendSnapshot();
+  return updated;
+}
+
 export function advanceClaim(claimId: string): Claim {
   const claim = repo.claims.find(claimId);
   if (!claim) throw new Error('理赔不存在');

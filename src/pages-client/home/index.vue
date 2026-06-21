@@ -156,7 +156,7 @@
         <text>{{ copy.tasks }}</text>
       </view>
       <view class="nav-item" @click="goInsurance">
-        <StitchIcon name="account_balance_wallet" size="38rpx" />
+        <StitchIcon name="shield" size="38rpx" />
         <text>{{ copy.assets }}</text>
       </view>
       <view class="nav-item" @click="goAuth">

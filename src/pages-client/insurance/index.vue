@@ -107,7 +107,7 @@
           <view v-if="!policyRows.length" class="policy-row">
             <view class="policy-left">
               <view class="policy-dot amber" />
-              <view>
+              <view class="policy-copy">
                 <text class="policy-id">{{ copy.noPolicyTitle }}</text>
                 <text class="policy-route">{{ copy.noPolicyDesc }}</text>
               </view>
@@ -116,7 +116,7 @@
           <view v-for="row in policyRows" :key="row.id" class="policy-row" hover-class="tap-press" @click="openPolicy(row)">
             <view class="policy-left">
               <view :class="['policy-dot', row.tone]" />
-              <view>
+              <view class="policy-copy">
                 <text class="policy-id">{{ row.id }}</text>
                 <text class="policy-route">{{ row.route }}</text>
               </view>
@@ -146,7 +146,7 @@
             <view class="timeline-copy">
               <text class="step-title">{{ step.title }}</text>
               <text class="step-meta">{{ step.meta }}</text>
-              <view v-if="step.action" class="supplement-btn" hover-class="tap-press" @click="supplementMaterials">
+              <view v-if="step.action" class="supplement-btn" hover-class="tap-press" @click="handleTimelineAction(step)">
                 <StitchIcon name="upload_file" size="25rpx" />
                 <text>{{ step.action }}</text>
               </view>
@@ -171,12 +171,8 @@
         <text>{{ copy.tasks }}</text>
       </view>
       <view class="nav-item active" hover-class="tap-press" @click="showToast(copy.currentAssets)">
-        <StitchIcon name="account_balance_wallet" size="40rpx" fill />
+        <StitchIcon name="shield" size="40rpx" fill />
         <text>{{ copy.assets }}</text>
-      </view>
-      <view class="nav-item" hover-class="tap-press" @click="goWallet">
-        <StitchIcon name="account_balance" size="41rpx" />
-        <text>{{ copy.wallet }}</text>
       </view>
       <view class="nav-item" hover-class="tap-press" @click="goProfile">
         <StitchIcon name="person" size="37rpx" />
@@ -191,7 +187,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { Role } from '@/models';
 import { claimAction } from '@/services/action-plans';
-import { advanceClaim, arbitrationClaim, bindInsurance, createClaim } from '@/services/app-flow';
+import { arbitrationClaim, bindInsurance, createClaim, supplementClaimEvidence } from '@/services/app-flow';
 import { cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
@@ -259,7 +255,6 @@ const CLAIMS_COPY = {
     home: 'Home',
     tasks: 'Tasks',
     assets: 'Assets',
-    wallet: 'Wallet',
     profile: 'Profile',
     currentAssets: 'Current: Assets',
     generalName: 'General Cargo',
@@ -289,10 +284,10 @@ const CLAIMS_COPY = {
     waitingInspect: 'Waiting for Assessment',
     payoutPrefix: 'Expected payout ',
     claimSubmitted: 'Claim submitted; investigation is now pending.',
-    materialSynced: 'Supplemental materials synced and claim status updated.',
+    materialSynced: 'Supplemental materials synced; claim stage is unchanged.',
     locatePrefix: 'Case ',
     locateSuffix: ' located.',
-    searchHint: 'Enter a case ID or tap Add Materials to sync the current claim.',
+    searchHint: 'Enter a case ID. Add Materials only syncs files and does not advance the claim stage.',
     planSelectedSuffix: ' selected. It can be enabled when launching a lift.',
     arbitration: 'Claim moved to arbitration. Wait for admin handling.',
     languageToast: 'Switched to English',
@@ -324,7 +319,6 @@ const CLAIMS_COPY = {
     home: '首页',
     tasks: '任务',
     assets: '资产',
-    wallet: '钱包',
     profile: '我的',
     currentAssets: '当前：资产',
     generalName: '普货保险',
@@ -354,10 +348,10 @@ const CLAIMS_COPY = {
     waitingInspect: '等待勘察',
     payoutPrefix: '预计赔付 ',
     claimSubmitted: '报案已提交，理赔流程进入待调查。',
-    materialSynced: '补充材料已同步，理赔状态已更新。',
+    materialSynced: '补充材料已同步，理赔阶段保持不变。',
     locatePrefix: '案件 ',
     locateSuffix: ' 已定位。',
-    searchHint: '请输入案件号或点击补充材料同步当前理赔。',
+    searchHint: '请输入案件号；补充材料只同步资料，不推进理赔阶段。',
     planSelectedSuffix: ' 方案已选中，可在发起吊运时启用。',
     arbitration: '理赔已进入仲裁，请等待后台处理。',
     languageToast: '已切换为中文',
@@ -498,32 +492,47 @@ function formatDateTime(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function ensureClaim() {
+function ensureClaimOrder() {
   let current = order.value ?? orderStore.ensureOrder();
   if (!current.policyId) {
     bindInsurance(current, 15000);
     current = repo.orders.find(current.id) ?? current;
   }
+  return current;
+}
 
+function startClaim() {
+  const current = ensureClaimOrder();
   if (!claims.value.length) {
-    createClaim(current.id, ['现场照片入口', '飞行数据入口']);
+    const claim = createClaim(current.id, ['现场照片入口', '飞行数据入口']);
+    locatedClaimId.value = claim.id;
     message.value = copy.value.claimSubmitted;
     return;
   }
 
-  const claim = claims.value[0];
-  const action = claimAction(claim);
-  if (!action.terminal && claim.status !== 'assessed') {
-    const nextClaimState = advanceClaim(claim.id);
-    message.value = claimAction(nextClaimState).terminal ? claimAction(nextClaimState).description : copy.value.materialSynced;
-    return;
-  }
-
-  message.value = action.description;
+  supplementMaterials();
 }
 
 function supplementMaterials() {
-  ensureClaim();
+  const claim = primaryClaim.value ?? claims.value[0];
+  if (!claim) {
+    startClaim();
+    return;
+  }
+
+  const evidenceLabel = localeStore.isZh ? '客户端补充材料入口' : 'Client supplemental material';
+  const updated = supplementClaimEvidence(claim.id, evidenceLabel);
+  locatedClaimId.value = updated.id;
+  message.value = copy.value.materialSynced;
+}
+
+function handleTimelineAction(step: TimelineStep) {
+  if (!primaryClaim.value && step.key === 'reported') {
+    startClaim();
+    return;
+  }
+
+  supplementMaterials();
 }
 
 function focusClaimSearch() {
@@ -563,11 +572,6 @@ function goTasks() {
   uni.navigateTo({ url: '/pages-client/order/index' });
 }
 
-function goWallet() {
-  orderStore.ensureOrder();
-  uni.navigateTo({ url: '/pages-client/review/index' });
-}
-
 function goProfile() {
   uni.navigateTo({ url: '/pages/auth/index' });
 }
@@ -592,6 +596,7 @@ defineExpose({ arbitrateCurrentClaim });
   min-height: 100vh;
   padding-bottom: 157rpx;
   box-sizing: border-box;
+  overflow-x: hidden;
   color: #dfe2f0;
   background-color: #f3f7fa;
   background-image:
@@ -703,6 +708,8 @@ defineExpose({ arbitrateCurrentClaim });
 .content {
   padding: 156rpx 32rpx 0;
   box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .hero-card {
@@ -1067,6 +1074,8 @@ defineExpose({ arbitrateCurrentClaim });
   background: #141822;
   color: #dfe2f0;
   box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .panel-head {
@@ -1095,16 +1104,20 @@ defineExpose({ arbitrateCurrentClaim });
   margin-top: 30rpx;
   display: grid;
   gap: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .policy-row {
+  width: 100%;
+  max-width: 100%;
   min-height: 95rpx;
   padding: 18rpx 25rpx;
   border: 2rpx solid rgba(58, 73, 75, .58);
   background: #171b26;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
-  justify-content: space-between;
   gap: 18rpx;
   box-sizing: border-box;
 }
@@ -1118,6 +1131,11 @@ defineExpose({ arbitrateCurrentClaim });
   display: flex;
   align-items: center;
   gap: 20rpx;
+}
+
+.policy-copy {
+  min-width: 0;
+  flex: 1;
 }
 
 .policy-dot {
@@ -1136,7 +1154,6 @@ defineExpose({ arbitrateCurrentClaim });
 }
 
 .policy-id,
-.policy-route,
 .policy-premium,
 .policy-state {
   display: block;
@@ -1149,9 +1166,13 @@ defineExpose({ arbitrateCurrentClaim });
   font-size: 23rpx;
   line-height: 29rpx;
   font-weight: 800;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .policy-route {
+  display: block;
   margin-top: 4rpx;
   color: #dfe2f0;
   font-family: "JetBrains Mono", monospace;
@@ -1159,11 +1180,16 @@ defineExpose({ arbitrateCurrentClaim });
   line-height: 23rpx;
   letter-spacing: 2rpx;
   font-weight: 700;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .policy-right {
   text-align: right;
-  flex: 0 0 auto;
+  min-width: 108rpx;
+  justify-self: end;
 }
 
 .policy-premium {
@@ -1359,7 +1385,7 @@ defineExpose({ arbitrateCurrentClaim });
   border-radius: 12rpx 12rpx 0 0;
   background: #0f131d;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
   gap: 3rpx;
   box-sizing: border-box;
