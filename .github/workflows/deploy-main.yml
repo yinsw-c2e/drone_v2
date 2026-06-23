@@ -94,6 +94,7 @@ jobs:
           archive="/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
           remote_archive="/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
           archive_size="$(wc -c < "$archive" | tr -d ' ')"
+          remote_cmd="set -e; head -c ${archive_size} > ${remote_archive}; actual_size=\$(wc -c < ${remote_archive} | tr -d ' '); test \"\$actual_size\" = \"${archive_size}\""
           ssh \
             -i ~/.ssh/drone_v2_deploy_key \
             -p "$DEPLOY_PORT" \
@@ -101,7 +102,7 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=4 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "set -euo pipefail; head -c '$archive_size' > '$remote_archive'; actual_size=\\$(wc -c < '$remote_archive' | tr -d ' '); test \"\\$actual_size\" = '$archive_size'" \
+            "$remote_cmd" \
             < "$archive"
 
       - name: Deploy on server
