@@ -57,13 +57,13 @@ jobs:
       - name: Package release
         run: |
           test -f dist/build/h5/index.html
-          tar \
-            --exclude='.git' \
-            --exclude='node_modules' \
-            --exclude='drone-lift-core/node_modules' \
-            --exclude='output' \
-            --exclude='.env.local' \
-            -czf /tmp/drone-v2-release-${GITHUB_SHA}.tgz .
+          release_dir="/tmp/drone-v2-release-${GITHUB_SHA}"
+          rm -rf "$release_dir"
+          mkdir -p "$release_dir/dist/build"
+          rsync -a backend "$release_dir"/
+          rsync -a dist/build/h5 "$release_dir/dist/build"/
+          tar -C "$release_dir" -czf /tmp/drone-v2-release-${GITHUB_SHA}.tgz .
+          ls -lh /tmp/drone-v2-release-${GITHUB_SHA}.tgz
 
       - name: Configure SSH
         run: |
