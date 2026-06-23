@@ -1,0 +1,132 @@
+name: Deploy main to production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VITE_BACKEND_URL: https://swvictory.com
+      VITE_DISABLE_LOCAL_DB_PERSIST: "1"
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
+    steps:
+      - name: Check required secrets
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_SSH_KEY"
+          if [ -z "$DEPLOY_PORT" ]; then
+            echo "DEPLOY_PORT=22" >> "$GITHUB_ENV"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Build H5
+        run: pnpm exec uni build -p h5
+
+      - name: Package release
+        run: |
+          test -f dist/build/h5/index.html
+          tar \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='drone-lift-core/node_modules' \
+            --exclude='output' \
+            --exclude='.env.local' \
+            -czf /tmp/drone-v2-release-${GITHUB_SHA}.tgz .
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/drone_v2_deploy_key
+          chmod 600 ~/.ssh/drone_v2_deploy_key
+          ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release
+        run: |
+          scp \
+            -i ~/.ssh/drone_v2_deploy_key \
+            -P "$DEPLOY_PORT" \
+            /tmp/drone-v2-release-${GITHUB_SHA}.tgz \
+            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
+
+      - name: Deploy on server
+        run: |
+          ssh \
+            -i ~/.ssh/drone_v2_deploy_key \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "RELEASE_SHA='${GITHUB_SHA}' bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+
+          APP_ROOT=/opt/drone_v2
+          RELEASES_DIR="$APP_ROOT/releases"
+          RELEASE_DIR="$RELEASES_DIR/$RELEASE_SHA"
+          ARCHIVE="/tmp/drone-v2-release-$RELEASE_SHA.tgz"
+          FRONTEND_DIR="$APP_ROOT/frontend"
+          BACKUP_FRONTEND_DIR="$APP_ROOT/frontend.prev"
+          BACKEND_DIR="$APP_ROOT/backend"
+          ENV_FILE="$BACKEND_DIR/.env"
+          COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
+
+          test -f "$ARCHIVE"
+          test -f "$ENV_FILE"
+          test -f "$COMPOSE_FILE"
+
+          mkdir -p "$RELEASES_DIR" "$APP_ROOT/.deploy"
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR"
+          tar -xzf "$ARCHIVE" -C "$RELEASE_DIR"
+
+          test -f "$RELEASE_DIR/dist/build/h5/index.html"
+          test -f "$RELEASE_DIR/backend/Dockerfile"
+
+          docker build -t drone-v2-api:prod "$RELEASE_DIR/backend"
+
+          mkdir -p "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
+          rsync -a --delete "$FRONTEND_DIR"/ "$BACKUP_FRONTEND_DIR"/
+          rsync -a --delete "$RELEASE_DIR/dist/build/h5"/ "$FRONTEND_DIR"/
+
+          docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api
+          curl -fsS https://swvictory.com/api/v1/health >/dev/null
+
+          printf '%s' "$RELEASE_SHA" > "$APP_ROOT/.deploy/deployed-main.commit"
+          rm -f "$ARCHIVE"
+          find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+            | sort -n \
+            | head -n -5 \
+            | cut -d' ' -f2- \
+            | xargs -r rm -rf
+          REMOTE
