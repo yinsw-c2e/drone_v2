@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: deploy-main-production
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -89,18 +89,27 @@ jobs:
             "echo deploy-ssh-ok"
 
       - name: Upload release
-        run: |
-          scp \
-            -i ~/.ssh/drone_v2_deploy_key \
-            -P "$DEPLOY_PORT" \
-            /tmp/drone-v2-release-${GITHUB_SHA}.tgz \
-            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
-
-      - name: Deploy on server
+        timeout-minutes: 5
         run: |
           ssh \
             -i ~/.ssh/drone_v2_deploy_key \
             -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cat > /tmp/drone-v2-release-${GITHUB_SHA}.tgz" \
+            < /tmp/drone-v2-release-${GITHUB_SHA}.tgz
+
+      - name: Deploy on server
+        timeout-minutes: 20
+        run: |
+          ssh \
+            -i ~/.ssh/drone_v2_deploy_key \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "RELEASE_SHA='${GITHUB_SHA}' bash -s" <<'REMOTE'
           set -Eeuo pipefail
