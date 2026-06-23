@@ -91,6 +91,9 @@ jobs:
       - name: Upload release
         timeout-minutes: 5
         run: |
+          archive="/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
+          remote_archive="/tmp/drone-v2-release-${GITHUB_SHA}.tgz"
+          archive_size="$(wc -c < "$archive" | tr -d ' ')"
           ssh \
             -i ~/.ssh/drone_v2_deploy_key \
             -p "$DEPLOY_PORT" \
@@ -98,8 +101,8 @@ jobs:
             -o ServerAliveInterval=15 \
             -o ServerAliveCountMax=4 \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cat > /tmp/drone-v2-release-${GITHUB_SHA}.tgz" \
-            < /tmp/drone-v2-release-${GITHUB_SHA}.tgz
+            "set -euo pipefail; head -c '$archive_size' > '$remote_archive'; actual_size=\\$(wc -c < '$remote_archive' | tr -d ' '); test \"\\$actual_size\" = '$archive_size'" \
+            < "$archive"
 
       - name: Deploy on server
         timeout-minutes: 20
