@@ -70,7 +70,23 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/drone_v2_deploy_key
           chmod 600 ~/.ssh/drone_v2_deploy_key
+          ssh-keygen -y -f ~/.ssh/drone_v2_deploy_key > ~/.ssh/drone_v2_deploy_key.pub
+          fingerprint="$(ssh-keygen -lf ~/.ssh/drone_v2_deploy_key.pub | awk '{print $2}')"
+          expected="SHA256:+bsdP/7OgZcTj62UgKDrA/o4C3zda+2kdGx0x/RDu+0"
+          if [ "$fingerprint" != "$expected" ]; then
+            echo "::error::DEPLOY_SSH_KEY fingerprint mismatch. Expected $expected, got $fingerprint."
+            exit 1
+          fi
           ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Verify SSH login
+        run: |
+          ssh \
+            -i ~/.ssh/drone_v2_deploy_key \
+            -p "$DEPLOY_PORT" \
+            -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "echo deploy-ssh-ok"
 
       - name: Upload release
         run: |
