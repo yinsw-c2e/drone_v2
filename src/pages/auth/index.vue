@@ -2,7 +2,7 @@
   <view class="auth-page" :class="{ 'zh-copy': localeStore.isZh }">
     <view class="topbar">
       <view class="icon-btn" hover-class="tap-press" @click="back">
-        <StitchIcon name="arrow_back" size="24px" />
+        <StitchIcon name="arrow_back" size="22px" />
       </view>
       <text class="page-title">{{ copy.pageTitle }}</text>
       <view class="top-actions">
@@ -10,7 +10,7 @@
           <text>{{ localeStore.toggleLabel }}</text>
         </view>
         <view class="icon-btn help" hover-class="tap-press" @click="showHelp">
-          <StitchIcon name="help_outline" size="24px" />
+          <StitchIcon name="help_outline" size="22px" />
         </view>
       </view>
     </view>
@@ -55,7 +55,7 @@
 
       <view class="form-card">
         <view class="form-head">
-          <StitchIcon name="verified" size="24px" />
+          <StitchIcon name="verified" size="22px" />
           <text>{{ copy.formTitle }}</text>
         </view>
 
@@ -73,11 +73,11 @@
 
             <view class="upload-grid">
               <view :class="['upload-box', uploads.portrait ? 'uploaded' : '']" hover-class="tap-press" @click="chooseUpload('portrait')">
-                <StitchIcon :name="uploads.portrait ? 'check_circle' : 'add_photo_alternate'" size="30px" />
+                <StitchIcon :name="uploads.portrait ? 'check_circle' : 'add_photo_alternate'" size="26px" />
                 <text>{{ uploads.portrait ? copy.uploadedLabel : copy.idPortrait }}</text>
               </view>
               <view :class="['upload-box', uploads.emblem ? 'uploaded' : '']" hover-class="tap-press" @click="chooseUpload('emblem')">
-                <StitchIcon :name="uploads.emblem ? 'check_circle' : 'add_photo_alternate'" size="30px" />
+                <StitchIcon :name="uploads.emblem ? 'check_circle' : 'add_photo_alternate'" size="26px" />
                 <text>{{ uploads.emblem ? copy.uploadedLabel : copy.idEmblem }}</text>
               </view>
             </view>
@@ -120,12 +120,12 @@
 
     <view class="bottom-action">
       <view class="identity-switch-btn" hover-class="tap-press" @click="switchIdentity">
-        <StitchIcon name="switch_account" size="24px" />
+        <StitchIcon name="switch_account" size="22px" />
         <text>{{ copy.switchIdentity }}</text>
       </view>
       <view :class="['submit-btn', submitting ? 'disabled' : '']" hover-class="tap-press" @click="submitCertificationForm">
         <text>{{ primaryText }}</text>
-        <StitchIcon name="send" size="24px" />
+        <StitchIcon name="send" size="22px" />
       </view>
     </view>
   </view>
@@ -384,20 +384,20 @@ function switchIdentity() {
   right: 0;
   top: 0;
   z-index: 70;
-  height: 76px;
-  padding: 0 24px;
+  height: 66px;
+  padding: 0 18px;
   border-bottom: 2px solid $line-strong;
   background: $bg-page;
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
   box-sizing: border-box;
 }
 
 .icon-btn {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   color: $blue-50;
   display: flex;
   align-items: center;
@@ -412,20 +412,20 @@ function switchIdentity() {
   display: flex;
   align-items: center;
   justify-self: end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .language-switch {
   min-width: 58px;
-  height: 42px;
-  padding: 0 12px;
+  height: 38px;
+  padding: 0 10px;
   border: 2px solid $line-strong;
   border-radius: 6px;
   background: rgba(49, 53, 64, .72);
   color: $color-primary;
   font-family: "JetBrains Mono", "PingFang SC", monospace;
   font-size: $fs-sm;
-  line-height: 38px;
+  line-height: 34px;
   font-weight: 700;
   text-align: center;
   box-sizing: border-box;
@@ -435,10 +435,10 @@ function switchIdentity() {
   min-width: 0;
   color: $ink-900;
   font-family: "Hanken Grotesk", "PingFang SC", sans-serif;
-  font-size: $fs-display;
-  line-height: 39px;
+  font-size: $fs-h1;
+  line-height: 28px;
   font-weight: 800;
-  padding-left: 9px;
+  padding-left: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -472,14 +472,14 @@ function switchIdentity() {
 
 .content {
   position: fixed;
-  inset: 76px 0 106px;
-  padding: 20px 20px 28px;
+  inset: 66px 0 92px;
+  padding: 16px 16px 24px;
   box-sizing: border-box;
 }
 
 .progress-card {
-  height: 174px;
-  padding: 29px 29px 24px;
+  height: 150px;
+  padding: 20px 20px 18px;
   border-radius: 8px;
   border: 2px solid $line-strong;
   background: linear-gradient(112deg, rgba(20, 24, 34, .98), rgba(16, 36, 45, .84));
@@ -490,7 +490,7 @@ function switchIdentity() {
   color: $ink-900;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
   font-family: "JetBrains Mono", monospace;
   font-size: $fs-sm;
   line-height: 21px;
@@ -501,8 +501,8 @@ function switchIdentity() {
 
 .stepper {
   position: relative;
-  height: 86px;
-  margin-top: 26px;
+  height: 74px;
+  margin-top: 20px;
   display: flex;
   justify-content: space-between;
 }
@@ -511,7 +511,7 @@ function switchIdentity() {
   position: absolute;
   left: 0;
   right: 0;
-  top: 29px;
+  top: 25px;
   height: 2px;
   background: $line-strong;
 }
@@ -525,11 +525,11 @@ function switchIdentity() {
 .step {
   position: relative;
   z-index: 2;
-  width: 110px;
+  width: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   font-family: "JetBrains Mono", "PingFang SC", monospace;
   font-size: $fs-sm;
   line-height: 18px;
@@ -550,8 +550,8 @@ function switchIdentity() {
 }
 
 .step-dot {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -580,7 +580,7 @@ function switchIdentity() {
 }
 
 .form-card {
-  margin-top: 38px;
+  margin-top: 24px;
   border-radius: 8px;
   border: 2px solid $line-strong;
   background: $bg-card;
@@ -588,17 +588,17 @@ function switchIdentity() {
 }
 
 .form-head {
-  height: 68px;
-  padding: 0 19px;
+  height: 56px;
+  padding: 0 16px;
   border-bottom: 2px solid $line-strong;
   background: $surface-raised;
   color: $blue-50;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   font-family: "Hanken Grotesk", "PingFang SC", sans-serif;
-  font-size: $fs-metric;
-  line-height: 32px;
+  font-size: $fs-h1;
+  line-height: 28px;
   font-weight: 800;
 }
 
@@ -607,16 +607,16 @@ function switchIdentity() {
 }
 
 .form-body {
-  padding: 31px 29px 30px;
+  padding: 22px 20px 24px;
 }
 
 .section-block + .section-block {
-  margin-top: 40px;
+  margin-top: 28px;
 }
 
 .section-label {
   display: block;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 2px solid $line-strong;
   color: $ink-900;
   font-family: "JetBrains Mono", monospace;
@@ -627,7 +627,7 @@ function switchIdentity() {
 }
 
 .field {
-  margin-top: 21px;
+  margin-top: 16px;
 }
 
 .field-label {
@@ -644,9 +644,9 @@ function switchIdentity() {
 
 .field-input {
   width: 100%;
-  height: 55px;
-  margin-top: 11px;
-  padding: 0 14px;
+  height: 48px;
+  margin-top: 8px;
+  padding: 0 12px;
   border: 2px solid $line-strong;
   border-radius: 0;
   background: $bg-page;
@@ -663,14 +663,14 @@ function switchIdentity() {
 }
 
 .upload-grid {
-  margin-top: 30px;
+  margin-top: 22px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 19px;
+  gap: 12px;
 }
 
 .upload-box {
-  height: 153px;
+  height: 124px;
   border: 3px dashed $line-strong;
   border-radius: 5px;
   background: $bg-page;
@@ -679,7 +679,7 @@ function switchIdentity() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 13px;
+  gap: 10px;
   box-sizing: border-box;
   font-size: $fs-h3;
   line-height: 22px;
@@ -701,8 +701,8 @@ function switchIdentity() {
 }
 
 .audit-status {
-  margin-top: 18px;
-  padding: 10px 14px;
+  margin-top: 14px;
+  padding: 8px 12px;
   border-radius: 5px;
   border: 1px solid $line-strong;
   display: flex;
@@ -744,34 +744,34 @@ function switchIdentity() {
 }
 
 .cargo-section {
-  margin-top: 38px;
+  margin-top: 28px;
 }
 
 .section-desc {
   display: block;
-  margin-top: 20px;
+  margin-top: 14px;
   color: $ink-500;
   font-size: $fs-h3;
   line-height: 23px;
 }
 
 .chip-wrap {
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex;
   flex-wrap: wrap;
-  gap: 15px 13px;
+  gap: 12px 10px;
 }
 
 .cargo-chip {
-  height: 45px;
-  padding: 0 17px;
-  border-radius: 14px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
   border: 2px solid $line-strong;
   background: $bg-page;
   color: $ink-700;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   font-size: $fs-h3;
   line-height: 22px;
   font-weight: 600;
@@ -785,20 +785,20 @@ function switchIdentity() {
 }
 
 .consent-box {
-  margin-top: 57px;
-  padding: 21px 19px;
+  margin-top: 32px;
+  padding: 16px 15px;
   border-radius: 5px;
   border: 2px solid $line-strong;
   background: $bg-page;
   display: flex;
   align-items: flex-start;
-  gap: 19px;
+  gap: 14px;
 }
 
 .checkbox {
-  width: 25px;
-  height: 25px;
-  margin-top: 10px;
+  width: 22px;
+  height: 22px;
+  margin-top: 7px;
   border-radius: 2px;
   border: 2px solid $line-strong;
   color: $blue-900;
@@ -822,8 +822,8 @@ function switchIdentity() {
 
 .consent-title {
   color: $blue-50;
-  font-size: $fs-h1;
-  line-height: 28px;
+  font-size: $fs-h3;
+  line-height: 24px;
   font-weight: 600;
 }
 
@@ -846,7 +846,7 @@ function switchIdentity() {
   position: fixed;
   left: 20px;
   right: 20px;
-  bottom: 108px;
+  bottom: 94px;
   z-index: 72;
   padding: 11px 15px;
   border-radius: 5px;
@@ -872,8 +872,8 @@ function switchIdentity() {
   right: 0;
   bottom: 0;
   z-index: 70;
-  height: 106px;
-  padding: 19px 19px calc(19px + env(safe-area-inset-bottom));
+  height: 92px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
   border-top: 2px solid $line-strong;
   background: $surface-raised;
   display: grid;
@@ -884,15 +884,15 @@ function switchIdentity() {
 
 .identity-switch-btn,
 .submit-btn {
-  height: 68px;
+  height: 56px;
   border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   font-family: "Hanken Grotesk", "PingFang SC", sans-serif;
-  font-size: $fs-h1;
-  line-height: 29px;
+  font-size: $fs-h3;
+  line-height: 24px;
   font-weight: 800;
   min-width: 0;
 }
