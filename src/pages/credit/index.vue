@@ -237,7 +237,13 @@ function goProfile() {
   padding-bottom: 164rpx;
   box-sizing: border-box;
   color: $ink-900;
-  background: $bg-page;
+  background:
+    radial-gradient(96% 48% at 50% -12%, rgba(0, 242, 255, .14), transparent 68%),
+    radial-gradient(76% 42% at 100% 6%, rgba(59, 130, 246, .10), transparent 72%),
+    linear-gradient(0deg, rgba(0, 242, 255, .045) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(0, 242, 255, .045) 1rpx, transparent 1rpx),
+    $bg-page;
+  background-size: auto, auto, 48rpx 48rpx, 48rpx 48rpx, auto;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
@@ -351,7 +357,9 @@ function goProfile() {
   height: 559rpx;
   border-radius: 13rpx;
   border: 2rpx solid rgba(58, 73, 75, .75);
-  background: $surface-panel;
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(0, 242, 255, .16), transparent 68%),
+    linear-gradient(160deg, #141822 0%, #0B0E14 100%);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -369,13 +377,16 @@ function goProfile() {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(11, 14, 20, .18), $bg-page 92%);
+  background:
+    linear-gradient(to bottom, rgba(11, 14, 20, .72), rgba(11, 14, 20, .92) 92%),
+    radial-gradient(80% 60% at 50% 18%, rgba(0, 242, 255, .18), transparent 70%);
 }
 
 .radar-image {
   width: 100%;
   height: 100%;
-  opacity: .72;
+  opacity: .28;
+  filter: saturate(.85) brightness(.48) contrast(1.08);
 }
 
 .radar-grid {

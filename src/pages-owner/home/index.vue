@@ -156,16 +156,16 @@
     </view>
 
     <view class="bottom-nav">
-      <view class="nav-item" hover-class="tap-press" @click="goHome">
-        <StitchIcon name="grid_view" size="24px" />
+      <view class="nav-item active" hover-class="tap-press" @click="showFeedback(copy.currentSection)">
+        <StitchIcon name="grid_view" size="24px" fill />
         <text>{{ copy.home }}</text>
       </view>
       <view class="nav-item" hover-class="tap-press" @click="goTasks">
         <StitchIcon name="assignment" size="24px" />
         <text>{{ copy.tasks }}</text>
       </view>
-      <view class="nav-item active" hover-class="tap-press" @click="showFeedback(copy.currentSection)">
-        <StitchIcon name="account_balance_wallet" size="24px" fill />
+      <view class="nav-item" hover-class="tap-press" @click="goAssets">
+        <StitchIcon name="account_balance_wallet" size="24px" />
         <text>{{ copy.assets }}</text>
       </view>
       <view class="nav-item" hover-class="tap-press" @click="goWallet">
@@ -255,7 +255,7 @@ const OWNER_HOME_COPY = {
     assets: 'Assets',
     wallet: 'Wallet',
     profile: 'Profile',
-    currentSection: 'Current section: Assets',
+    currentSection: 'Current section: Home',
     languageToast: 'Switched to English',
   },
   zh: {
@@ -301,7 +301,7 @@ const OWNER_HOME_COPY = {
     assets: '资产',
     wallet: '钱包',
     profile: '我的',
-    currentSection: '当前栏目：资产',
+    currentSection: '当前栏目：首页',
     languageToast: '已切换为中文',
   },
 } as const;
@@ -443,12 +443,12 @@ function openDevices() {
   uni.navigateTo({ url: '/pages-owner/devices/index' });
 }
 
-function goHome() {
-  uni.reLaunch({ url: '/pages-owner/home/index' });
-}
-
 function goTasks() {
   uni.navigateTo({ url: '/pages-owner/dispatch/index' });
+}
+
+function goAssets() {
+  uni.navigateTo({ url: '/pages/credit/index' });
 }
 
 function goWallet() {
@@ -463,7 +463,7 @@ function goProfile() {
 <style lang="scss" scoped>
 .owner-dashboard {
   min-height: 100vh;
-  background: #ffffff;
+  background: $bg-page;
   color: #dfe2f0;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
@@ -581,7 +581,12 @@ function goProfile() {
   bottom: 118px;
   padding: 24px 16px 118px;
   box-sizing: border-box;
-  background: #ffffff;
+  background:
+    radial-gradient(96% 48% at 50% -12%, rgba(0, 242, 255, .13), transparent 68%),
+    linear-gradient(0deg, rgba(0, 242, 255, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 242, 255, .045) 1px, transparent 1px),
+    $bg-page;
+  background-size: auto, 24px 24px, 24px 24px, auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
