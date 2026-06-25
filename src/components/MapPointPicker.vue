@@ -23,43 +23,55 @@
 
       <view
         class="map-viewport"
-        @tap="onMapTap"
-        @touchstart.stop="startPan"
-        @touchmove.stop.prevent="movePan"
-        @touchend.stop="endPan"
-        @touchcancel.stop="endPan"
-        @mousedown.stop="startPan"
-        @mousemove.stop.prevent="movePan"
-        @mouseup.stop="endPan"
-        @mouseleave.stop="endPan"
+        :class="{ 'native-amap-mode': nativeAmapActive }"
       >
-        <image
-          v-for="tile in tiles"
-          :key="tile.key"
-          class="map-tile"
-          :src="tile.url"
-          :style="tile.style"
-          mode="scaleToFill"
-        />
-        <view class="map-tint" />
-        <view v-if="counterpart" class="counterpart-marker" :style="counterpartStyle">
-          <StitchIcon name="radio_button_checked" size="28rpx" />
-          <text>{{ counterpartLabel }}</text>
+        <!-- #ifdef H5 -->
+        <div v-if="nativeAmapActive" :id="amapElementId" class="amap-sdk-map"></div>
+        <!-- #endif -->
+        <view v-if="nativeAmapActive && amapState.loading" class="amap-status">
+          <text>{{ amapLoadingText }}</text>
         </view>
-        <view class="center-cross horizontal" />
-        <view class="center-cross vertical" />
-        <view class="center-marker">
-          <StitchIcon name="location_on" size="44rpx" fill />
-        </view>
-        <view class="zoom-controls map-zoom-controls">
-          <view hover-class="tap-press" @tap.stop="setZoom(1)">
-            <StitchIcon name="add" size="28rpx" />
+        <view
+          v-if="!nativeAmapActive"
+          class="fallback-map-surface"
+          @tap="onMapTap"
+          @touchstart.stop="startPan"
+          @touchmove.stop.prevent="movePan"
+          @touchend.stop="endPan"
+          @touchcancel.stop="endPan"
+          @mousedown.stop="startPan"
+          @mousemove.stop.prevent="movePan"
+          @mouseup.stop="endPan"
+          @mouseleave.stop="endPan"
+        >
+          <image
+            v-for="tile in tiles"
+            :key="tile.key"
+            class="map-tile"
+            :src="tile.url"
+            :style="tile.style"
+            mode="scaleToFill"
+          />
+          <view class="map-tint" />
+          <view v-if="counterpart" class="counterpart-marker" :style="counterpartStyle">
+            <StitchIcon name="radio_button_checked" size="28rpx" />
+            <text>{{ counterpartLabel }}</text>
           </view>
-          <view hover-class="tap-press" @tap.stop="setZoom(-1)">
-            <StitchIcon name="remove" size="28rpx" />
+          <view class="center-cross horizontal" />
+          <view class="center-cross vertical" />
+          <view class="center-marker">
+            <StitchIcon name="location_on" size="44rpx" fill />
           </view>
+          <view class="zoom-controls map-zoom-controls">
+            <view hover-class="tap-press" @tap.stop="setZoom(1)">
+              <StitchIcon name="add" size="28rpx" />
+            </view>
+            <view hover-class="tap-press" @tap.stop="setZoom(-1)">
+              <StitchIcon name="remove" size="28rpx" />
+            </view>
+          </view>
+          <view class="tile-credit">高德地图</view>
         </view>
-        <view class="tile-credit">高德地图</view>
       </view>
 
       <view v-if="warnings.length || suggestions.length" class="recommend-panel">
@@ -92,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, nextTick, reactive, ref, watch } from 'vue';
+import { computed, getCurrentInstance, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import type { GeoPoint } from '@/models';
 import { coordinateAddress, isCoordinateAddress, isGenericMapAddress, locationSuggestionLabel, resolveMapPoint } from '@/services/geocoding';
@@ -102,6 +114,26 @@ const TILE_SIZE = 256;
 const MIN_ZOOM = 11;
 const MAX_ZOOM = 17;
 const AMAP_TILE_HOSTS = 4;
+const AMAP_JSAPI_VERSION = '2.0';
+const AMAP_PICKER_PLUGINS = ['AMap.ToolBar'];
+const NATIVE_MAP_SYNC_SUPPRESS_MS = 650;
+
+type AMapApi = {
+  Map: new (container: HTMLElement, options: Record<string, unknown>) => any;
+  Marker: new (options: Record<string, unknown>) => any;
+  ToolBar?: new (options?: Record<string, unknown>) => any;
+  plugin?: (plugins: string[], callback: () => void) => void;
+};
+
+type AMapWindow = Window & {
+  AMap?: AMapApi;
+  _AMapSecurityConfig?: {
+    securityJsCode?: string;
+    serviceHost?: string;
+  };
+};
+
+let amapLoaderPromise: Promise<AMapApi> | undefined;
 
 const props = withDefaults(defineProps<{
   visible: boolean;
@@ -126,6 +158,7 @@ const emit = defineEmits<{
 }>();
 
 const instance = getCurrentInstance();
+const amapElementId = `amap-picker-${Math.random().toString(36).slice(2)}`;
 const zoom = reactive({ value: 13 });
 const viewport = reactive({ width: 360, height: 300, left: 0, top: 0 });
 const selected = reactive<GeoPoint>({ lng: props.initial.lng, lat: props.initial.lat, address: props.initial.address });
@@ -144,11 +177,23 @@ const panState = reactive({
   moved: false,
   lastMovedAt: 0,
 });
+const amapState = reactive({
+  loading: false,
+  ready: false,
+  error: '',
+});
+let amapMap: any;
+let amapMarker: any;
+let amapResolveTimer: ReturnType<typeof setTimeout> | undefined;
+let amapInitSeq = 0;
+let suppressNativeMapEventsUntil = 0;
 
 const coordText = computed(() => `LNG ${selected.lng.toFixed(5)} / LAT ${selected.lat.toFixed(5)}`);
 const addressText = computed(() => selected.address || coordinateAddress(selected, props.locale));
 const resolveStatusText = computed(() => props.locale === 'en' ? 'Resolving address...' : '正在解析地址...');
 const confirmDisabled = computed(() => resolvingAddress.value || !hasReadableAddress(addressText.value));
+const nativeAmapActive = computed(() => Boolean(amapWebKey()) && !amapState.error && isBrowserRuntime());
+const amapLoadingText = computed(() => props.locale === 'en' ? 'Loading AMap...' : '正在加载高德地图...');
 
 const tiles = computed(() => {
   const center = project(selected, zoom.value);
@@ -191,7 +236,10 @@ const counterpartStyle = computed(() => {
 });
 
 watch(() => props.visible, (visible) => {
-  if (!visible) return;
+  if (!visible) {
+    destroyNativeAmap();
+    return;
+  }
   selected.lng = props.initial.lng;
   selected.lat = props.initial.lat;
   selected.address = displayAddress(props.initial);
@@ -199,6 +247,7 @@ watch(() => props.visible, (visible) => {
   warnings.value = [];
   selectionError.value = '';
   measureViewport();
+  void ensureNativeAmap();
   void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
 });
 
@@ -210,6 +259,7 @@ watch(() => props.initial, (point) => {
   suggestions.value = [];
   warnings.value = [];
   selectionError.value = '';
+  syncNativeAmapPosition();
   void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
 });
 
@@ -355,6 +405,7 @@ function applySuggestion(item: LocationSuggestion) {
   if (point) {
     selected.lng = point.lng;
     selected.lat = point.lat;
+    syncNativeAmapPosition();
   }
   selected.address = locationSuggestionLabel(item, props.locale) ?? item.name;
   selectionError.value = '';
@@ -426,6 +477,192 @@ function eventClientPoint(event: any): { x: number; y: number } | undefined {
   return { x, y };
 }
 
+async function ensureNativeAmap() {
+  if (!props.visible || !nativeAmapActive.value) return;
+  const seq = ++amapInitSeq;
+  amapState.loading = true;
+  await nextTick();
+  try {
+    const AMap = await loadAmapSdk();
+    if (seq !== amapInitSeq || !props.visible) return;
+    const element = document.getElementById(amapElementId);
+    if (!element) throw new Error('AMap container is not mounted');
+    if (!amapMap) {
+      amapMap = new AMap.Map(element, {
+        center: [selected.lng, selected.lat],
+        zoom: zoom.value,
+        zooms: [MIN_ZOOM, MAX_ZOOM],
+        viewMode: '2D',
+        resizeEnable: true,
+        dragEnable: true,
+        zoomEnable: true,
+        touchZoom: true,
+        scrollWheel: true,
+        doubleClickZoom: true,
+        keyboardEnable: false,
+      });
+      amapMarker = new AMap.Marker({
+        position: [selected.lng, selected.lat],
+        anchor: 'bottom-center',
+      });
+      amapMap.add(amapMarker);
+      amapMap.on('click', (event: { lnglat?: unknown }) => {
+        const point = amapLngLat(event.lnglat);
+        if (point) updateFromNativeAmap(point, true);
+      });
+      amapMap.on('moveend', () => {
+        if (isNativeMapProgrammaticSync()) return;
+        const point = amapLngLat(amapMap?.getCenter?.());
+        if (point) updateFromNativeAmap(point, true);
+      });
+      amapMap.on('zoomend', () => {
+        if (isNativeMapProgrammaticSync()) return;
+        const currentZoom = Number(amapMap?.getZoom?.());
+        if (Number.isFinite(currentZoom)) zoom.value = Math.round(currentZoom);
+      });
+      addNativeAmapToolbar(AMap);
+    } else {
+      syncNativeAmapPosition();
+      amapMap.resize?.();
+    }
+    amapState.ready = true;
+  } catch (error) {
+    console.warn('AMap picker failed, falling back to tile picker', error);
+    amapState.error = error instanceof Error ? error.message : 'AMAP_LOAD_FAILED';
+    destroyNativeAmap();
+  } finally {
+    if (seq === amapInitSeq) amapState.loading = false;
+  }
+}
+
+function addNativeAmapToolbar(AMap: AMapApi) {
+  const addToolbar = () => {
+    if (!AMap.ToolBar || !amapMap) return;
+    amapMap.addControl(new AMap.ToolBar({
+      position: { right: '12px', top: '12px' },
+      liteStyle: true,
+    }));
+  };
+  if (typeof AMap.plugin === 'function') {
+    AMap.plugin(['AMap.ToolBar'], addToolbar);
+    return;
+  }
+  addToolbar();
+}
+
+function updateFromNativeAmap(point: GeoPoint, shouldResolve: boolean) {
+  selected.lng = point.lng;
+  selected.lat = point.lat;
+  selected.address = coordinateAddress(point, props.locale);
+  suggestions.value = [];
+  warnings.value = [];
+  selectionError.value = '';
+  syncNativeAmapMarker();
+  if (shouldResolve) scheduleNativeAmapResolve();
+}
+
+function scheduleNativeAmapResolve() {
+  if (amapResolveTimer) clearTimeout(amapResolveTimer);
+  amapResolveTimer = setTimeout(() => {
+    void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
+  }, 420);
+}
+
+function syncNativeAmapPosition() {
+  if (!amapMap) return;
+  markNativeMapProgrammaticSync();
+  amapMap.setCenter?.([selected.lng, selected.lat]);
+  amapMap.setZoom?.(zoom.value);
+  syncNativeAmapMarker();
+}
+
+function syncNativeAmapMarker() {
+  if (!amapMarker) return;
+  amapMarker.setPosition?.([selected.lng, selected.lat]);
+}
+
+function destroyNativeAmap() {
+  amapInitSeq += 1;
+  suppressNativeMapEventsUntil = 0;
+  if (amapResolveTimer) {
+    clearTimeout(amapResolveTimer);
+    amapResolveTimer = undefined;
+  }
+  amapMarker = undefined;
+  amapMap?.destroy?.();
+  amapMap = undefined;
+  amapState.loading = false;
+  amapState.ready = false;
+}
+
+function amapLngLat(value: any): GeoPoint | undefined {
+  const lng = Number(typeof value?.getLng === 'function' ? value.getLng() : value?.lng);
+  const lat = Number(typeof value?.getLat === 'function' ? value.getLat() : value?.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return undefined;
+  return { lng, lat };
+}
+
+function markNativeMapProgrammaticSync() {
+  suppressNativeMapEventsUntil = Date.now() + NATIVE_MAP_SYNC_SUPPRESS_MS;
+}
+
+function isNativeMapProgrammaticSync() {
+  return Date.now() < suppressNativeMapEventsUntil;
+}
+
+function loadAmapSdk() {
+  const win = browserWindow();
+  const key = amapWebKey();
+  if (!win || !key) return Promise.reject(new Error('AMap web key is not configured'));
+  if (win.AMap?.Map) return Promise.resolve(win.AMap);
+  const securityCode = envValue('VITE_AMAP_SECURITY_CODE') || envValue('VITE_AMAP_SECURITY_JS_CODE');
+  const serviceHost = envValue('VITE_AMAP_SERVICE_HOST');
+  if (securityCode || serviceHost) {
+    win._AMapSecurityConfig = {
+      ...(win._AMapSecurityConfig ?? {}),
+      ...(securityCode ? { securityJsCode: securityCode } : {}),
+      ...(serviceHost ? { serviceHost } : {}),
+    };
+  }
+  if (!amapLoaderPromise) {
+    amapLoaderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      const params = new URLSearchParams({
+        v: AMAP_JSAPI_VERSION,
+        key,
+        plugin: AMAP_PICKER_PLUGINS.join(','),
+      });
+      script.src = `https://webapi.amap.com/maps?${params.toString()}`;
+      script.async = true;
+      script.dataset.droneAmapJsapi = 'true';
+      script.onload = () => {
+        if (win.AMap?.Map) resolve(win.AMap);
+        else reject(new Error('AMap JS API loaded without Map'));
+      };
+      script.onerror = () => reject(new Error('AMap JS API failed to load'));
+      document.head.appendChild(script);
+    });
+  }
+  return amapLoaderPromise;
+}
+
+function browserWindow(): AMapWindow | undefined {
+  if (!isBrowserRuntime()) return undefined;
+  return window as AMapWindow;
+}
+
+function isBrowserRuntime() {
+  return typeof window !== 'undefined' && typeof document !== 'undefined';
+}
+
+function amapWebKey() {
+  return envValue('VITE_AMAP_WEB_KEY') || envValue('VITE_AMAP_API_KEY');
+}
+
+function envValue(key: string) {
+  return String((import.meta.env as Record<string, string | undefined>)?.[key] ?? '').trim();
+}
+
 function project(point: GeoPoint, z: number) {
   const sinLat = Math.sin((clampLat(point.lat) * Math.PI) / 180);
   const scale = TILE_SIZE * 2 ** z;
@@ -450,6 +687,10 @@ function clampLat(lat: number) {
 function roundCoord(value: number) {
   return Math.round(value * 1000000) / 1000000;
 }
+
+onBeforeUnmount(() => {
+  destroyNativeAmap();
+});
 </script>
 
 <style lang="scss" scoped>
@@ -601,12 +842,53 @@ function roundCoord(value: number) {
   height: 520rpx;
   overflow: hidden;
   background: $bg-sunken;
+}
+
+.native-amap-mode {
+  background: #f5f7fa;
+  cursor: default;
+  touch-action: auto;
+  user-select: auto;
+}
+
+.amap-sdk-map,
+.fallback-map-surface {
+  position: absolute;
+  inset: 0;
+}
+
+.amap-sdk-map {
+  z-index: 0;
+}
+
+.amap-status {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $ink-900;
+  background: rgba(11, 14, 20, .42);
+  pointer-events: none;
+}
+
+.amap-status text {
+  padding: 12rpx 18rpx;
+  border: 2rpx solid rgba(210, 224, 239, .28);
+  border-radius: $r-sm;
+  background: rgba(13, 18, 27, .82);
+  font-size: $fs-cap;
+  line-height: 1.2;
+}
+
+.fallback-map-surface {
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
 
-.map-viewport:active {
+.fallback-map-surface:active {
   cursor: grabbing;
 }
 

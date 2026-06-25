@@ -206,10 +206,9 @@ export async function reverseGeocodeByAmap(point: PointLike, locale: Locale): Pr
 export async function resolveMapPointByBackend(point: PointLike, locale: Locale): Promise<LocationResolveResult | undefined> {
   const endpoint = envValue('VITE_LOCATION_REGEOCODE_URL') || envValue('VITE_AMAP_REGEOCODE_PROXY_URL') || defaultRegeocodeProxy();
   if (!endpoint) return undefined;
-  const lookupPoint = wgs84ToGcj02(point);
   const query = buildQuery([
-    ['lng', String(lookupPoint.lng)],
-    ['lat', String(lookupPoint.lat)],
+    ['lng', String(point.lng)],
+    ['lat', String(point.lat)],
     ['radius', '1000'],
     ['extensions', 'all'],
   ]);
@@ -228,16 +227,15 @@ export async function resolveMapPointByAmap(point: PointLike, locale: Locale): P
   const key = envValue('VITE_AMAP_WEB_SERVICE_KEY') || envValue('VITE_AMAP_API_KEY') || envValue('VITE_AMAP_WEB_KEY');
   const aroundProxy = envValue('VITE_AMAP_PLACE_AROUND_PROXY_URL') || defaultPlaceAroundProxy();
   if (!key && !aroundProxy) return undefined;
-  const gcj = wgs84ToGcj02(point);
   const regeoParams = [
     ...(key ? [['key', key]] : []),
-    ['location', `${gcj.lng.toFixed(6)},${gcj.lat.toFixed(6)}`],
+    ['location', `${point.lng.toFixed(6)},${point.lat.toFixed(6)}`],
     ['output', 'JSON'],
     ['extensions', 'all'],
     ['radius', '1000'],
   ];
   const regeo = key ? await requestJson<AmapReversePayload>(`${AMAP_REGEOCODE_URL}?${buildQuery(regeoParams)}`) : undefined;
-  const around = await requestAmapPlaceAround(gcj, key, aroundProxy);
+  const around = await requestAmapPlaceAround(point, key, aroundProxy);
   return compactAmapLocationResolve(regeo, around, locale);
 }
 
@@ -570,40 +568,4 @@ function parseLngLat(value: string | undefined): GeoPoint | undefined {
 
 function flexText(value: string | unknown[] | undefined) {
   return typeof value === 'string' ? value.trim() : undefined;
-}
-
-function wgs84ToGcj02(point: PointLike): PointLike {
-  if (outsideChina(point.lng, point.lat)) return point;
-  let dLat = transformLat(point.lng - 105, point.lat - 35);
-  let dLng = transformLng(point.lng - 105, point.lat - 35);
-  const radLat = point.lat / 180 * Math.PI;
-  let magic = Math.sin(radLat);
-  magic = 1 - 0.006693421622965943 * magic * magic;
-  const sqrtMagic = Math.sqrt(magic);
-  dLat = (dLat * 180) / ((6335552.717000426 * magic) / (sqrtMagic * sqrtMagic) * Math.PI);
-  dLng = (dLng * 180) / (6378245 / sqrtMagic * Math.cos(radLat) * Math.PI);
-  return {
-    lat: point.lat + dLat,
-    lng: point.lng + dLng,
-  };
-}
-
-function outsideChina(lng: number, lat: number) {
-  return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
-}
-
-function transformLat(x: number, y: number) {
-  let ret = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
-  ret += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3;
-  ret += (20 * Math.sin(y * Math.PI) + 40 * Math.sin(y / 3 * Math.PI)) * 2 / 3;
-  ret += (160 * Math.sin(y / 12 * Math.PI) + 320 * Math.sin(y * Math.PI / 30)) * 2 / 3;
-  return ret;
-}
-
-function transformLng(x: number, y: number) {
-  let ret = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
-  ret += (20 * Math.sin(6 * x * Math.PI) + 20 * Math.sin(2 * x * Math.PI)) * 2 / 3;
-  ret += (20 * Math.sin(x * Math.PI) + 40 * Math.sin(x / 3 * Math.PI)) * 2 / 3;
-  ret += (150 * Math.sin(x / 12 * Math.PI) + 300 * Math.sin(x / 30 * Math.PI)) * 2 / 3;
-  return ret;
 }

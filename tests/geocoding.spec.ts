@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import {
   compactAmapAddress,
   compactAmapLocationResolve,
@@ -8,7 +8,13 @@ import {
   isCoordinateAddress,
   isGenericMapAddress,
   locationSuggestionLabel,
+  resolveMapPointByAmap,
 } from '@/services/geocoding';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 it('formats coordinate fallback without generic map label', () => {
   expect(coordinateAddress({ lng: 117.16, lat: 39.845 }, 'zh')).toBe('经纬度点 117.16000, 39.84500');
@@ -94,4 +100,25 @@ it('builds amap point recommendations with access risk hints', () => {
   expect(locationSuggestionLabel(resolved?.suggestions[0], 'zh')).toBe('首开广场东门 · 阜荣街入口');
   expect(resolved?.warnings.some((item) => item.includes('门禁'))).toBe(true);
   expect(resolved?.warnings.some((item) => item.includes('室内'))).toBe(true);
+});
+
+it('queries amap with the selected map coordinate without extra datum offset', async () => {
+  vi.stubEnv('VITE_AMAP_WEB_SERVICE_KEY', 'test-amap-key');
+  const urls: string[] = [];
+  vi.stubGlobal('uni', {
+    request: ({ url, success }: { url: string; success: (result: { data: unknown }) => void }) => {
+      urls.push(url);
+      success({
+        data: url.includes('/v3/geocode/regeo')
+          ? { status: '1', regeocode: { formatted_address: '广东省佛山市禅城区祖庙街道' } }
+          : { status: '1', pois: [] },
+      });
+      return {};
+    },
+  });
+
+  await resolveMapPointByAmap({ lng: 113.12521, lat: 23.0205 }, 'zh');
+
+  expect(urls[0]).toContain('location=113.125210%2C23.020500');
+  expect(urls[1]).toContain('location=113.125210%2C23.020500');
 });
