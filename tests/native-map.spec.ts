@@ -33,6 +33,13 @@ it('reports missing provider when H5 has no key', () => {
   expect(configureH5MapProvider()).toBe(false);
 });
 
+it('reports missing provider when H5 runtime has no map config object', () => {
+  vi.stubGlobal('document', {});
+  vi.stubGlobal('window', {});
+
+  expect(configureH5MapProvider()).toBe(false);
+});
+
 it('injects AMap provider config from Vite env', () => {
   vi.stubEnv('VITE_AMAP_WEB_KEY', 'amap-web-key');
   vi.stubEnv('VITE_AMAP_SECURITY_CODE', 'amap-security');

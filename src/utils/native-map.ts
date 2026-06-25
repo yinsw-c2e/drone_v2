@@ -14,8 +14,7 @@ type UniWindow = Window & {
 export function configureH5MapProvider() {
   const win = getBrowserWindow();
   if (!win) return true;
-  const config = win.__uniConfig;
-  if (!config) return true;
+  const config = win.__uniConfig ?? (win.__uniConfig = {});
   if (hasMapProvider(config)) return true;
 
   const amapKey = envValue('VITE_AMAP_WEB_KEY') || envValue('VITE_AMAP_API_KEY');

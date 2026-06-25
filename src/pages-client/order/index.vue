@@ -196,7 +196,6 @@ import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { distanceKm } from '@/utils/geo';
-import { configureH5MapProvider } from '@/utils/native-map';
 import { etaMinutes, priceOrder } from '@/utils/price';
 
 const orderStore = useOrderStore();
@@ -433,10 +432,6 @@ function pickLocation(field: 'from' | 'to', options: { preserveError?: boolean }
     return;
   }
   if (isH5Runtime()) {
-    if (configureH5MapProvider()) {
-      openNativeLocationPicker(field);
-      return;
-    }
     openMapPicker(field);
     return;
   }

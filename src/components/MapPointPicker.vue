@@ -19,17 +19,20 @@
           <text v-if="resolvingAddress" class="resolve-status">{{ resolveStatusText }}</text>
           <text v-if="selectionError" class="resolve-error">{{ selectionError }}</text>
         </view>
-        <view class="zoom-controls">
-          <view hover-class="tap-press" @tap="setZoom(1)">
-            <StitchIcon name="add" size="28rpx" />
-          </view>
-          <view hover-class="tap-press" @tap="setZoom(-1)">
-            <StitchIcon name="remove" size="28rpx" />
-          </view>
-        </view>
       </view>
 
-      <view class="map-viewport" @tap="onMapTap">
+      <view
+        class="map-viewport"
+        @tap="onMapTap"
+        @touchstart.stop="startPan"
+        @touchmove.stop.prevent="movePan"
+        @touchend.stop="endPan"
+        @touchcancel.stop="endPan"
+        @mousedown.stop="startPan"
+        @mousemove.stop.prevent="movePan"
+        @mouseup.stop="endPan"
+        @mouseleave.stop="endPan"
+      >
         <image
           v-for="tile in tiles"
           :key="tile.key"
@@ -47,6 +50,14 @@
         <view class="center-cross vertical" />
         <view class="center-marker">
           <StitchIcon name="location_on" size="44rpx" fill />
+        </view>
+        <view class="zoom-controls map-zoom-controls">
+          <view hover-class="tap-press" @tap.stop="setZoom(1)">
+            <StitchIcon name="add" size="28rpx" />
+          </view>
+          <view hover-class="tap-press" @tap.stop="setZoom(-1)">
+            <StitchIcon name="remove" size="28rpx" />
+          </view>
         </view>
         <view class="tile-credit">高德地图</view>
       </view>
@@ -124,6 +135,15 @@ const pendingAddress = ref<Promise<string | undefined> | undefined>();
 const suggestions = ref<LocationSuggestion[]>([]);
 const warnings = ref<string[]>([]);
 const selectionError = ref('');
+const panState = reactive({
+  active: false,
+  startX: 0,
+  startY: 0,
+  startLng: 0,
+  startLat: 0,
+  moved: false,
+  lastMovedAt: 0,
+});
 
 const coordText = computed(() => `LNG ${selected.lng.toFixed(5)} / LAT ${selected.lat.toFixed(5)}`);
 const addressText = computed(() => selected.address || coordinateAddress(selected, props.locale));
@@ -198,6 +218,7 @@ function setZoom(delta: number) {
 }
 
 function onMapTap(event: any) {
+  if (Date.now() - panState.lastMovedAt < 260) return;
   const local = localPoint(event);
   if (!local) return;
   const center = project(selected, zoom.value);
@@ -213,6 +234,44 @@ function onMapTap(event: any) {
   warnings.value = [];
   selectionError.value = '';
   void resolveSelectedAddress(next);
+}
+
+function startPan(event: any) {
+  const point = eventClientPoint(event);
+  if (!point) return;
+  panState.active = true;
+  panState.startX = point.x;
+  panState.startY = point.y;
+  panState.startLng = selected.lng;
+  panState.startLat = selected.lat;
+  panState.moved = false;
+}
+
+function movePan(event: any) {
+  if (!panState.active) return;
+  const point = eventClientPoint(event);
+  if (!point) return;
+  const dx = point.x - panState.startX;
+  const dy = point.y - panState.startY;
+  if (Math.abs(dx) + Math.abs(dy) < 3) return;
+  panState.moved = true;
+  panState.lastMovedAt = Date.now();
+  const start = project({ lng: panState.startLng, lat: panState.startLat }, zoom.value);
+  const next = unproject(start.x - dx, start.y - dy, zoom.value);
+  selected.lng = next.lng;
+  selected.lat = next.lat;
+  selected.address = coordinateAddress(next, props.locale);
+  suggestions.value = [];
+  warnings.value = [];
+  selectionError.value = '';
+}
+
+function endPan() {
+  if (!panState.active) return;
+  panState.active = false;
+  if (!panState.moved) return;
+  panState.lastMovedAt = Date.now();
+  void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
 }
 
 async function confirm() {
@@ -359,6 +418,14 @@ function localPoint(event: any): { x: number; y: number } | undefined {
   return { x, y };
 }
 
+function eventClientPoint(event: any): { x: number; y: number } | undefined {
+  const touch = event?.changedTouches?.[0] ?? event?.touches?.[0] ?? event;
+  const x = Number(touch?.clientX ?? touch?.pageX);
+  const y = Number(touch?.clientY ?? touch?.pageY);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+  return { x, y };
+}
+
 function project(point: GeoPoint, z: number) {
   const sinLat = Math.sin((clampLat(point.lat) * Math.PI) / 180);
   const scale = TILE_SIZE * 2 ** z;
@@ -479,6 +546,7 @@ function roundCoord(value: number) {
 
 .selected-readout {
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .selected-readout text {
@@ -533,6 +601,13 @@ function roundCoord(value: number) {
   height: 520rpx;
   overflow: hidden;
   background: $bg-sunken;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.map-viewport:active {
+  cursor: grabbing;
 }
 
 .map-tile {
@@ -582,6 +657,19 @@ function roundCoord(value: number) {
   color: $color-primary;
   transform: translate(-50%, -100%);
   filter: drop-shadow(0 8rpx 18rpx rgba(0, 0, 0, .45));
+}
+
+.map-zoom-controls {
+  position: absolute;
+  right: $sp-3;
+  top: $sp-3;
+  z-index: 2;
+  flex-direction: column;
+  padding: 4rpx;
+  border: 2rpx solid rgba(210, 224, 239, .35);
+  border-radius: $r-sm;
+  background: rgba(13, 18, 27, .82);
+  box-shadow: $shadow-float;
 }
 
 .counterpart-marker {
