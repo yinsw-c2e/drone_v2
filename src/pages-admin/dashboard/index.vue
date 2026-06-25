@@ -1936,4 +1936,430 @@ function handleRiskAction(item: RiskRow) {
     line-height: 10px;
   }
 }
+
+@media screen and (max-width: 760px) {
+  .op-console {
+    height: 100dvh;
+  }
+
+  .topbar {
+    height: 64px;
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .brand-cluster {
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .brand-icon {
+    flex: 0 0 auto;
+  }
+
+  .brand-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .version-chip,
+  .operator-divider,
+  .operator-copy {
+    display: none;
+  }
+
+  .operator-cluster {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .top-icon,
+  .operator-card {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  .operator-card {
+    gap: 0;
+  }
+
+  .operator-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+  }
+
+  .side-rail {
+    left: 0;
+    right: 0;
+    top: 64px;
+    bottom: auto;
+    width: auto;
+    height: 68px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1px solid #3a494b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .side-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rail-label,
+  .system-card {
+    display: none;
+  }
+
+  .rail-item {
+    flex: 0 0 auto;
+    min-width: 104px;
+    height: 48px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .rail-item + .rail-item {
+    margin-top: 0;
+  }
+
+  .rail-item text:nth-child(2) {
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .rail-badge {
+    top: 3px;
+    right: 5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 18px;
+  }
+
+  .main-scroll {
+    left: 0;
+    top: 132px;
+    bottom: 0;
+  }
+
+  .grid-layer {
+    left: 0;
+    top: 132px;
+    background-size: 24px 24px;
+  }
+
+  .main-content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 14px 14px calc(30px + env(safe-area-inset-bottom));
+  }
+
+  .page-head {
+    height: auto;
+    min-height: 0;
+    padding-bottom: 14px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-title {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  .page-subtitle {
+    margin-top: 5px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  .head-actions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .outline-action,
+  .primary-action {
+    min-height: 44px;
+    height: auto;
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 0 12px;
+    font-size: 12px;
+    line-height: 18px;
+  }
+
+  .flow-feedback {
+    margin-top: 16px;
+    padding: 12px 14px;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .kpi-card {
+    height: auto;
+    min-height: 128px;
+    padding: 16px 14px;
+  }
+
+  .kpi-top {
+    gap: 8px;
+    letter-spacing: .04em;
+  }
+
+  .kpi-value {
+    margin-top: 12px;
+    font-size: 32px;
+    line-height: 36px;
+    word-break: break-word;
+  }
+
+  .kpi-foot {
+    margin-top: 12px;
+    gap: 6px;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .kpi-progress {
+    margin-top: 18px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .left-column,
+  .right-column {
+    grid-column: auto;
+    gap: 14px;
+  }
+
+  .map-card {
+    min-height: 240px;
+    aspect-ratio: 16 / 11;
+  }
+
+  .map-title-band {
+    top: 4%;
+    width: 70%;
+  }
+
+  .map-title-band text:first-child {
+    font-size: 10px;
+    line-height: 14px;
+  }
+
+  .map-title-band text:last-child {
+    white-space: normal;
+    font-size: 7px;
+    line-height: 10px;
+  }
+
+  .fleet-total {
+    width: auto;
+    max-width: none;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 8px;
+    line-height: 28px;
+  }
+
+  .fleet-total-top {
+    top: auto;
+    right: 10px;
+    bottom: 12px;
+  }
+
+  .fleet-total-bottom {
+    left: 10px;
+    bottom: 12px;
+    width: auto;
+  }
+
+  .map-controls {
+    right: 10px;
+    top: 52px;
+    bottom: auto;
+    gap: 8px;
+  }
+
+  .map-controls view {
+    width: 44px;
+    height: 44px;
+  }
+
+  .chart-card {
+    height: auto;
+    min-height: 280px;
+    padding: 18px 14px 16px;
+  }
+
+  .chart-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chart-head > text,
+  .panel-title text,
+  .risk-head text {
+    font-size: 19px;
+    line-height: 24px;
+  }
+
+  .range-tabs {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .range-tabs view {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    line-height: 44px;
+  }
+
+  .chart-body {
+    height: 190px;
+    padding-left: 34px;
+  }
+
+  .bars {
+    left: 20px;
+    gap: 4px;
+  }
+
+  .x-axis {
+    left: 34px;
+    font-size: 10px;
+  }
+
+  .queue-card,
+  .risk-card {
+    height: auto;
+  }
+
+  .panel-head {
+    min-height: 60px;
+    height: auto;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .queue-list {
+    max-height: none;
+    padding: 10px;
+    overflow: visible;
+  }
+
+  .queue-row {
+    padding: 14px;
+  }
+
+  .queue-line {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .queue-id {
+    min-width: 0;
+    flex: 1;
+    font-size: 14px;
+    line-height: 18px;
+    word-break: break-word;
+  }
+
+  .queue-time {
+    margin-left: 0;
+  }
+
+  .queue-desc {
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .queue-actions {
+    gap: 8px;
+  }
+
+  .queue-actions view {
+    min-height: 40px;
+    height: auto;
+    line-height: 40px;
+  }
+
+  .queue-footer {
+    min-height: 44px;
+    height: auto;
+    padding: 0 10px;
+    font-size: 11px;
+    line-height: 44px;
+    letter-spacing: .08em;
+  }
+
+  .risk-card {
+    padding: 18px 14px;
+  }
+
+  .risk-list {
+    margin-top: 16px;
+  }
+
+  .risk-row {
+    min-height: 0;
+    padding: 12px 0;
+    align-items: flex-start;
+  }
+
+  .risk-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .risk-copy {
+    margin-left: 12px;
+  }
+
+  .risk-copy text:first-child {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  .risk-action {
+    min-width: 44px;
+    min-height: 40px;
+    line-height: 40px;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
