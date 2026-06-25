@@ -155,7 +155,15 @@ jobs:
           rsync -a --delete "$RELEASE_DIR/dist/build/h5"/ "$FRONTEND_DIR"/
 
           docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy
-          curl -fsS https://swvictory.com/api/v1/health >/dev/null
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 10 https://swvictory.com/api/v1/health >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 12 ]; then
+              exit 1
+            fi
+            sleep 5
+          done
 
           printf '%s' "$RELEASE_SHA" > "$APP_ROOT/.deploy/deployed-main.commit"
           rm -f "$ARCHIVE"
