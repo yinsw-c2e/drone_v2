@@ -142,14 +142,19 @@ jobs:
 
           test -f "$RELEASE_DIR/dist/build/h5/index.html"
           test -f "$RELEASE_DIR/backend/Dockerfile"
+          test -f "$RELEASE_DIR/backend/Caddyfile"
+          test -f "$RELEASE_DIR/backend/docker-compose.prod.yml"
 
           docker build -t drone-v2-api:prod "$RELEASE_DIR/backend"
+
+          install -m 0644 "$RELEASE_DIR/backend/Caddyfile" "$BACKEND_DIR/Caddyfile"
+          install -m 0644 "$RELEASE_DIR/backend/docker-compose.prod.yml" "$COMPOSE_FILE"
 
           mkdir -p "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
           rsync -a --delete "$FRONTEND_DIR"/ "$BACKUP_FRONTEND_DIR"/
           rsync -a --delete "$RELEASE_DIR/dist/build/h5"/ "$FRONTEND_DIR"/
 
-          docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api
+          docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy
           curl -fsS https://swvictory.com/api/v1/health >/dev/null
 
           printf '%s' "$RELEASE_SHA" > "$APP_ROOT/.deploy/deployed-main.commit"
