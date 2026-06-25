@@ -129,8 +129,12 @@
         <StitchIcon name="assignment" size="40rpx" fill />
         <text>{{ copy.tasks }}</text>
       </view>
-      <view class="nav-item" hover-class="tap-press" @click="goWallet">
+      <view class="nav-item" hover-class="tap-press" @click="goAssets">
         <StitchIcon name="account_balance_wallet" size="40rpx" />
+        <text>{{ copy.assets }}</text>
+      </view>
+      <view class="nav-item" hover-class="tap-press" @click="goWallet">
+        <StitchIcon name="account_balance" size="40rpx" />
         <text>{{ copy.wallet }}</text>
       </view>
       <view class="nav-item" hover-class="tap-press" @click="goProfile">
@@ -218,6 +222,7 @@ const HALL_COPY = {
     autoMatch: 'Auto-Match',
     home: 'Home',
     tasks: 'Tasks',
+    assets: 'Assets',
     wallet: 'Wallet',
     profile: 'Profile',
     urgentSorted: 'Sorted by urgency priority',
@@ -272,6 +277,7 @@ const HALL_COPY = {
     autoMatch: '自动匹配',
     home: '首页',
     tasks: '任务',
+    assets: '资产',
     wallet: '钱包',
     profile: '我的',
     urgentSorted: '已按紧急度优先排序',
@@ -471,6 +477,10 @@ function accept(orderId: string) {
 
 function goHome() {
   uni.reLaunch({ url: '/pages-pilot/home/index' });
+}
+
+function goAssets() {
+  uni.navigateTo({ url: '/pages/credit/index' });
 }
 
 function goWallet() {
