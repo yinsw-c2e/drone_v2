@@ -188,9 +188,21 @@ async function review() {
     submitted.value = true;
     uni.showToast({ title: '评价已提交，信用分已更新', icon: 'success' });
     message.value = '评价已提交，飞手信用分已重算';
+    leaveAfterReview();
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '提交失败，请稍后重试', icon: 'none' });
   }
+}
+
+function leaveAfterReview() {
+  setTimeout(() => {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (pages.length > 1) {
+      uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pages-client/home/index' }) });
+      return;
+    }
+    uni.reLaunch({ url: '/pages-client/home/index' });
+  }, 900);
 }
 
 function setStar(value: number) {
