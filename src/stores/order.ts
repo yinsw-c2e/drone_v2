@@ -90,7 +90,8 @@ export const useOrderStore = defineStore('order', {
         const prepay = await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
         await requestPlatformPayment(prepay);
         await waitForPaymentPaid(prepay, syncPaymentRemote);
-        const remote = await confirmOrderRemote(order.id, candidate.capacityId, prepay.paymentId);
+        const paymentId = prepay.provider === 'local-mock' ? undefined : prepay.paymentId;
+        const remote = await confirmOrderRemote(order.id, candidate.capacityId, paymentId);
         if (remote) {
           this.activeOrderId = remote.id;
           this.selectedCapacityId = remote.capacityId ?? candidate.capacityId;
