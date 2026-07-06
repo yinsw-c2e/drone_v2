@@ -35,11 +35,20 @@ func TestValidateRuntimeConfigBlocksMissingProductionCORS(t *testing.T) {
 	}
 }
 
-func TestValidateRuntimeConfigBlocksProductionMockSMS(t *testing.T) {
+func TestValidateRuntimeConfigDefersSMSConfigToAuthSendCode(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "mock")
 	setProviderBridgeEnv(t)
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
+	if err != nil {
+		t.Fatalf("sms rollout should not block backend startup: %v", err)
+	}
+}
+
+func TestValidateSMSProviderEnvBlocksProductionMockSMS(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "mock")
+
+	err := app.ValidateSMSProviderEnv(true)
 	if err == nil || !strings.Contains(err.Error(), "禁止使用 SMS_PROVIDER=mock") {
 		t.Fatalf("expected mock SMS error, got %v", err)
 	}

@@ -130,8 +130,5 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	if origin == "*" {
 		return errors.New("生产环境禁止 CORS_ALLOW_ORIGIN=*")
 	}
-	if err := app.ValidateSMSProviderEnv(true); err != nil {
-		return err
-	}
 	return nil
 }
