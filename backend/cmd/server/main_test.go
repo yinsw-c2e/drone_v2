@@ -3,6 +3,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"drone-v2-backend/internal/app"
 )
 
 func TestValidateRuntimeConfigAllowsLocalDefaults(t *testing.T) {
@@ -53,11 +55,18 @@ func TestValidateRuntimeConfigAllowsProductionWhitelistAndHTTPSMS(t *testing.T) 
 	}
 }
 
-func TestValidateRuntimeConfigBlocksMissingProviderBridge(t *testing.T) {
+func TestValidateRuntimeConfigAllowsMissingProviderBridgeAtStartup(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
+	if err != nil {
+		t.Fatalf("provider endpoint rollout should not block backend startup: %v", err)
+	}
+}
+
+func TestValidateProviderBridgeEnvBlocksMissingProductionProviderBridge(t *testing.T) {
+	err := app.ValidateProviderBridgeEnv(true)
 	if err == nil || !strings.Contains(err.Error(), "provider bridge 配置缺失") {
 		t.Fatalf("expected provider bridge error, got %v", err)
 	}

@@ -133,8 +133,5 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	if err := app.ValidateSMSProviderEnv(true); err != nil {
 		return err
 	}
-	if err := app.ValidateProviderBridgeEnv(true); err != nil {
-		return err
-	}
 	return nil
 }
