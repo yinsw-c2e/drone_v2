@@ -131,6 +131,20 @@ jobs:
           ENV_FILE="$BACKEND_DIR/.env"
           COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
 
+          dump_deploy_state() {
+            echo "::group::docker compose ps"
+            docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps || true
+            echo "::endgroup::"
+            echo "::group::api logs"
+            docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=200 api || true
+            echo "::endgroup::"
+            echo "::group::caddy logs"
+            docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=120 caddy || true
+            echo "::endgroup::"
+          }
+
+          trap 'status=$?; if [ "$status" -ne 0 ]; then dump_deploy_state; fi' EXIT
+
           test -f "$ARCHIVE"
           test -f "$ENV_FILE"
           test -f "$COMPOSE_FILE"
