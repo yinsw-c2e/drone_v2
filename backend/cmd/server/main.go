@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,11 @@ import (
 func main() {
 	dsn := getenv("MYSQL_DSN", "drone:drone@tcp(127.0.0.1:3308)/drone_v2?parseTime=true&charset=utf8mb4&loc=Local&multiStatements=true")
 	port := getenv("PORT", "8088")
+	production := isProductionRuntime()
+	corsAllowOrigin := corsAllowOriginFromEnv(production)
+	if err := validateRuntimeConfig(production, corsAllowOrigin); err != nil {
+		log.Fatalf("invalid runtime configuration: %v", err)
+	}
 
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -42,9 +48,11 @@ func main() {
 	}
 
 	server := app.NewServerWithOptions(store, app.ServerOptions{
-		ResetEnabled:         getenvBool("ENABLE_RESET_ENDPOINT", true),
-		SnapshotWriteEnabled: getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", true),
-		CORSAllowOrigin:      getenv("CORS_ALLOW_ORIGIN", "*"),
+		ResetEnabled:            getenvBool("ENABLE_RESET_ENDPOINT", true),
+		SnapshotWriteEnabled:    getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", true),
+		CORSAllowOrigin:         corsAllowOrigin,
+		RequirePaidPayment:      production,
+		RequireProviderReceipts: production,
 	})
 	log.Printf("drone_v2 backend listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, server.Routes()); err != nil {
@@ -88,4 +96,45 @@ func getenvBool(key string, fallback bool) bool {
 		log.Printf("invalid boolean %s=%q, using %t", key, value, fallback)
 		return fallback
 	}
+}
+
+func isProductionRuntime() bool {
+	for _, key := range []string{"APP_ENV", "GO_ENV", "DRONE_ENV", "ENV", "NODE_ENV"} {
+		value := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+		if value == "prod" || value == "production" {
+			return true
+		}
+	}
+	return false
+}
+
+func corsAllowOriginFromEnv(production bool) string {
+	value := strings.TrimSpace(os.Getenv("CORS_ALLOW_ORIGIN"))
+	if value != "" {
+		return value
+	}
+	if production {
+		return ""
+	}
+	return "*"
+}
+
+func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
+	if !production {
+		return nil
+	}
+	origin := strings.TrimSpace(corsAllowOrigin)
+	if origin == "" {
+		return errors.New("生产环境必须显式设置 CORS_ALLOW_ORIGIN 为 H5/admin 可信域名白名单")
+	}
+	if origin == "*" {
+		return errors.New("生产环境禁止 CORS_ALLOW_ORIGIN=*")
+	}
+	if err := app.ValidateSMSProviderEnv(true); err != nil {
+		return err
+	}
+	if err := app.ValidateProviderBridgeEnv(true); err != nil {
+		return err
+	}
+	return nil
 }

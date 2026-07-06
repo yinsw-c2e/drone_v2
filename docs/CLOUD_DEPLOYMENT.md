@@ -182,10 +182,14 @@ docker compose --env-file .env -f docker-compose.prod.yml exec -T mysql \
 
 ## 6. 前端连接云后端
 
-H5 或小程序构建前设置：
+H5 或小程序构建前设置后端地址。小程序正式发布必须走 release 预检脚本，不能把普通开发构建当成发布包：
 
 ```bash
-VITE_BACKEND_URL=https://api.your-domain.com pnpm build:mp-weixin
+VITE_BACKEND_URL=https://api.your-domain.com \
+VITE_PROVIDER_MODE=bridge \
+VITE_PROVIDER_BRIDGE_URL=https://api.your-domain.com/api/v1/provider \
+VITE_PROVIDER_BRIDGE_TOKEN=<same value as PROVIDER_BRIDGE_AUTH_TOKEN> \
+pnpm build:mp-weixin:release
 ```
 
 H5 本地验证：

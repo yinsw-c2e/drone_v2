@@ -155,6 +155,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, CapacityStatus, Role } from '@/models';
 import type { Drone } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { activeOwnerMissionForDrone, deployOwnerDrone, withdrawOwnerDrone } from '@/services/app-flow';
 import { ownerQualificationIssue } from '@/services/compliance';
 import { demoBatteryPct } from '@/services/device-status';
@@ -280,9 +281,7 @@ const userStore = useUserStore();
 const localeStore = useLocaleStore();
 const copy = computed(() => FLEET_COPY[localeStore.locale]);
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));
@@ -420,7 +419,7 @@ function goWallet() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 </script>
 
@@ -430,7 +429,13 @@ function goProfile() {
   padding-bottom: 158rpx;
   box-sizing: border-box;
   color: #dfe2f0;
-  background: #0b0e14;
+  background:
+    radial-gradient(96% 48% at 50% -12%, rgba(0, 242, 255, .13), transparent 68%),
+    radial-gradient(78% 44% at 100% 4%, rgba(245, 158, 11, .12), transparent 72%),
+    linear-gradient(0deg, rgba(0, 242, 255, .045) 1rpx, transparent 1rpx),
+    linear-gradient(90deg, rgba(0, 242, 255, .045) 1rpx, transparent 1rpx),
+    #0b0e14;
+  background-size: auto, auto, 48rpx 48rpx, 48rpx 48rpx, auto;
   font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
@@ -443,7 +448,9 @@ function goProfile() {
   height: 123rpx;
   padding: 0 31rpx;
   border-bottom: 2rpx solid #3a494b;
-  background: #0b0e14;
+  background: rgba(11, 14, 20, .94);
+  backdrop-filter: saturate(160%) blur(18rpx);
+  -webkit-backdrop-filter: saturate(160%) blur(18rpx);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -591,7 +598,7 @@ function goProfile() {
   padding: 12rpx 23rpx;
   border-radius: 4rpx;
   border: 2rpx solid rgba(58, 73, 75, .82);
-  background: rgba(30, 36, 51, .72);
+  background: rgba(30, 36, 51, .78);
   box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, .02);
   display: flex;
   align-items: center;
@@ -673,8 +680,9 @@ function goProfile() {
 
 .asset-card {
   border-radius: 13rpx;
-  border: 2rpx solid #3a494b;
-  background: #1e2433;
+  border: 2rpx solid rgba(58, 73, 75, .82);
+  background: rgba(30, 36, 51, .82);
+  box-shadow: 0 8rpx 26rpx rgba(0, 0, 0, .24);
   overflow: hidden;
   box-sizing: border-box;
 }

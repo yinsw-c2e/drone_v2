@@ -177,6 +177,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { LedgerStatus, LedgerType, Role } from '@/models';
 import type { LedgerEntry } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { ledgerTypeLabel } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
@@ -201,9 +202,7 @@ const ledgerLimit = ref(6);
 const ledgerFilter = ref<'all' | 'in' | 'out' | 'pending'>('all');
 const userStore = useUserStore();
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const wallet = computed(() => repo.wallets.find(user.value.id));
@@ -344,7 +343,7 @@ function goAssets() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 </script>
 

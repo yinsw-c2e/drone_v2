@@ -1,6 +1,6 @@
-import { Role, AuditStatus, CapacityStatus, LedgerStatus, LedgerType } from '@/models';
+import { Role, AuditStatus, CapacityStatus, LedgerStatus, LedgerType, RoleProfileStatus } from '@/models';
 import type { DBShape } from '@/utils/db';
-import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Wallet, LedgerEntry, CertificationApplication } from '@/models';
+import type { User, UserRoleProfile, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Wallet, LedgerEntry, CertificationApplication } from '@/models';
 
 const future = '2031-12-31T00:00:00.000Z';
 
@@ -56,16 +56,29 @@ export function buildSeedCertQueue(): CertificationApplication[] {
 }
 
 export function buildSeed(): DBShape {
+  const now = new Date().toISOString();
   const pilotIds = ['u_p1', 'u_p2', 'u_p3'];
   const ownerIds = ['u_o1', 'u_o2'];
   const clientIds = ['u_c1', 'u_c2'];
 
-  const mkUser = (id: string, role: Role, nick: string): User => ({ id, phone: '138' + id, nickname: nick, roles: [role], currentRole: role, realNameVerified: true, blacklisted: false });
+  const seedPhones: Record<string, string> = {
+    u_p1: '13800000001',
+    u_p2: '13800000002',
+    u_p3: '13800000003',
+    u_o1: '13800000004',
+    u_o2: '13800000005',
+    u_c1: '13800000006',
+    u_c2: '13800000007',
+    u_admin: '13900000000',
+  };
+  const mkUser = (id: string, role: Role, nick: string): User => ({ id, phone: seedPhones[id], nickname: nick, roles: [role], currentRole: role, authStatus: AuditStatus.Approved, realNameVerified: true, createdAt: now, blacklisted: false, disabled: false });
   const users: User[] = [
     ...pilotIds.map((id, i) => mkUser(id, Role.Pilot, `飞手${i + 1}`)),
     ...ownerIds.map((id, i) => mkUser(id, Role.Owner, `机主${i + 1}`)),
     ...clientIds.map((id, i) => mkUser(id, Role.Client, `业主${i + 1}`)),
+    mkUser('u_admin', Role.Admin, '运营管理员'),
   ];
+  const userRoleProfiles: UserRoleProfile[] = users.flatMap((user) => user.roles.map((role) => ({ id: `${user.id}_${role}`, userId: user.id, role, status: RoleProfileStatus.Active, createdAt: now, updatedAt: now })));
 
   const pStats = () => ({ orders: 120, completed: 114, cancelled: 6, onTimeRate: 0.94, complaintRate: 0.03, accidentRate: 0, violationCount: 0, flightHours: 600, onlineHours: 320, avgRespSec: 18, avgStar: 4.7 });
   const pilots: PilotProfile[] = pilotIds.map((userId, i) => ({ userId, caacLevel: i === 0 ? 'BVLOS' : 'VLOS', caacExpire: future, noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved, trainingCerts: ['应急处置'], online: true, location: [{ lng: 116.400, lat: 39.910 }, { lng: 116.390, lat: 39.905 }, { lng: 116.405, lat: 39.912 }][i], stats: pStats() }));
@@ -93,5 +106,5 @@ export function buildSeed(): DBShape {
     { id: 'cap4', pilotId: 'u_p1', droneId: 'd4', ownerId: 'u_o2', location: capLoc[3], status: CapacityStatus.Online },
   ];
 
-  return { users, pilots, owners, clients, drones, capacity, orders: [], credits: [], policies: [], claims: [], airspace: [], telemetry: [], reviews: [], wallets: buildSeedWallets(), ledger: buildSeedLedger(), notifications: [], authApplications: buildSeedCertQueue(), auditLogs: [], _seededAt: new Date().toISOString() };
+  return { users, userRoleProfiles, authSessions: [], smsCodes: [], pilots, owners, clients, drones, capacity, orders: [], paymentOrders: [], credits: [], policies: [], claims: [], airspace: [], telemetry: [], reviews: [], wallets: buildSeedWallets(), ledger: buildSeedLedger(), notifications: [], authApplications: buildSeedCertQueue(), auditLogs: [], _seededAt: now };
 }

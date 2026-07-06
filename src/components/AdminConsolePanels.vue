@@ -282,7 +282,6 @@ function confirmReset() {
 
 function resetDemoData() {
   resetDB();
-  userStore.loginAs(Role.Admin);
   close();
   uni.showToast({ title: '演示数据已重置', icon: 'none' });
   emit('changed');

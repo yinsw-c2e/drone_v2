@@ -204,6 +204,8 @@ import { droneDisplayName } from '@/services/display-labels';
 import { PRICE_CONFIG } from '@/stores/config-data';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
+import { distanceKm } from '@/utils/geo';
+import { etaMinutes } from '@/utils/price';
 import { repo } from '@/utils/repo';
 
 const orderStore = useOrderStore();
@@ -234,8 +236,8 @@ const MATCH_COPY = {
     payloadRemain: 'Payload left: ',
     distanceLabel: 'Distance: ',
     estimatedTime: 'Estimated Time',
-    arriveOrigin: 'Arrive Origin',
-    deliverDest: 'Deliver Dest',
+    arriveOrigin: 'Arrive Pickup',
+    deliverDest: 'Deliver Destination',
     compliance: 'Compliance: full insurance | approved route | dual-certified pilot',
     reasonLabel: 'Recommendation',
     noCandidateTitle: 'No plan available',
@@ -251,6 +253,7 @@ const MATCH_COPY = {
     confirmOrder: 'Confirm Order',
     confirming: 'Confirming',
     rematched: 'Rematched to the global optimal plan',
+    arriveEtaShort: 'Pickup ETA',
     noCapacity: 'No compliant online capacity. Please rematch.',
     progressed: 'Current order has advanced. View tracking or launch a new order.',
     confirmFailed: 'Order confirmation failed. Select another plan or return to edit the order.',
@@ -279,8 +282,8 @@ const MATCH_COPY = {
     payloadRemain: '载重剩余: ',
     distanceLabel: '距离: ',
     estimatedTime: '预估时间',
-    arriveOrigin: '到达起点',
-    deliverDest: '送达终点',
+    arriveOrigin: '预计到场',
+    deliverDest: '预计送达',
     compliance: '合规保障：全额保险覆盖 | 航线已审批 | 驾驶员持双证',
     reasonLabel: '推荐理由',
     noCandidateTitle: '暂无可选方案',
@@ -296,6 +299,7 @@ const MATCH_COPY = {
     confirmOrder: '确认下单',
     confirming: '确认中',
     rematched: '已重新匹配到全局最优方案',
+    arriveEtaShort: '到场ETA',
     noCapacity: '当前没有在线合规运力，请重新匹配。',
     progressed: '当前订单阶段已推进，请查看追踪或重新发单。',
     confirmFailed: '确认下单失败，请重新选择方案或返回修改订单。',
@@ -351,12 +355,20 @@ const payloadRemainText = computed(() => {
   return `${Math.max(0, drone.maxPayloadKg - (order?.cargo.weightKg ?? 0)).toFixed(0)}kg`;
 });
 const distanceText = computed(() => selected.value ? `${selected.value.distanceKm.toFixed(1)}km` : '—');
-const arriveText = computed(() => selected.value ? `${formatClock(PRICE_CONFIG.prepMin)} (${PRICE_CONFIG.prepMin}m)` : '—');
-const deliverText = computed(() => selected.value ? `${formatClock(selected.value.etaMin)} (${selected.value.etaMin}m)` : '—');
+const pickupEtaMin = computed(() => selected.value?.etaMin ?? 0);
+const routeDistanceKm = computed(() => {
+  const order = activeOrder.value;
+  if (!order) return 0;
+  return order.distanceKm ?? distanceKm(order.from, order.to);
+});
+const liftDurationMin = computed(() => Math.max(1, etaMinutes(routeDistanceKm.value) - PRICE_CONFIG.prepMin));
+const deliveryEtaMin = computed(() => selected.value ? pickupEtaMin.value + liftDurationMin.value : 0);
+const arriveText = computed(() => selected.value ? `${formatClock(pickupEtaMin.value)} (${pickupEtaMin.value}m)` : '—');
+const deliverText = computed(() => selected.value ? `${formatClock(deliveryEtaMin.value)} (${deliveryEtaMin.value}m)` : '—');
 const reasonText = computed(() => selected.value?.reasons.join('；') || '—');
 const selectedStrategyMeta = computed(() => {
   if (!selected.value) return '';
-  return `${copy.value.currentPick}: ${candidateTitle(selected.value)} · ETA ${selected.value.etaMin}m · ${selected.value.distanceKm.toFixed(1)}km · ${copy.value.creditSuffix} ${selected.value.creditScore}`;
+  return `${copy.value.currentPick}: ${candidateTitle(selected.value)} · ${copy.value.arriveEtaShort} ${pickupEtaMin.value}m · ${selected.value.distanceKm.toFixed(1)}km · ${copy.value.creditSuffix} ${selected.value.creditScore}`;
 });
 
 const costRows = computed(() => {

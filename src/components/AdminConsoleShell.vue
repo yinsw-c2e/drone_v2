@@ -71,6 +71,7 @@ import { computed, ref } from 'vue';
 import AdminConsolePanels from '@/components/AdminConsolePanels.vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { Role } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import type { AdminModuleKey, AdminNavItem } from '@/services/admin-console';
 import { adminMetrics, adminNavItems } from '@/services/admin-console';
 import { useUserStore } from '@/stores/user';
@@ -83,7 +84,7 @@ const props = defineProps<{
 }>();
 
 const userStore = useUserStore();
-userStore.loginAs(Role.Admin);
+ensureRole(Role.Admin);
 
 const metrics = computed(() => adminMetrics());
 const navModules = computed(() => adminNavItems(props.active));
@@ -103,7 +104,9 @@ function openModule(item: AdminNavItem) {
 }
 
 function switchIdentity() {
-  uni.reLaunch({ url: '/pages/login/index' });
+  void userStore.logout().finally(() => {
+    uni.reLaunch({ url: '/pages/login/index' });
+  });
 }
 
 function showSystemHealth() {
@@ -946,7 +949,7 @@ function showSystemHealth() {
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: $fs-cap;
     line-height: 18px;
   }
 

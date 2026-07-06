@@ -194,6 +194,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { LedgerStatus, LedgerType, Role } from '@/models';
 import type { LedgerEntry } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { ledgerTypeLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useUserStore } from '@/stores/user';
@@ -330,9 +331,7 @@ const userStore = useUserStore();
 const localeStore = useLocaleStore();
 const copy = computed(() => WALLET_COPY[localeStore.locale]);
 
-if (userStore.user.currentRole !== Role.Pilot) {
-  userStore.loginAs(Role.Pilot);
-}
+ensureRole(Role.Pilot);
 
 const user = computed(() => userStore.user);
 const wallet = computed(() => repo.wallets.find(user.value.id));
@@ -533,7 +532,7 @@ function goAssets() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 </script>
 

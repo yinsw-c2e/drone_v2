@@ -184,11 +184,14 @@
 </template>
 
 <script setup lang="ts">
+import { onLoad } from '@dcloudio/uni-app';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import MapPointPicker from '@/components/MapPointPicker.vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { CargoType, PaymentMode, Role } from '@/models';
 import type { GeoPoint, Order } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
+import { findCommonRoutePreset } from '@/services/common-routes';
 import { coordinateAddress, isCoordinateAddress, isGenericMapAddress, locationSuggestionLabel, resolveMapPoint, reverseGeocode } from '@/services/geocoding';
 import type { LocationSuggestion } from '@/services/geocoding';
 import { estimateDroneForWeight } from '@/services/order-estimate';
@@ -201,11 +204,13 @@ import { etaMinutes, priceOrder } from '@/utils/price';
 const orderStore = useOrderStore();
 const userStore = useUserStore();
 const localeStore = useLocaleStore();
+ensureRole(Role.Client);
 const loading = ref(false);
 const error = ref('');
 const ERROR_TOAST_DURATION_MS = 3000;
 let errorTimer: ReturnType<typeof setTimeout> | undefined;
 let locatingOrigin = false;
+const appliedPresetId = ref('');
 
 const ORDER_COPY = {
   en: {
@@ -262,6 +267,7 @@ const ORDER_COPY = {
     initiate: 'INITIATE',
     mission: 'MISSION',
     submitFallback: 'Premium coverage mission',
+    routePresetApplied: 'Common route applied. Confirm payload and protection.',
     invoiceTitle: 'SkyLink Logistics',
     routeFrom: 'Sector 4 Storage Facility',
     routeTo: 'Select Target Zone',
@@ -322,6 +328,7 @@ const ORDER_COPY = {
     initiate: '发起',
     mission: '任务',
     submitFallback: '高级保障任务',
+    routePresetApplied: '已套用常用航线，请继续确认货物和保障信息',
     invoiceTitle: '天链物流',
     routeFrom: '4区仓储设施',
     routeTo: '目标区域',
@@ -418,6 +425,24 @@ function scheduledAtIso() {
 
 function onScheduleChange(event: { detail: { value: string } }) {
   draft.scheduledTime = event.detail.value;
+}
+
+onLoad((query: Record<string, string | undefined> = {}) => {
+  applyRoutePreset(query.preset);
+});
+
+function applyRoutePreset(presetId: string | undefined) {
+  const preset = findCommonRoutePreset(presetId);
+  if (!preset) return;
+  appliedPresetId.value = preset.id;
+  draft.cargoType = preset.cargoType;
+  draft.weightKg = String(preset.weightKg);
+  draft.volume = preset.volume;
+  draft.valueYuan = String(preset.valueYuan);
+  draft.insured = preset.insured;
+  draft.special = preset.labels[localeStore.locale].special;
+  draft.from = { ...preset.from };
+  draft.to = { ...preset.to };
 }
 
 function pickLocation(field: 'from' | 'to', options: { preserveError?: boolean } = {}) {
@@ -693,7 +718,8 @@ async function submit() {
   loading.value = true;
   clearError();
   try {
-    const user = userStore.user.currentRole === Role.Client ? userStore.user : userStore.loginAs(Role.Client);
+    if (!userStore.hasActiveRole(Role.Client)) throw new Error('当前账号没有业主发单权限');
+    const user = userStore.user;
     // 预算给实时估价留 10% 余量，保证匹配阶段报价不超预算
     const budgetCent = Math.max(Math.round(estimateCent.value * 1.1), 10000);
     await orderStore.createOrderDraftWithBackend({
@@ -728,6 +754,10 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
+  if (appliedPresetId.value) {
+    toast(copy.value.routePresetApplied);
+    return;
+  }
   toast(copy.value.locatingOriginToast);
   void locateOrigin().catch(() => {
     locatingOrigin = false;

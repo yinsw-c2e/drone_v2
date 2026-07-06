@@ -23,12 +23,16 @@ type collection struct {
 
 var collections = []collection{
 	{"users", func(s *DBShape) []any { return anySlice(s.Users) }, setJSON[User](func(s *DBShape, v []User) { s.Users = v })},
+	{"user_role_profiles", func(s *DBShape) []any { return anySlice(s.UserRoleProfiles) }, setJSON[UserRoleProfile](func(s *DBShape, v []UserRoleProfile) { s.UserRoleProfiles = v })},
+	{"auth_sessions", func(s *DBShape) []any { return anySlice(s.AuthSessions) }, setJSON[AuthSession](func(s *DBShape, v []AuthSession) { s.AuthSessions = v })},
+	{"sms_codes", func(s *DBShape) []any { return anySlice(s.SMSCodes) }, setJSON[SMSCode](func(s *DBShape, v []SMSCode) { s.SMSCodes = v })},
 	{"pilots", func(s *DBShape) []any { return anySlice(s.Pilots) }, setJSON[PilotProfile](func(s *DBShape, v []PilotProfile) { s.Pilots = v })},
 	{"owners", func(s *DBShape) []any { return anySlice(s.Owners) }, setJSON[OwnerProfile](func(s *DBShape, v []OwnerProfile) { s.Owners = v })},
 	{"clients", func(s *DBShape) []any { return anySlice(s.Clients) }, setJSON[ClientProfile](func(s *DBShape, v []ClientProfile) { s.Clients = v })},
 	{"drones", func(s *DBShape) []any { return anySlice(s.Drones) }, setJSON[Drone](func(s *DBShape, v []Drone) { s.Drones = v })},
 	{"capacity_units", func(s *DBShape) []any { return anySlice(s.Capacity) }, setJSON[CapacityUnit](func(s *DBShape, v []CapacityUnit) { s.Capacity = v })},
 	{"orders", func(s *DBShape) []any { return anySlice(s.Orders) }, setJSON[Order](func(s *DBShape, v []Order) { s.Orders = v })},
+	{"payment_orders", func(s *DBShape) []any { return anySlice(s.PaymentOrders) }, setJSON[PaymentOrder](func(s *DBShape, v []PaymentOrder) { s.PaymentOrders = v })},
 	{"credits", func(s *DBShape) []any { return anySlice(s.Credits) }, setJSON[CreditScore](func(s *DBShape, v []CreditScore) { s.Credits = v })},
 	{"policies", func(s *DBShape) []any { return anySlice(s.Policies) }, setJSON[InsurancePolicy](func(s *DBShape, v []InsurancePolicy) { s.Policies = v })},
 	{"claims", func(s *DBShape) []any { return anySlice(s.Claims) }, setJSON[Claim](func(s *DBShape, v []Claim) { s.Claims = v })},
@@ -99,10 +103,12 @@ func (s *Store) Load(ctx context.Context) (*DBShape, error) {
 			return nil, fmt.Errorf("load %s: %w", coll.table, err)
 		}
 	}
+	normalizeAuthState(state)
 	return state, nil
 }
 
 func (s *Store) Save(ctx context.Context, state *DBShape) error {
+	normalizeAuthState(state)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -162,6 +168,12 @@ func docID(item any) string {
 	switch v := item.(type) {
 	case User:
 		return v.ID
+	case UserRoleProfile:
+		return v.ID
+	case AuthSession:
+		return v.AccessToken
+	case SMSCode:
+		return v.ID
 	case PilotProfile:
 		return v.UserID
 	case OwnerProfile:
@@ -173,6 +185,8 @@ func docID(item any) string {
 	case CapacityUnit:
 		return v.ID
 	case Order:
+		return v.ID
+	case PaymentOrder:
 		return v.ID
 	case CreditScore:
 		return v.UserID

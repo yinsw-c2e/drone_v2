@@ -83,6 +83,13 @@
       }
     },
     {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "个人中心",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages-pilot/home/index",
       "style": {
         "navigationBarTitleText": "飞手驾驶舱",

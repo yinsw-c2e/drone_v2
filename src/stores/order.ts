@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
 import { DispatchStrategy, OrderStatus, PaymentMode } from '@/models';
 import type { MatchCandidate, Order } from '@/models';
-import { advanceOrderRemote, confirmOrderRemote, fetchCandidatesRemote, finishOrderRemote, reviewOrderRemote, submitOrderRemote } from '@/api/backend';
+import { advanceOrderRemote, confirmOrderRemote, fetchCandidatesRemote, finishOrderRemote, reviewOrderRemote, submitOrderRemote, syncPaymentRemote } from '@/api/backend';
 import { advanceOrder, assertOrderPilotOperational, candidatesForOrder, confirmCandidate, createAirspaceRequest, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 import { providers } from '@/api/providers';
 import { matchConfirmAction } from '@/services/action-plans';
+import { requestPlatformPayment, waitForPaymentPaid } from '@/services/payment';
 
 interface OrderState {
   activeOrderId: string;
@@ -86,8 +87,10 @@ export const useOrderStore = defineStore('order', {
       try {
         this.error = '';
         await providers.insurance.quote(order.id, order.cargo.valueCent);
-        await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
-        const remote = await confirmOrderRemote(order.id, candidate.capacityId);
+        const prepay = await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
+        await requestPlatformPayment(prepay);
+        await waitForPaymentPaid(prepay, syncPaymentRemote);
+        const remote = await confirmOrderRemote(order.id, candidate.capacityId, prepay.paymentId);
         if (remote) {
           this.activeOrderId = remote.id;
           this.selectedCapacityId = remote.capacityId ?? candidate.capacityId;

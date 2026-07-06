@@ -222,12 +222,12 @@
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { Role } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { claimAction } from '@/services/action-plans';
 import { arbitrationClaim, createClaim, supplementClaimEvidence } from '@/services/app-flow';
 import { cargoTypeLabel, claimLiabilityLabel, claimStatusLabel, policyStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
-import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
 interface PlanCard {
@@ -264,10 +264,9 @@ interface MaterialOption {
   evidence: string;
 }
 
-const userStore = useUserStore();
 const orderStore = useOrderStore();
 const localeStore = useLocaleStore();
-if (userStore.user.currentRole !== Role.Client) userStore.loginAs(Role.Client);
+ensureRole(Role.Client);
 
 const claimKeyword = ref('');
 const message = ref('');
@@ -722,7 +721,7 @@ function goTasks() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 
 function arbitrateCurrentClaim() {

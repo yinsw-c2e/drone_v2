@@ -6,6 +6,7 @@ type PointLike = Pick<GeoPoint, 'lat' | 'lng'>;
 const REQUEST_TIMEOUT_MS = 4800;
 const AMAP_REGEOCODE_URL = 'https://restapi.amap.com/v3/geocode/regeo';
 const AMAP_PLACE_AROUND_URL = 'https://restapi.amap.com/v5/place/around';
+const AMAP_PLACE_TEXT_URL = 'https://restapi.amap.com/v5/place/text';
 const OSM_REGEOCODE_URL = 'https://nominatim.openstreetmap.org/reverse';
 
 interface OsmAddress {
@@ -100,6 +101,12 @@ interface AmapReversePayload {
 }
 
 interface AmapPlaceAroundPayload {
+  status?: string;
+  info?: string;
+  pois?: AmapPoi | AmapPoi[];
+}
+
+interface AmapPlaceTextPayload {
   status?: string;
   info?: string;
   pois?: AmapPoi | AmapPoi[];
@@ -237,6 +244,38 @@ export async function resolveMapPointByAmap(point: PointLike, locale: Locale): P
   const regeo = key ? await requestJson<AmapReversePayload>(`${AMAP_REGEOCODE_URL}?${buildQuery(regeoParams)}`) : undefined;
   const around = await requestAmapPlaceAround(point, key, aroundProxy);
   return compactAmapLocationResolve(regeo, around, locale);
+}
+
+export async function searchMapPlaces(keyword: string, locale: Locale): Promise<LocationResolveResult> {
+  const value = keyword.trim();
+  if (!value) return { suggestions: [], warnings: [] };
+  const key = envValue('VITE_AMAP_WEB_SERVICE_KEY') || envValue('VITE_AMAP_API_KEY') || envValue('VITE_AMAP_WEB_KEY');
+  const textProxy = envValue('VITE_AMAP_PLACE_TEXT_PROXY_URL') || defaultPlaceTextProxy();
+  if (!key && !textProxy) {
+    return {
+      suggestions: [],
+      warnings: [locale === 'en'
+        ? 'AMap search is not configured. Please configure a Web Service key.'
+        : '高德地点搜索未配置，请配置 Web 服务 Key。'],
+    };
+  }
+  const data = await requestAmapPlaceText(value, key, textProxy);
+  if (!data || data.status === '0') {
+    return {
+      suggestions: [],
+      warnings: [locale === 'en'
+        ? 'Place search failed. Try another keyword.'
+        : '地点搜索失败，请换个关键词重试。'],
+    };
+  }
+  const suggestions = uniqueSuggestions(compactAmapPois(extractAmapPois(data.pois)));
+  return {
+    address: locationSuggestionLabel(suggestions[0], locale),
+    suggestions,
+    warnings: suggestions.length ? [] : [locale === 'en'
+      ? 'No POI matched this keyword.'
+      : '没有搜索到匹配地点。'],
+  };
 }
 
 export async function reverseGeocodeByOsm(point: PointLike, locale: Locale): Promise<string | undefined> {
@@ -420,6 +459,10 @@ function defaultPlaceAroundProxy() {
   return import.meta.env.DEV ? '/__amap/place-around' : '';
 }
 
+function defaultPlaceTextProxy() {
+  return import.meta.env.DEV ? '/__amap/place-text' : '';
+}
+
 async function requestAmapPlaceAround(point: PointLike, key: string, proxyEndpoint: string): Promise<AmapPlaceAroundPayload | undefined> {
   const params = [
     ...(key ? [['key', key]] : []),
@@ -439,6 +482,24 @@ async function requestAmapPlaceAround(point: PointLike, key: string, proxyEndpoi
     ['radius', '600'],
   ]);
   return await requestJson<AmapPlaceAroundPayload>(`${proxyEndpoint}${proxyEndpoint.includes('?') ? '&' : '?'}${query}`);
+}
+
+async function requestAmapPlaceText(keyword: string, key: string, proxyEndpoint: string): Promise<AmapPlaceTextPayload | undefined> {
+  if (proxyEndpoint) {
+    const query = buildQuery([['keywords', keyword]]);
+    return await requestJson<AmapPlaceTextPayload>(`${proxyEndpoint}${proxyEndpoint.includes('?') ? '&' : '?'}${query}`);
+  }
+  if (!key) return undefined;
+  const params = [
+    ['key', key],
+    ['keywords', keyword],
+    ['city_limit', 'false'],
+    ['page_size', '8'],
+    ['page_num', '1'],
+    ['show_fields', 'indoor,navi'],
+    ['output', 'json'],
+  ];
+  return await requestJson<AmapPlaceTextPayload>(`${AMAP_PLACE_TEXT_URL}?${buildQuery(params)}`);
 }
 
 function mergeLocationResolve(primary: LocationResolveResult | undefined, secondary: LocationResolveResult | undefined): LocationResolveResult {

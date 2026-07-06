@@ -9,10 +9,16 @@ export enum LedgerStatus { Pending='pending', Available='available', Paid='paid'
 export enum NotificationType { Dispatch='dispatch', Audit='audit', Settlement='settlement', Alert='alert', System='system' }
 export enum PaymentMode { Prepay='prepay', Escrow='escrow', Credit='credit', Installment='installment' }
 export enum AuditAction { Login='login', Certification='certification', Payment='payment', Airspace='airspace', Insurance='insurance', Order='order', Settlement='settlement', Withdraw='withdraw', Risk='risk' }
+export enum RoleProfileStatus { Active='active', Pending='pending', Rejected='rejected' }
+export type PaymentStatus = 'pending'|'paid'|'failed'|'cancelled';
 
 export interface GeoPoint { lng: number; lat: number; address?: string }
 
-export interface User { id: string; phone: string; nickname: string; avatar?: string; roles: Role[]; currentRole: Role; realNameVerified: boolean; blacklisted?: boolean }
+export interface User { id: string; phone: string; nickname: string; avatar?: string; roles: Role[]; currentRole: Role; authStatus?: AuditStatus | string; realNameVerified: boolean; createdAt?: string; lastLoginAt?: string; disabled?: boolean; blacklisted?: boolean }
+export interface UserRoleProfile { id: string; userId: string; role: Role; status: RoleProfileStatus; certificationId?: string; createdAt: string; updatedAt: string }
+export interface AuthSession { accessToken: string; refreshToken: string; userId: string; expiresAt: string; refreshExpiresAt: string; createdAt: string }
+export interface SMSCode { id: string; phone: string; code: string; sentAt: string; expiresAt: string; attempts: number; consumedAt?: string }
+export interface TokenPair { accessToken: string; refreshToken: string; expiresAt: string }
 export interface PilotStats { orders: number; completed: number; cancelled: number; onTimeRate: number; complaintRate: number; accidentRate: number; violationCount: number; flightHours: number; onlineHours: number; avgRespSec: number; avgStar: number }
 export interface PilotProfile { userId: string; caacLevel: 'VLOS'|'BVLOS'|'instructor'; caacExpire: string; noCrimeProof: AuditStatus; healthProof: AuditStatus; trainingCerts: string[]; online: boolean; location: GeoPoint; stats: PilotStats }
 export interface OwnerStats { deviceUptime: number; faultRate: number; maintainTimely: number; completeRate: number; cancelRate: number; respSec: number; cooperation: number }
@@ -25,20 +31,23 @@ export interface CapacityUnit { id: string; pilotId: string; droneId: string; ow
 
 export interface PriceBreakdown { baseCent: number; mileageCent: number; durationCent: number; weightCent: number; difficultyFactor: number; insuranceCent: number; extraCent: number; totalCent: number }
 export interface OrderEvent { at: string; status: OrderStatus; note?: string; actor?: Role }
-export interface Order { id: string; clientId: string; cargo: { type: CargoType; weightKg: number; volume?: string; valueCent: number; photos: string[]; remark?: string }; from: GeoPoint; to: GeoPoint; distanceKm?: number; timeMode: 'instant'|'scheduled'; scheduledAt?: string; timeRequirement?: string; needs: { tempControl?: boolean; shockProof?: boolean; insurance?: boolean; special?: string }; budgetCent: number; paymentMode?: PaymentMode; invoiceTitle?: string; status: OrderStatus; pilotId?: string; droneId?: string; capacityId?: string; policyId?: string; priceBreakdown?: PriceBreakdown; settlement?: Settlement; events: OrderEvent[]; createdAt: string }
+export interface PaymentSDKParams { provider?: string; appId?: string; timeStamp: string; nonceStr: string; package: string; signType: string; paySign: string; prepayId?: string }
+export interface PaymentPrepayResult { paymentId?: string; tradeNo: string; paidCent: number; mode: PaymentMode; status: PaymentStatus; provider?: string; sdkParams?: PaymentSDKParams }
+export interface PaymentOrder { id: string; orderId: string; amountCent: number; mode: PaymentMode | string; status: PaymentStatus; provider: string; providerTradeNo: string; prepayId?: string; sdkParams?: PaymentSDKParams; createdAt: string; updatedAt: string; paidAt?: string; failedReason?: string }
+export interface Order { id: string; clientId: string; cargo: { type: CargoType; weightKg: number; volume?: string; valueCent: number; photos: string[]; remark?: string }; from: GeoPoint; to: GeoPoint; distanceKm?: number; timeMode: 'instant'|'scheduled'; scheduledAt?: string; timeRequirement?: string; needs: { tempControl?: boolean; shockProof?: boolean; insurance?: boolean; special?: string }; budgetCent: number; paymentMode?: PaymentMode; paymentId?: string; invoiceTitle?: string; status: OrderStatus; pilotId?: string; droneId?: string; capacityId?: string; policyId?: string; priceBreakdown?: PriceBreakdown; settlement?: Settlement; events: OrderEvent[]; createdAt: string }
 export interface MatchCandidate { pilotId: string; droneId: string; capacityId: string; distanceKm: number; etaMin: number; creditScore: number; quoteCent: number; score: number; reasons: string[]; priceBreakdown: PriceBreakdown }
 
 export interface Settlement { orderId: string; totalCent: number; items: { party: 'platform'|'pilot'|'owner'|'insurance'|'tax'; ratio: number; amountCent: number; cycle: 'realtime'|'T+1'|'T+7'|'-'; note: string }[] }
 export interface Wallet { id: string; userId: string; balanceCent: number; pendingCent: number }
 export interface LedgerEntry { id: string; userId: string; orderId?: string; type: LedgerType; amountCent: number; cycle: string; status: LedgerStatus; note?: string; createdAt: string }
 
-export interface CreditScore { userId: string; role: Role; total: number; level: 'A'|'B'|'C'|'D'; dimensions: { name: string; score: number; max: number }[] }
-export interface InsurancePolicy { id: string; orderId: string; cargoType: CargoType; coverages: string[]; insuredAmountCent: number; premiumCent: number; status: 'active'|'claiming'|'closed' }
+export interface CreditScore { userId: string; role: Role; total: number; level: 'A'|'B'|'C'|'D'; dimensions: { name: string; score: number; max: number }[]; provider?: string; providerTraceId?: string; authorizedAt?: string; expiresAt?: string }
+export interface InsurancePolicy { id: string; orderId: string; cargoType: CargoType; coverages: string[]; insuredAmountCent: number; premiumCent: number; status: 'active'|'claiming'|'closed'; provider?: string; providerPolicyNo?: string; providerQuoteId?: string; activatedAt?: string }
 export interface Claim { id: string; policyId: string; orderId: string; reportedAt: string; evidence: string[]; liability?: string; payoutCent?: number; status: 'reported'|'investigating'|'assessed'|'paid'|'arbitration' }
 export type AirspaceStatus = 'draft'|'submitted'|'approved'|'rejected';
-export interface AirspaceRequest { id: string; orderId: string; area: GeoPoint[]; altitudeM: number; window: { start: string; end: string }; status: AirspaceStatus }
+export interface AirspaceRequest { id: string; orderId: string; area: GeoPoint[]; altitudeM: number; window: { start: string; end: string }; status: AirspaceStatus; provider?: string; providerRequestId?: string; approvalNo?: string; validFrom?: string; validTo?: string; routeGeometry?: GeoPoint[] }
 export interface Telemetry { ts: string; pos: GeoPoint; altM: number; speedMs: number; batteryPct: number; heading: number; swingDeg: number }
-export interface TelemetrySnapshot { id: string; orderId: string; frame: Telemetry; source: 'simulator'|'pilot'|'client'|'backend'; updatedAt: string }
+export interface TelemetrySnapshot { id: string; orderId: string; frame: Telemetry; source: 'simulator'|'pilot'|'client'|'backend'|'device'; updatedAt: string; provider?: string; deviceSn?: string }
 export interface Review { id: string; orderId: string; byRole: Role; targetUserId: string; star: 1|2|3|4|5; tags: string[]; text?: string }
 export interface Notification { id: string; userId: string; type: NotificationType; title: string; body: string; read: boolean; createdAt: string; ref?: string }
 export interface CertificationApplication { id: string; userId: string; role: Role; status: AuditStatus; submittedAt: string; reviewedAt?: string; fields: Record<string, string | number | boolean | string[]> }

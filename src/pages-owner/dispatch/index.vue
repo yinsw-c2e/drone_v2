@@ -185,6 +185,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { CapacityStatus, OrderStatus, Role } from '@/models';
 import type { CapacityUnit, Order } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { setCapacityOffline, setCapacityOnline } from '@/services/app-flow';
 import { ownerQualificationIssue } from '@/services/compliance';
 import { demoBatteryPct } from '@/services/device-status';
@@ -227,9 +228,7 @@ interface DispatchCard {
 const userStore = useUserStore();
 const localeStore = useLocaleStore();
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const capacity = computed(() => repo.capacity.where((c) => c.ownerId === user.value.id));
@@ -608,7 +607,7 @@ function goWallet() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 
 function toggleLocale() {

@@ -143,7 +143,7 @@
       <view class="action-panel">
         <view class="action-btn auth" hover-class="tap-press" @click="openAuth">
           <StitchIcon name="verified_user" size="32px" />
-          <text>{{ copy.authAction }}</text>
+          <text>{{ authActionText }}</text>
         </view>
         <view class="action-btn manage" hover-class="tap-press" @click="openDevices">
           <StitchIcon name="settings" size="32px" />
@@ -184,6 +184,7 @@
 import { computed } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, CapacityStatus, OrderStatus, Role } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { ownerQualificationIssue } from '@/services/compliance';
 import { demoBatteryPct } from '@/services/device-status';
 import { droneDisplayName } from '@/services/display-labels';
@@ -247,7 +248,8 @@ const OWNER_HOME_COPY = {
     maintenanceRequired: 'Maintenance Required',
     qualificationBlocked: 'Certification Required',
     maintenanceToast: 'Maintenance required before dispatch',
-    authAction: 'Auth',
+    authAction: 'Supplement Auth',
+    authProfileAction: 'Certification',
     manageDevice: 'Manage Devices',
     manageHint: '(Manage)',
     home: 'Home',
@@ -294,6 +296,7 @@ const OWNER_HOME_COPY = {
     qualificationBlocked: '资质待补',
     maintenanceToast: '派单前需完成维护',
     authAction: '补认证',
+    authProfileAction: '认证资料',
     manageDevice: '管理设备',
     manageHint: '设备台账',
     home: '首页',
@@ -310,9 +313,7 @@ const userStore = useUserStore();
 const localeStore = useLocaleStore();
 const copy = computed(() => OWNER_HOME_COPY[localeStore.locale]);
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const ownerDrones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));
@@ -320,6 +321,12 @@ const ownerCapacity = computed(() => repo.capacity.where((c) => c.ownerId === us
 const ownerProfile = computed(() => repo.owners.find(user.value.id));
 const ownerIssue = computed(() => ownerQualificationIssue(ownerProfile.value, repo.users.find(user.value.id)));
 const ownerStats = computed(() => repo.owners.find(user.value.id)?.stats);
+const deviceCertificationIssue = computed(() => ownerDrones.value.length === 0 || ownerDrones.value.some((drone) => (
+  drone.airworthiness !== AuditStatus.Approved
+  || drone.insured.thirdPartyAmount < PRICE_CONFIG.minThirdParty
+)));
+const needsSupplementAuth = computed(() => Boolean(ownerIssue.value) || ownerProfile.value?.uomVerified === false || deviceCertificationIssue.value);
+const authActionText = computed(() => needsSupplementAuth.value ? copy.value.authAction : copy.value.authProfileAction);
 
 const fleetTotal = computed(() => ownerDrones.value.length);
 const onlineCount = computed(() => ownerIssue.value ? 0 : ownerCapacity.value.filter((c) => c.status === CapacityStatus.Online).length);
@@ -436,7 +443,7 @@ function toggleLocale() {
 }
 
 function openAuth() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/auth/index?role=owner' });
 }
 
 function openDevices() {
@@ -448,7 +455,7 @@ function goTasks() {
 }
 
 function goAssets() {
-  uni.navigateTo({ url: '/pages/credit/index' });
+  uni.navigateTo({ url: '/pages-owner/devices/index' });
 }
 
 function goWallet() {
@@ -456,7 +463,7 @@ function goWallet() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 </script>
 

@@ -10,10 +10,23 @@ services:
         condition: service_healthy
     environment:
       MYSQL_DSN: "${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=true&charset=utf8mb4&loc=Local&multiStatements=true"
+      APP_ENV: production
       PORT: "8088"
       ENABLE_RESET_ENDPOINT: "${ENABLE_RESET_ENDPOINT:-false}"
       ENABLE_SNAPSHOT_WRITE_ENDPOINT: "${ENABLE_SNAPSHOT_WRITE_ENDPOINT:-false}"
-      CORS_ALLOW_ORIGIN: "${CORS_ALLOW_ORIGIN:-*}"
+      CORS_ALLOW_ORIGIN: "${CORS_ALLOW_ORIGIN:?set CORS_ALLOW_ORIGIN to production H5/admin trusted origins}"
+      SMS_PROVIDER: "${SMS_PROVIDER:?set SMS_PROVIDER=http/aliyun/tencent and configure SMS_HTTP_ENDPOINT}"
+      SMS_HTTP_ENDPOINT: "${SMS_HTTP_ENDPOINT:-}"
+      SMS_HTTP_AUTH_HEADER: "${SMS_HTTP_AUTH_HEADER:-}"
+      SMS_HTTP_TEMPLATE_ID: "${SMS_HTTP_TEMPLATE_ID:-}"
+      PROVIDER_BRIDGE_AUTH_TOKEN: "${PROVIDER_BRIDGE_AUTH_TOKEN:?set backend provider bridge ingress token and match VITE_PROVIDER_BRIDGE_TOKEN}"
+      PROVIDER_PAYMENT_PREPAY_URL: "${PROVIDER_PAYMENT_PREPAY_URL:?set payment prepay provider endpoint}"
+      PROVIDER_PAYMENT_NOTIFY_SECRET: "${PROVIDER_PAYMENT_NOTIFY_SECRET:?set payment notify signature secret}"
+      PROVIDER_AIRSPACE_APPLY_URL: "${PROVIDER_AIRSPACE_APPLY_URL:?set airspace provider endpoint}"
+      PROVIDER_INSURANCE_QUOTE_URL: "${PROVIDER_INSURANCE_QUOTE_URL:?set insurance provider endpoint}"
+      PROVIDER_CREDIT_SCORE_URL: "${PROVIDER_CREDIT_SCORE_URL:?set credit provider endpoint}"
+      PROVIDER_DRONE_ARM_URL: "${PROVIDER_DRONE_ARM_URL:?set drone arm provider endpoint}"
+      PROVIDER_HTTP_AUTH_HEADER: "${PROVIDER_HTTP_AUTH_HEADER:-}"
     expose:
       - "8088"
     restart: unless-stopped

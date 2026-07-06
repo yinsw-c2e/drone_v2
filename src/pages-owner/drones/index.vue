@@ -123,6 +123,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, Role } from '@/models';
 import type { Drone } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { droneDisplayName } from '@/services/display-labels';
 import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
@@ -145,9 +146,7 @@ interface DeviceRow {
 
 const userStore = useUserStore();
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const drones = computed(() => repo.drones.where((d) => d.ownerId === user.value.id));

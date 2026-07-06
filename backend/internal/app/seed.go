@@ -8,15 +8,23 @@ import (
 func buildSeed() DBShape {
 	future := "2031-12-31T00:00:00.000Z"
 	ago := func(d time.Duration) string { return time.Now().Add(-d).Format(time.RFC3339Nano) }
+	now := nowISO()
 
 	users := []User{
-		{ID: "u_p1", Phone: "138u_p1", Nickname: "飞手1", Roles: []Role{RolePilot}, CurrentRole: RolePilot, RealNameVerified: true},
-		{ID: "u_p2", Phone: "138u_p2", Nickname: "飞手2", Roles: []Role{RolePilot}, CurrentRole: RolePilot, RealNameVerified: true},
-		{ID: "u_p3", Phone: "138u_p3", Nickname: "飞手3", Roles: []Role{RolePilot}, CurrentRole: RolePilot, RealNameVerified: true},
-		{ID: "u_o1", Phone: "138u_o1", Nickname: "机主1", Roles: []Role{RoleOwner}, CurrentRole: RoleOwner, RealNameVerified: true},
-		{ID: "u_o2", Phone: "138u_o2", Nickname: "机主2", Roles: []Role{RoleOwner}, CurrentRole: RoleOwner, RealNameVerified: true},
-		{ID: "u_c1", Phone: "138u_c1", Nickname: "业主1", Roles: []Role{RoleClient}, CurrentRole: RoleClient, RealNameVerified: true},
-		{ID: "u_c2", Phone: "138u_c2", Nickname: "业主2", Roles: []Role{RoleClient}, CurrentRole: RoleClient, RealNameVerified: true},
+		{ID: "u_p1", Phone: "13800000001", Nickname: "飞手1", Roles: []Role{RolePilot}, CurrentRole: RolePilot, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_p2", Phone: "13800000002", Nickname: "飞手2", Roles: []Role{RolePilot}, CurrentRole: RolePilot, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_p3", Phone: "13800000003", Nickname: "飞手3", Roles: []Role{RolePilot}, CurrentRole: RolePilot, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_o1", Phone: "13800000004", Nickname: "机主1", Roles: []Role{RoleOwner}, CurrentRole: RoleOwner, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_o2", Phone: "13800000005", Nickname: "机主2", Roles: []Role{RoleOwner}, CurrentRole: RoleOwner, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_c1", Phone: "13800000006", Nickname: "业主1", Roles: []Role{RoleClient}, CurrentRole: RoleClient, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_c2", Phone: "13800000007", Nickname: "业主2", Roles: []Role{RoleClient}, CurrentRole: RoleClient, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+		{ID: "u_admin", Phone: "13900000000", Nickname: "运营管理员", Roles: []Role{RoleAdmin}, CurrentRole: RoleAdmin, AuthStatus: string(AuditApproved), RealNameVerified: true, CreatedAt: now},
+	}
+	roleProfiles := make([]UserRoleProfile, 0, len(users))
+	for _, user := range users {
+		for _, role := range user.Roles {
+			roleProfiles = append(roleProfiles, UserRoleProfile{ID: roleProfileID(user.ID, role), UserID: user.ID, Role: role, Status: RoleProfileActive, CreatedAt: now, UpdatedAt: now})
+		}
 	}
 	stats := PilotStats{Orders: 120, Completed: 114, Cancelled: 6, OnTimeRate: .94, ComplaintRate: .03, AccidentRate: 0, Violation: 0, FlightHours: 600, OnlineHours: 320, AvgRespSec: 18, AvgStar: 4.7}
 	pilots := []PilotProfile{
@@ -69,8 +77,8 @@ func buildSeed() DBShape {
 	}
 
 	return DBShape{
-		Users: users, Pilots: pilots, Owners: owners, Clients: clients, Drones: drones, Capacity: capacity,
-		Orders: []Order{}, Credits: []CreditScore{}, Policies: []InsurancePolicy{}, Claims: []Claim{}, Airspace: []AirspaceRequest{}, Telemetry: []TelemetrySnapshot{}, Reviews: []Review{},
+		Users: users, UserRoleProfiles: roleProfiles, AuthSessions: []AuthSession{}, SMSCodes: []SMSCode{}, Pilots: pilots, Owners: owners, Clients: clients, Drones: drones, Capacity: capacity,
+		Orders: []Order{}, PaymentOrders: []PaymentOrder{}, Credits: []CreditScore{}, Policies: []InsurancePolicy{}, Claims: []Claim{}, Airspace: []AirspaceRequest{}, Telemetry: []TelemetrySnapshot{}, Reviews: []Review{},
 		Wallets: wallets, Ledger: ledger, Notifications: []Notification{}, AuthApplications: auth, AuditLogs: []AuditLog{}, SeededAt: fmt.Sprintf("%s", nowISO()),
 	}
 }

@@ -1,0 +1,407 @@
+package app
+
+import (
+	"bytes"
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+)
+
+type ProviderBridge struct {
+	client       *http.Client
+	production   bool
+	endpoints    providerEndpoints
+	authHeader   string
+	headerName   string
+	notifySecret string
+}
+
+type providerEndpoints struct {
+	PaymentPrepay  string
+	AirspaceApply  string
+	InsuranceQuote string
+	CreditScore    string
+	DroneArm       string
+}
+
+type ProviderPaymentPrepayRequest struct {
+	OrderID    string `json:"orderId"`
+	AmountCent int    `json:"amountCent"`
+	Mode       string `json:"mode"`
+	NotifyURL  string `json:"notifyUrl,omitempty"`
+}
+
+type ProviderPaymentPrepayResult struct {
+	TradeNo   string            `json:"tradeNo"`
+	PaidCent  int               `json:"paidCent"`
+	Mode      string            `json:"mode"`
+	Provider  string            `json:"provider,omitempty"`
+	PrepayID  string            `json:"prepayId,omitempty"`
+	SDKParams *PaymentSDKParams `json:"sdkParams,omitempty"`
+}
+
+type PaymentPrepayResponse struct {
+	PaymentID string            `json:"paymentId"`
+	TradeNo   string            `json:"tradeNo"`
+	PaidCent  int               `json:"paidCent"`
+	Mode      string            `json:"mode"`
+	Status    PaymentStatus     `json:"status"`
+	Provider  string            `json:"provider,omitempty"`
+	SDKParams *PaymentSDKParams `json:"sdkParams,omitempty"`
+}
+
+type PaymentNotification struct {
+	PaymentID string `json:"paymentId"`
+	TradeNo   string `json:"tradeNo"`
+	Status    string `json:"status"`
+	PaidCent  int    `json:"paidCent"`
+	Provider  string `json:"provider,omitempty"`
+	PaidAt    string `json:"paidAt,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+type ProviderAirspaceApplyRequest struct {
+	OrderID   string     `json:"orderId"`
+	Area      []GeoPoint `json:"area"`
+	AltitudeM int        `json:"altitudeM"`
+	Window    TimeWindow `json:"window"`
+}
+
+type ProviderAirspaceApplyResult struct {
+	RequestID     string     `json:"requestId"`
+	Status        string     `json:"status"`
+	Provider      string     `json:"provider,omitempty"`
+	ApprovalNo    string     `json:"approvalNo,omitempty"`
+	ValidFrom     string     `json:"validFrom,omitempty"`
+	ValidTo       string     `json:"validTo,omitempty"`
+	RouteGeometry []GeoPoint `json:"routeGeometry,omitempty"`
+}
+
+type ProviderInsuranceQuoteRequest struct {
+	OrderID   string    `json:"orderId"`
+	CargoType CargoType `json:"cargoType"`
+	ValueCent int       `json:"valueCent"`
+}
+
+type ProviderInsuranceQuoteResult struct {
+	QuoteID           string   `json:"quoteId,omitempty"`
+	PolicyNo          string   `json:"policyNo,omitempty"`
+	Provider          string   `json:"provider,omitempty"`
+	PremiumCent       int      `json:"premiumCent"`
+	InsuredAmountCent int      `json:"insuredAmountCent"`
+	Coverages         []string `json:"coverages,omitempty"`
+	ActivatedAt       string   `json:"activatedAt,omitempty"`
+}
+
+type ProviderCreditScoreRequest struct {
+	UserID string `json:"userId"`
+	Role   Role   `json:"role,omitempty"`
+}
+
+type ProviderCreditScoreResult struct {
+	UserID          string `json:"userId"`
+	Score           int    `json:"score"`
+	Provider        string `json:"provider,omitempty"`
+	ProviderTraceID string `json:"providerTraceId,omitempty"`
+	AuthorizedAt    string `json:"authorizedAt,omitempty"`
+	ExpiresAt       string `json:"expiresAt,omitempty"`
+}
+
+type ProviderDroneArmRequest struct {
+	DroneID string `json:"droneId"`
+	OrderID string `json:"orderId,omitempty"`
+}
+
+type ProviderDroneArmResult struct {
+	DroneID  string     `json:"droneId"`
+	Ready    bool       `json:"ready"`
+	Provider string     `json:"provider,omitempty"`
+	DeviceSN string     `json:"deviceSn,omitempty"`
+	Frame    *Telemetry `json:"frame,omitempty"`
+}
+
+type providerEnvelope struct {
+	OK    *bool           `json:"ok,omitempty"`
+	Data  json.RawMessage `json:"data,omitempty"`
+	Error string          `json:"error,omitempty"`
+}
+
+func NewProviderBridgeFromEnv(production bool) *ProviderBridge {
+	headerName := firstEnv("PROVIDER_HTTP_AUTH_HEADER_NAME")
+	if headerName == "" {
+		headerName = "Authorization"
+	}
+	timeout := 8 * time.Second
+	return &ProviderBridge{
+		client:     &http.Client{Timeout: timeout},
+		production: production,
+		endpoints: providerEndpoints{
+			PaymentPrepay:  firstEnv("PROVIDER_PAYMENT_PREPAY_URL"),
+			AirspaceApply:  firstEnv("PROVIDER_AIRSPACE_APPLY_URL"),
+			InsuranceQuote: firstEnv("PROVIDER_INSURANCE_QUOTE_URL"),
+			CreditScore:    firstEnv("PROVIDER_CREDIT_SCORE_URL"),
+			DroneArm:       firstEnv("PROVIDER_DRONE_ARM_URL"),
+		},
+		authHeader:   providerAuthHeader(),
+		headerName:   headerName,
+		notifySecret: firstEnv("PROVIDER_PAYMENT_NOTIFY_SECRET"),
+	}
+}
+
+func ValidateProviderBridgeEnv(production bool) error {
+	if !production {
+		return nil
+	}
+	required := map[string]string{
+		"PROVIDER_BRIDGE_AUTH_TOKEN":     firstEnv("PROVIDER_BRIDGE_AUTH_TOKEN"),
+		"PROVIDER_PAYMENT_PREPAY_URL":    firstEnv("PROVIDER_PAYMENT_PREPAY_URL"),
+		"PROVIDER_PAYMENT_NOTIFY_SECRET": firstEnv("PROVIDER_PAYMENT_NOTIFY_SECRET"),
+		"PROVIDER_AIRSPACE_APPLY_URL":    firstEnv("PROVIDER_AIRSPACE_APPLY_URL"),
+		"PROVIDER_INSURANCE_QUOTE_URL":   firstEnv("PROVIDER_INSURANCE_QUOTE_URL"),
+		"PROVIDER_CREDIT_SCORE_URL":      firstEnv("PROVIDER_CREDIT_SCORE_URL"),
+		"PROVIDER_DRONE_ARM_URL":         firstEnv("PROVIDER_DRONE_ARM_URL"),
+	}
+	missing := make([]string, 0)
+	for key, value := range required {
+		if strings.TrimSpace(value) == "" {
+			missing = append(missing, key)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("生产 provider bridge 配置缺失: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+func providerAuthHeader() string {
+	if value := firstEnv("PROVIDER_HTTP_AUTH_HEADER"); value != "" {
+		return value
+	}
+	token := firstEnv("PROVIDER_HTTP_AUTH_TOKEN")
+	if token == "" {
+		return ""
+	}
+	return "Bearer " + token
+}
+
+func (b *ProviderBridge) PaymentPrepay(ctx context.Context, req ProviderPaymentPrepayRequest) (*ProviderPaymentPrepayResult, error) {
+	var out ProviderPaymentPrepayResult
+	if err := b.postJSON(ctx, "payment prepay", b.endpoints.PaymentPrepay, req, &out); err != nil {
+		return nil, err
+	}
+	if out.PaidCent == 0 {
+		out.PaidCent = req.AmountCent
+	}
+	if out.Mode == "" {
+		out.Mode = req.Mode
+	}
+	if out.Provider == "" {
+		out.Provider = "provider-bridge"
+	}
+	if out.TradeNo == "" {
+		return nil, errors.New("payment provider 未返回 tradeNo")
+	}
+	if b.production && !paymentSDKParamsReady(out.SDKParams) {
+		return nil, errors.New("payment provider 未返回微信/平台支付 SDK 参数")
+	}
+	return &out, nil
+}
+
+func (b *ProviderBridge) AirspaceApply(ctx context.Context, req ProviderAirspaceApplyRequest) (*ProviderAirspaceApplyResult, error) {
+	var out ProviderAirspaceApplyResult
+	if err := b.postJSON(ctx, "airspace apply", b.endpoints.AirspaceApply, req, &out); err != nil {
+		return nil, err
+	}
+	if out.Provider == "" {
+		out.Provider = "provider-bridge"
+	}
+	if out.RequestID == "" {
+		return nil, errors.New("airspace provider 未返回 requestId")
+	}
+	if out.Status == "" {
+		out.Status = "submitted"
+	}
+	return &out, nil
+}
+
+func (b *ProviderBridge) InsuranceQuote(ctx context.Context, req ProviderInsuranceQuoteRequest) (*ProviderInsuranceQuoteResult, error) {
+	var out ProviderInsuranceQuoteResult
+	if err := b.postJSON(ctx, "insurance quote", b.endpoints.InsuranceQuote, req, &out); err != nil {
+		return nil, err
+	}
+	if out.Provider == "" {
+		out.Provider = "provider-bridge"
+	}
+	if out.PremiumCent <= 0 {
+		return nil, errors.New("insurance provider 未返回有效保费")
+	}
+	if out.InsuredAmountCent <= 0 {
+		out.InsuredAmountCent = req.ValueCent
+	}
+	if b.production && out.PolicyNo == "" {
+		return nil, errors.New("insurance provider 未返回保单号")
+	}
+	return &out, nil
+}
+
+func (b *ProviderBridge) CreditScore(ctx context.Context, req ProviderCreditScoreRequest) (*ProviderCreditScoreResult, error) {
+	var out ProviderCreditScoreResult
+	if err := b.postJSON(ctx, "credit score", b.endpoints.CreditScore, req, &out); err != nil {
+		return nil, err
+	}
+	if out.UserID == "" {
+		out.UserID = req.UserID
+	}
+	if out.Provider == "" {
+		out.Provider = "provider-bridge"
+	}
+	if out.Score <= 0 {
+		return nil, errors.New("credit provider 未返回有效分数")
+	}
+	if b.production && out.ProviderTraceID == "" {
+		return nil, errors.New("credit provider 未返回供应商流水号")
+	}
+	return &out, nil
+}
+
+func (b *ProviderBridge) DroneArm(ctx context.Context, req ProviderDroneArmRequest) (*ProviderDroneArmResult, error) {
+	var out ProviderDroneArmResult
+	if err := b.postJSON(ctx, "drone arm", b.endpoints.DroneArm, req, &out); err != nil {
+		return nil, err
+	}
+	if out.DroneID == "" {
+		out.DroneID = req.DroneID
+	}
+	if out.Provider == "" {
+		out.Provider = "provider-bridge"
+	}
+	return &out, nil
+}
+
+func (b *ProviderBridge) postJSON(ctx context.Context, name string, endpoint string, payload any, out any) error {
+	if strings.TrimSpace(endpoint) == "" {
+		return fmt.Errorf("%s provider endpoint 未配置", name)
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if b.authHeader != "" {
+		req.Header.Set(b.headerName, b.authHeader)
+	}
+	client := b.client
+	if client == nil {
+		client = &http.Client{Timeout: 8 * time.Second}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s provider 调用失败: %w", name, err)
+	}
+	defer resp.Body.Close()
+	responseBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("%s provider 调用失败: HTTP %d %s", name, resp.StatusCode, strings.TrimSpace(string(responseBody)))
+	}
+	return decodeProviderResponse(responseBody, out)
+}
+
+func decodeProviderResponse(body []byte, out any) error {
+	var envelope providerEnvelope
+	if err := json.Unmarshal(body, &envelope); err == nil && (envelope.OK != nil || envelope.Data != nil || envelope.Error != "") {
+		if envelope.OK != nil && !*envelope.OK {
+			if envelope.Error == "" {
+				envelope.Error = "provider 返回失败"
+			}
+			return errors.New(envelope.Error)
+		}
+		if len(envelope.Data) > 0 {
+			return json.Unmarshal(envelope.Data, out)
+		}
+	}
+	return json.Unmarshal(body, out)
+}
+
+func paymentSDKParamsReady(params *PaymentSDKParams) bool {
+	return params != nil && params.TimeStamp != "" && params.NonceStr != "" && params.Package != "" && params.SignType != "" && params.PaySign != ""
+}
+
+func (b *ProviderBridge) VerifyPaymentNotification(body []byte, signature string) error {
+	if strings.TrimSpace(b.notifySecret) == "" {
+		return errors.New("PROVIDER_PAYMENT_NOTIFY_SECRET 未配置，不能验签支付回调")
+	}
+	expected := signProviderWebhook(b.notifySecret, body)
+	actual := strings.TrimSpace(strings.TrimPrefix(signature, "sha256="))
+	if !hmac.Equal([]byte(expected), []byte(actual)) {
+		return errors.New("支付回调验签失败")
+	}
+	return nil
+}
+
+func signProviderWebhook(secret string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(body)
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func decodePaymentNotification(body []byte) (*PaymentNotification, error) {
+	var note PaymentNotification
+	if err := json.Unmarshal(body, &note); err != nil {
+		return nil, err
+	}
+	if note.PaymentID == "" && note.TradeNo == "" {
+		return nil, errors.New("支付回调缺少 paymentId 或 tradeNo")
+	}
+	return &note, nil
+}
+
+func applyPaymentNotification(state *DBShape, note *PaymentNotification) (*PaymentOrder, error) {
+	payment := findPaymentOrder(state, note.PaymentID)
+	if payment == nil && note.TradeNo != "" {
+		for i := range state.PaymentOrders {
+			if state.PaymentOrders[i].ProviderTradeNo == note.TradeNo {
+				payment = &state.PaymentOrders[i]
+				break
+			}
+		}
+	}
+	if payment == nil {
+		return nil, errors.New("支付单不存在")
+	}
+	now := nowISO()
+	status := strings.ToLower(strings.TrimSpace(note.Status))
+	switch status {
+	case "paid", "success", "succeeded":
+		payment.Status = PaymentPaid
+		payment.PaidAt = fallback(note.PaidAt, now)
+		payment.FailedReason = ""
+	case "failed", "fail":
+		payment.Status = PaymentFailed
+		payment.FailedReason = fallback(note.Error, "provider reported payment failed")
+	case "cancelled", "canceled", "cancel":
+		payment.Status = PaymentCancelled
+		payment.FailedReason = fallback(note.Error, "provider reported payment cancelled")
+	default:
+		return nil, errors.New("支付回调状态不支持")
+	}
+	if note.PaidCent > 0 {
+		payment.AmountCent = note.PaidCent
+	}
+	if note.Provider != "" {
+		payment.Provider = note.Provider
+	}
+	payment.UpdatedAt = now
+	return payment, nil
+}

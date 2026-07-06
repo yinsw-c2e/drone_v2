@@ -4,7 +4,7 @@
       <view class="icon-btn" hover-class="tap-press" @click="back">
         <StitchIcon name="arrow_back" size="22px" />
       </view>
-      <text class="page-title">{{ copy.pageTitle }}</text>
+      <text class="page-title">{{ authContext.pageTitle }}</text>
       <view class="top-actions">
         <view class="language-switch" hover-class="tap-press" @click="toggleLocale">
           <text>{{ localeStore.toggleLabel }}</text>
@@ -19,7 +19,7 @@
       <view class="progress-card">
         <view class="progress-heading">
           <StitchIcon name="linear_scale" size="16px" />
-          <text>{{ copy.progressHeading }}</text>
+          <text>{{ authContext.progressHeading }}</text>
         </view>
 
         <view class="stepper">
@@ -56,12 +56,13 @@
       <view class="form-card">
         <view class="form-head">
           <StitchIcon name="verified" size="22px" />
-          <text>{{ copy.formTitle }}</text>
+          <text>{{ authContext.formTitle }}</text>
         </view>
 
         <view class="form-body">
+          <text class="form-intro">{{ authContext.description }}</text>
           <view class="section-block">
-            <text class="section-label">{{ copy.identitySection }}</text>
+            <text class="section-label">{{ authContext.identitySection }}</text>
             <view class="field">
               <text class="field-label">{{ copy.realName }} <text class="required">*</text></text>
               <input v-model="form.realName" class="field-input" :placeholder="copy.realNamePlaceholder" />
@@ -83,7 +84,57 @@
             </view>
           </view>
 
-          <view class="section-block cargo-section">
+          <view v-if="role === Role.Pilot" class="section-block">
+            <text class="section-label">{{ copy.pilotSection }}</text>
+            <text class="section-desc">{{ copy.pilotDesc }}</text>
+            <view class="field">
+              <text class="field-label">{{ copy.caacLevel }} <text class="required">*</text></text>
+              <input v-model="form.caacLevel" class="field-input" :placeholder="copy.caacLevelPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.noCrimeProof }} <text class="required">*</text></text>
+              <input v-model="form.noCrimeProof" class="field-input" :placeholder="copy.noCrimeProofPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.healthProof }} <text class="required">*</text></text>
+              <input v-model="form.healthProof" class="field-input" :placeholder="copy.healthProofPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.trainingCerts }} <text class="required">*</text></text>
+              <textarea v-model="form.trainingCerts" class="field-textarea" :placeholder="copy.trainingCertsPlaceholder" />
+            </view>
+          </view>
+
+          <view v-if="role === Role.Owner" class="section-block">
+            <text class="section-label">{{ copy.ownerSection }}</text>
+            <text class="section-desc">{{ copy.ownerDesc }}</text>
+            <view class="field">
+              <text class="field-label">{{ copy.droneModel }} <text class="required">*</text></text>
+              <input v-model="form.droneModel" class="field-input" :placeholder="copy.droneModelPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.droneSn }} <text class="required">*</text></text>
+              <input v-model="form.droneSn" class="field-input mono" :placeholder="copy.droneSnPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.uomNo }} <text class="required">*</text></text>
+              <input v-model="form.uomNo" class="field-input mono" :placeholder="copy.uomNoPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.insuranceAmount }} <text class="required">*</text></text>
+              <input v-model="form.insuranceAmount" class="field-input mono" type="number" :placeholder="copy.insuranceAmountPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.maxPayloadKg }} <text class="required">*</text></text>
+              <input v-model="form.maxPayloadKg" class="field-input mono" type="number" :placeholder="copy.maxPayloadKgPlaceholder" />
+            </view>
+            <view class="field">
+              <text class="field-label">{{ copy.maintenance }} <text class="required">*</text></text>
+              <textarea v-model="form.maintenance" class="field-textarea" :placeholder="copy.maintenancePlaceholder" />
+            </view>
+          </view>
+
+          <view v-if="role === Role.Client" class="section-block cargo-section">
             <text class="section-label">{{ copy.cargoSection }}</text>
             <text class="section-desc">{{ copy.cargoDesc }}</text>
             <view class="chip-wrap">
@@ -100,7 +151,7 @@
             </view>
           </view>
 
-          <view class="consent-box" hover-class="tap-press" @click="creditConsent = !creditConsent">
+          <view v-if="role === Role.Client" class="consent-box" hover-class="tap-press" @click="creditConsent = !creditConsent">
             <view :class="['checkbox', creditConsent ? 'checked' : '']">
               <StitchIcon v-if="creditConsent" name="check" size="18px" />
             </view>
@@ -132,9 +183,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { onLoad, onShow } from '@dcloudio/uni-app';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, Role } from '@/models';
+import type { CertificationApplication } from '@/models';
+import { submitCertificationRemote } from '@/api/backend';
+import { ensureAuthenticated } from '@/services/auth-guard';
 import { latestCertification, submitCertification } from '@/services/app-flow';
 import { auditStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
@@ -148,17 +203,49 @@ interface CargoOption {
 
 const userStore = useUserStore();
 const localeStore = useLocaleStore();
-const role = computed(() => userStore.user.currentRole === Role.Admin ? Role.Client : userStore.user.currentRole);
+ensureAuthenticated();
+const targetRole = ref<Role | ''>('');
+const role = computed(() => targetRole.value || (userStore.user.currentRole === Role.Admin ? Role.Client : userStore.user.currentRole));
+
+onLoad((query) => {
+  applyTargetRole(typeof query?.role === 'string' ? query.role : currentRoleParam());
+});
+
+onShow(() => {
+  syncTargetRoleFromLocation();
+});
+
+onMounted(() => {
+  if (typeof window === 'undefined') return;
+  window.addEventListener('hashchange', syncTargetRoleFromLocation);
+  window.addEventListener('popstate', syncTargetRoleFromLocation);
+  syncTargetRoleFromLocation();
+});
 
 const AUTH_COPY = {
   en: {
     pageTitle: 'Certification',
+    ownerPageTitle: 'Owner Certification',
+    pilotPageTitle: 'Pilot Certification',
+    clientPageTitle: 'Client Entity Certification',
     progressHeading: 'CERTIFICATION PROGRESS',
+    ownerProgressHeading: 'OWNER CERTIFICATION PROGRESS',
+    pilotProgressHeading: 'PILOT CERTIFICATION PROGRESS',
+    clientProgressHeading: 'CLIENT ENTITY CERTIFICATION PROGRESS',
     stepBasic: 'Basic Info',
     stepDocs: 'Credentials',
     stepFace: 'Face Check',
     formTitle: 'Submit Credentials',
+    ownerFormTitle: 'Submit Owner Certification',
+    pilotFormTitle: 'Submit Pilot Certification',
+    clientFormTitle: 'Submit Client Entity Certification',
+    ownerDescription: 'Owner certification verifies the asset owner, aircraft UOM/SN, insurance coverage, and maintenance status before capacity can go online.',
+    pilotDescription: 'Pilot certification verifies operator identity, CAAC level, background proof, health proof, and task training records.',
+    clientDescription: 'Client entity certification verifies the ordering subject, credit authorization, and cargo declaration context.',
     identitySection: 'ENTITY IDENTITY',
+    ownerIdentitySection: 'OWNER IDENTITY',
+    pilotIdentitySection: 'PILOT IDENTITY',
+    clientIdentitySection: 'CLIENT ENTITY',
     realName: 'Legal Name',
     realNamePlaceholder: 'Enter legal name',
     idNo: 'Identity Number',
@@ -172,6 +259,30 @@ const AUTH_COPY = {
     cargoChemical: 'Chemicals',
     cargoMachine: 'Machinery',
     cargoOther: 'Other',
+    pilotSection: 'PILOT QUALIFICATION',
+    pilotDesc: 'Visible pilot fields will be submitted for operations review.',
+    caacLevel: 'CAAC Level',
+    caacLevelPlaceholder: 'BVLOS / VLOS / instructor',
+    noCrimeProof: 'No-crime Proof',
+    noCrimeProofPlaceholder: 'Describe the submitted proof',
+    healthProof: 'Health Proof',
+    healthProofPlaceholder: 'Vision and health check notes',
+    trainingCerts: 'Training Certificates',
+    trainingCertsPlaceholder: 'Separate multiple certificates with commas',
+    ownerSection: 'OWNER DEVICE CERTIFICATION',
+    ownerDesc: 'Visible owner device fields will be submitted and used to create the pending aircraft record.',
+    droneModel: 'Device Model',
+    droneModelPlaceholder: 'Enter aircraft/device model',
+    droneSn: 'Device SN',
+    droneSnPlaceholder: 'Enter device serial number',
+    uomNo: 'UOM Number',
+    uomNoPlaceholder: 'Enter UOM registration number',
+    insuranceAmount: 'Third-party Liability Coverage',
+    insuranceAmountPlaceholder: 'Amount in CNY',
+    maxPayloadKg: 'Max Payload (kg)',
+    maxPayloadKgPlaceholder: 'Enter max payload',
+    maintenance: 'Maintenance Notes',
+    maintenancePlaceholder: 'Describe latest maintenance status',
     consentTitle: 'Credit Inquiry Consent',
     consentText: 'I authorize SkyLink Logistics to query my personal credit report, traffic violation records, and qualification validity for certification review under applicable laws.',
     consentLink: 'Personal Information Inquiry Authorization',
@@ -199,12 +310,27 @@ const AUTH_COPY = {
   },
   zh: {
     pageTitle: '认证中心',
+    ownerPageTitle: '机主认证',
+    pilotPageTitle: '飞手认证',
+    clientPageTitle: '业主主体认证',
     progressHeading: '认证进度',
+    ownerProgressHeading: '机主认证进度',
+    pilotProgressHeading: '飞手认证进度',
+    clientProgressHeading: '业主主体认证进度',
     stepBasic: '基础信息',
     stepDocs: '资质材料',
     stepFace: '人脸识别',
     formTitle: '提交资质材料',
+    ownerFormTitle: '提交机主认证资料',
+    pilotFormTitle: '提交飞手认证资料',
+    clientFormTitle: '提交业主主体认证资料',
+    ownerDescription: '机主认证需要核验机主主体、设备型号、设备 SN/UOM、三责险额度与维护说明，审核通过后设备才能投放运力。',
+    pilotDescription: '飞手认证需要核验飞手身份、CAAC 等级、无犯罪记录、健康证明与训练证书。',
+    clientDescription: '业主主体认证需要核验下单主体、信用授权与承运品类声明。',
     identitySection: '主体身份',
+    ownerIdentitySection: '机主主体身份',
+    pilotIdentitySection: '飞手身份',
+    clientIdentitySection: '业主/主体认证',
     realName: '真实姓名',
     realNamePlaceholder: '输入姓名',
     idNo: '身份证号',
@@ -218,6 +344,30 @@ const AUTH_COPY = {
     cargoChemical: '化工品',
     cargoMachine: '机械设备',
     cargoOther: '其他',
+    pilotSection: '飞手资质字段',
+    pilotDesc: '以下飞手认证字段会随申请提交给运营审核。',
+    caacLevel: 'CAAC 等级',
+    caacLevelPlaceholder: '例如 BVLOS / VLOS / 教员',
+    noCrimeProof: '无犯罪记录证明',
+    noCrimeProofPlaceholder: '填写已提交的证明说明',
+    healthProof: '健康证明',
+    healthProofPlaceholder: '填写视力/健康检查说明',
+    trainingCerts: '训练证书',
+    trainingCertsPlaceholder: '多个证书用逗号或顿号分隔',
+    ownerSection: '机主设备认证字段',
+    ownerDesc: '以下机主认证字段会用于生成待审设备记录，并随申请提交给运营审核。',
+    droneModel: '设备型号',
+    droneModelPlaceholder: '输入无人机/吊运设备型号',
+    droneSn: '设备 SN',
+    droneSnPlaceholder: '输入设备序列号',
+    uomNo: '设备 UOM 编号',
+    uomNoPlaceholder: '输入实名登记/UOM 编号',
+    insuranceAmount: '三责险额度',
+    insuranceAmountPlaceholder: '输入保额，单位元',
+    maxPayloadKg: '设备最大载重(kg)',
+    maxPayloadKgPlaceholder: '输入最大载重',
+    maintenance: '维护说明',
+    maintenancePlaceholder: '填写最近维护、例检或适航说明',
     consentTitle: '信用查询授权',
     consentText: '本人同意并授权天链物流根据相关法律法规，查询本人的个人信用报告、交通违章记录及从业资格有效性，用于认证审核。',
     consentLink: '《个人信息查询授权书》',
@@ -247,6 +397,33 @@ const AUTH_COPY = {
 
 const copy = computed(() => AUTH_COPY[localeStore.locale]);
 const roleTitle = computed(() => role.value === Role.Pilot ? copy.value.rolePilot : role.value === Role.Owner ? copy.value.roleOwner : copy.value.roleClient);
+const authContext = computed(() => {
+  if (role.value === Role.Owner) {
+    return {
+      pageTitle: copy.value.ownerPageTitle,
+      progressHeading: copy.value.ownerProgressHeading,
+      formTitle: copy.value.ownerFormTitle,
+      description: copy.value.ownerDescription,
+      identitySection: copy.value.ownerIdentitySection,
+    };
+  }
+  if (role.value === Role.Pilot) {
+    return {
+      pageTitle: copy.value.pilotPageTitle,
+      progressHeading: copy.value.pilotProgressHeading,
+      formTitle: copy.value.pilotFormTitle,
+      description: copy.value.pilotDescription,
+      identitySection: copy.value.pilotIdentitySection,
+    };
+  }
+  return {
+    pageTitle: copy.value.clientPageTitle,
+    progressHeading: copy.value.clientProgressHeading,
+    formTitle: copy.value.clientFormTitle,
+    description: copy.value.clientDescription,
+    identitySection: copy.value.clientIdentitySection,
+  };
+});
 const form = reactive({
   realName: '张建国',
   idNo: '110105********1234',
@@ -258,6 +435,7 @@ const form = reactive({
   droneSn: 'SN-NEW',
   uomNo: 'UOM-2026-演示',
   insuranceAmount: '8000000',
+  maxPayloadKg: '30',
   maintenance: '月度例检正常',
 });
 
@@ -295,11 +473,29 @@ const feedback = ref('');
 const feedbackTone = ref<'success' | 'danger' | 'warning'>('success');
 const primaryText = computed(() => latest.value?.status === AuditStatus.Pending ? copy.value.update : copy.value.submit);
 let lastSubmitAt = 0;
+let feedbackTimer: ReturnType<typeof setTimeout> | undefined;
 
 function toggleCargo(key: string) {
   selectedCargo.value = selectedCargo.value.includes(key)
     ? selectedCargo.value.filter((item) => item !== key)
     : [...selectedCargo.value, key];
+}
+
+function applyTargetRole(requested: string) {
+  if (requested === Role.Client || requested === Role.Pilot || requested === Role.Owner) {
+    targetRole.value = requested;
+  }
+}
+
+function currentRoleParam() {
+  if (typeof window === 'undefined') return '';
+  const hashQuery = window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '';
+  const searchQuery = window.location.search.startsWith('?') ? window.location.search.slice(1) : '';
+  return new URLSearchParams(hashQuery || searchQuery).get('role') ?? '';
+}
+
+function syncTargetRoleFromLocation() {
+  applyTargetRole(currentRoleParam());
 }
 
 function chooseUpload(key: 'portrait' | 'emblem') {
@@ -337,27 +533,65 @@ async function submitCertificationForm() {
   submitting.value = true;
   feedback.value = '';
   try {
-    submitCertification(role.value, userStore.user.id, {
-      ...form,
-      idNo: form.idNo,
-      realName: form.realName,
-      creditConsent: creditConsent.value ? copy.value.creditApproved : copy.value.creditPending,
-      cargoDeclaration: selectedCargo.value,
-      trainingCerts: form.trainingCerts.split(',').map((item) => item.trim()).filter(Boolean),
-      insuranceAmount: Number(form.insuranceAmount),
-      idPhotos: [uploads.portrait, uploads.emblem].filter(Boolean),
-    });
+    const fields = certificationFields();
+    const remote = await submitCertificationRemote(role.value, userStore.user.id, fields);
+    if (!remote) submitCertification(role.value, userStore.user.id, fields);
     refreshTick.value += 1;
-    feedbackTone.value = 'success';
-    feedback.value = `${roleTitle.value}${copy.value.successSuffix}`;
+    showTransientFeedback(`${roleTitle.value}${copy.value.successSuffix}`, 'success');
     uni.showToast({ title: copy.value.successToast, icon: 'none' });
   } catch (e) {
-    feedbackTone.value = 'danger';
-    feedback.value = e instanceof Error ? e.message : copy.value.submitError;
+    showTransientFeedback(e instanceof Error ? e.message : copy.value.submitError, 'danger');
     uni.showToast({ title: copy.value.submitFailedToast, icon: 'none' });
   } finally {
     submitting.value = false;
   }
+}
+
+function certificationFields(): CertificationApplication['fields'] {
+  const base: CertificationApplication['fields'] = {
+    realName: form.realName.trim(),
+    idNo: form.idNo.trim(),
+    idPhotos: [uploads.portrait, uploads.emblem].filter(Boolean),
+  };
+  if (role.value === Role.Owner) {
+    return {
+      ...base,
+      droneModel: form.droneModel.trim(),
+      droneSn: form.droneSn.trim(),
+      uomNo: form.uomNo.trim(),
+      insuranceAmount: Number(form.insuranceAmount),
+      maxPayloadKg: Number(form.maxPayloadKg),
+      maintenance: form.maintenance.trim(),
+    };
+  }
+  if (role.value === Role.Pilot) {
+    return {
+      ...base,
+      caacLevel: form.caacLevel.trim(),
+      noCrimeProof: form.noCrimeProof.trim(),
+      healthProof: form.healthProof.trim(),
+      trainingCerts: parseList(form.trainingCerts),
+    };
+  }
+  return {
+    ...base,
+    creditConsent: creditConsent.value,
+    cargoDeclaration: selectedCargo.value,
+  };
+}
+
+function parseList(value: string) {
+  return value.split(/[,，、\n]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function showTransientFeedback(message: string, tone: 'success' | 'danger' | 'warning') {
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+  feedbackTone.value = tone;
+  feedback.value = message;
+  feedbackTimer = setTimeout(() => {
+    feedback.value = '';
+    feedbackTimer = undefined;
+  }, 3600);
 }
 
 function back() {
@@ -365,9 +599,16 @@ function back() {
 }
 
 function switchIdentity() {
-  userStore.logout();
-  uni.reLaunch({ url: '/pages/login/index' });
+  uni.redirectTo({ url: '/pages/profile/index' });
 }
+
+onBeforeUnmount(() => {
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('hashchange', syncTargetRoleFromLocation);
+    window.removeEventListener('popstate', syncTargetRoleFromLocation);
+  }
+});
 </script>
 
 <style lang="scss" scoped>
@@ -478,7 +719,7 @@ function switchIdentity() {
 }
 
 .progress-card {
-  height: 150px;
+  min-height: 150px;
   padding: 20px 20px 18px;
   border-radius: 8px;
   border: 2px solid $line-strong;
@@ -610,6 +851,18 @@ function switchIdentity() {
   padding: 22px 20px 24px;
 }
 
+.form-intro {
+  display: block;
+  margin-bottom: 22px;
+  padding: 13px 14px;
+  border: 2px solid rgba(0, 242, 255, .24);
+  border-radius: 5px;
+  color: $blue-50;
+  background: rgba(0, 242, 255, .08);
+  font-size: $fs-h3;
+  line-height: 24px;
+}
+
 .section-block + .section-block {
   margin-top: 28px;
 }
@@ -662,6 +915,21 @@ function switchIdentity() {
   letter-spacing: 1px;
 }
 
+.field-textarea {
+  width: 100%;
+  min-height: 92px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 2px solid $line-strong;
+  border-radius: 0;
+  background: $bg-page;
+  color: $blue-50;
+  font-size: $fs-h3;
+  line-height: 24px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
 .upload-grid {
   margin-top: 22px;
   display: grid;
@@ -701,14 +969,16 @@ function switchIdentity() {
 }
 
 .audit-status {
-  margin-top: 14px;
-  padding: 8px 12px;
+  margin-top: 18px;
+  padding: 10px 12px;
   border-radius: 5px;
   border: 1px solid $line-strong;
+  background: rgba(11, 14, 20, .56);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  font-size: $fs-h3;
+  font-size: $fs-sm;
+  line-height: 18px;
 }
 
 .audit-status.pending {

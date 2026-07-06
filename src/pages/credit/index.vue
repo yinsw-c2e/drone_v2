@@ -227,7 +227,7 @@ function goWallet() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 </script>
 
@@ -359,7 +359,7 @@ function goProfile() {
   border: 2rpx solid rgba(58, 73, 75, .75);
   background:
     radial-gradient(90% 60% at 50% 0%, rgba(0, 242, 255, .16), transparent 68%),
-    linear-gradient(160deg, #141822 0%, #0B0E14 100%);
+    $grad-sky-soft;
   overflow: hidden;
   display: flex;
   flex-direction: column;

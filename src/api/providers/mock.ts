@@ -4,10 +4,10 @@ import type { Providers } from './index';
 
 const wait = async <T>(value: T, ms = 120): Promise<T> => new Promise((resolve) => setTimeout(() => resolve(value), ms));
 
-export const providers: Providers = {
+export const mockProviders: Providers = {
   payment: {
     prepay(orderId, amountCent, mode) {
-      return wait({ tradeNo: genId('pay'), paidCent: amountCent, mode });
+      return wait({ paymentId: genId('pay'), tradeNo: genId('pay'), paidCent: amountCent, mode, status: 'paid', provider: 'local-mock' });
     },
   },
   airspace: {
@@ -32,3 +32,5 @@ export const providers: Providers = {
     },
   },
 };
+
+export const providers = mockProviders;

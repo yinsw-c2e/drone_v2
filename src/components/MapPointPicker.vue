@@ -21,6 +21,41 @@
         </view>
       </view>
 
+      <view class="place-search">
+        <view class="search-box">
+          <StitchIcon name="search" size="28rpx" />
+          <input
+            v-model="searchKeyword"
+            class="search-input"
+            confirm-type="search"
+            :placeholder="searchPlaceholder"
+            @confirm="runSearch"
+          />
+          <view :class="['search-action', { disabled: searchActionDisabled }]" hover-class="tap-press" @tap.stop="runSearch">
+            <text>{{ searchActionText }}</text>
+          </view>
+        </view>
+        <view v-if="searchLoading || searchError || searchResults.length" class="search-results">
+          <text v-if="searchLoading" class="search-status">{{ searchLoadingText }}</text>
+          <text v-else-if="searchError" class="search-status error">{{ searchError }}</text>
+          <view v-else class="suggestion-list search-list">
+            <view
+              v-for="item in searchResults"
+              :key="`search-${suggestionKey(item)}`"
+              :class="['suggestion-row', { active: isSuggestionActive(item) }]"
+              hover-class="tap-press"
+              @tap.stop="selectSearchResult(item)"
+            >
+              <view class="suggestion-pin"><StitchIcon name="location_on" size="24rpx" /></view>
+              <view class="suggestion-copy">
+                <text>{{ item.name }}</text>
+                <text>{{ suggestionMeta(item) }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <view
         class="map-viewport"
         :class="{ 'native-amap-mode': nativeAmapActive }"
@@ -107,7 +142,7 @@
 import { computed, getCurrentInstance, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import type { GeoPoint } from '@/models';
-import { coordinateAddress, isCoordinateAddress, isGenericMapAddress, locationSuggestionLabel, resolveMapPoint } from '@/services/geocoding';
+import { coordinateAddress, isCoordinateAddress, isGenericMapAddress, locationSuggestionLabel, resolveMapPoint, searchMapPlaces } from '@/services/geocoding';
 import type { LocationSuggestion } from '@/services/geocoding';
 
 const TILE_SIZE = 256;
@@ -168,6 +203,11 @@ const pendingAddress = ref<Promise<string | undefined> | undefined>();
 const suggestions = ref<LocationSuggestion[]>([]);
 const warnings = ref<string[]>([]);
 const selectionError = ref('');
+const searchKeyword = ref('');
+const searchResults = ref<LocationSuggestion[]>([]);
+const searchLoading = ref(false);
+const searchError = ref('');
+const searchSeq = ref(0);
 const panState = reactive({
   active: false,
   startX: 0,
@@ -187,6 +227,7 @@ let amapMarker: any;
 let amapResolveTimer: ReturnType<typeof setTimeout> | undefined;
 let amapInitSeq = 0;
 let suppressNativeMapEventsUntil = 0;
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 const coordText = computed(() => `LNG ${selected.lng.toFixed(5)} / LAT ${selected.lat.toFixed(5)}`);
 const addressText = computed(() => selected.address || coordinateAddress(selected, props.locale));
@@ -194,6 +235,12 @@ const resolveStatusText = computed(() => props.locale === 'en' ? 'Resolving addr
 const confirmDisabled = computed(() => resolvingAddress.value || !hasReadableAddress(addressText.value));
 const nativeAmapActive = computed(() => Boolean(amapWebKey()) && !amapState.error && isBrowserRuntime());
 const amapLoadingText = computed(() => props.locale === 'en' ? 'Loading AMap...' : '正在加载高德地图...');
+const searchPlaceholder = computed(() => props.locale === 'en' ? 'Search places, e.g. Wangjing SOHO' : '搜索地点，例如：望京SOHO');
+const searchActionText = computed(() => searchLoading.value
+  ? (props.locale === 'en' ? 'Searching' : '搜索中')
+  : (props.locale === 'en' ? 'Search' : '搜索'));
+const searchLoadingText = computed(() => props.locale === 'en' ? 'Searching AMap POI...' : '正在搜索高德 POI...');
+const searchActionDisabled = computed(() => searchLoading.value || searchKeyword.value.trim().length < 2);
 
 const tiles = computed(() => {
   const center = project(selected, zoom.value);
@@ -246,6 +293,7 @@ watch(() => props.visible, (visible) => {
   suggestions.value = [];
   warnings.value = [];
   selectionError.value = '';
+  resetSearch();
   measureViewport();
   void ensureNativeAmap();
   void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
@@ -259,8 +307,25 @@ watch(() => props.initial, (point) => {
   suggestions.value = [];
   warnings.value = [];
   selectionError.value = '';
+  resetSearch();
   syncNativeAmapPosition();
   void resolveSelectedAddress({ lng: selected.lng, lat: selected.lat });
+});
+
+watch(searchKeyword, (value) => {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = undefined;
+  }
+  searchError.value = '';
+  if (value.trim().length < 2) {
+    searchResults.value = [];
+    searchLoading.value = false;
+    return;
+  }
+  searchTimer = setTimeout(() => {
+    void runSearch();
+  }, 420);
 });
 
 function setZoom(delta: number) {
@@ -400,6 +465,11 @@ async function selectSuggestion(item: LocationSuggestion) {
   await confirm();
 }
 
+function selectSearchResult(item: LocationSuggestion) {
+  applySuggestion(item);
+  warnings.value = [];
+}
+
 function applySuggestion(item: LocationSuggestion) {
   const point = item.entrance ?? item.location;
   if (point) {
@@ -427,6 +497,32 @@ function suggestionMeta(item: LocationSuggestion) {
 
 function isSuggestionActive(item: LocationSuggestion) {
   return locationSuggestionLabel(item, props.locale) === selected.address;
+}
+
+async function runSearch() {
+  const keyword = searchKeyword.value.trim();
+  if (searchLoading.value || keyword.length < 2) return;
+  const seq = searchSeq.value + 1;
+  searchSeq.value = seq;
+  searchLoading.value = true;
+  searchError.value = '';
+  const result = await searchMapPlaces(keyword, props.locale);
+  if (searchSeq.value !== seq) return;
+  searchResults.value = result.suggestions;
+  searchError.value = result.warnings[0] ?? '';
+  searchLoading.value = false;
+}
+
+function resetSearch() {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = undefined;
+  }
+  searchSeq.value += 1;
+  searchKeyword.value = '';
+  searchResults.value = [];
+  searchError.value = '';
+  searchLoading.value = false;
 }
 
 function hasReadableAddress(address: string | undefined) {
@@ -689,6 +785,7 @@ function roundCoord(value: number) {
 }
 
 onBeforeUnmount(() => {
+  resetSearch();
   destroyNativeAmap();
 });
 </script>
@@ -822,6 +919,83 @@ onBeforeUnmount(() => {
   line-height: 1.3;
 }
 
+.place-search {
+  padding: $sp-2 $sp-3;
+  border-top: 2rpx solid $line-strong;
+  background: $bg-card;
+}
+
+.search-box {
+  min-height: 72rpx;
+  display: flex;
+  align-items: center;
+  gap: $sp-2;
+  padding: 0 12rpx;
+  border: 2rpx solid $line-strong;
+  border-radius: $r-sm;
+  background: $bg-sunken;
+  box-sizing: border-box;
+}
+
+.search-box .stitch-icon {
+  flex: 0 0 auto;
+  color: $color-primary;
+}
+
+.search-input {
+  min-width: 0;
+  flex: 1;
+  height: 64rpx;
+  color: $blue-50;
+  font-size: $fs-body;
+  line-height: 64rpx;
+}
+
+.search-action {
+  min-width: 96rpx;
+  height: 48rpx;
+  padding: 0 16rpx;
+  border-radius: $r-sm;
+  color: $on-primary;
+  background: $color-primary;
+  font-size: $fs-cap;
+  line-height: 48rpx;
+  font-weight: $fw-bold;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.search-action.disabled {
+  opacity: .45;
+}
+
+.search-results {
+  max-height: 260rpx;
+  overflow-y: auto;
+  margin-top: $sp-2;
+}
+
+.search-status {
+  display: block;
+  padding: 14rpx 16rpx;
+  border: 2rpx solid $line-strong;
+  border-radius: $r-sm;
+  color: $ink-700;
+  background: $bg-sunken;
+  font-size: $fs-cap;
+  line-height: 1.35;
+}
+
+.search-status.error {
+  color: $warning-ink;
+  border-color: $warning-line;
+  background: $warning-bg;
+}
+
+.search-list {
+  gap: $sp-1;
+}
+
 .zoom-controls {
   gap: $sp-1;
   flex: 0 0 auto;
@@ -845,7 +1019,7 @@ onBeforeUnmount(() => {
 }
 
 .native-amap-mode {
-  background: #f5f7fa;
+  background: $ink-900;
   cursor: default;
   touch-action: auto;
   user-select: auto;

@@ -14,6 +14,8 @@
     "lint": "eslint \"src/**/*.{ts,vue}\" --max-warnings=0",
     "test": "vitest run --coverage",
     "build:mp-weixin": "uni build -p mp-weixin",
+    "preflight:release": "node scripts/preflight-release.mjs",
+    "build:mp-weixin:release": "pnpm preflight:release && uni build -p mp-weixin",
     "check:integrity": "node scripts/check-integrity.mjs",
     "verify": "pnpm install && pnpm type-check && pnpm lint && pnpm test && pnpm build:mp-weixin && pnpm check:integrity"
   },

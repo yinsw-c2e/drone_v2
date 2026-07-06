@@ -147,18 +147,22 @@ import { computed, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import LiveRouteMap from '@/components/LiveRouteMap.vue';
 import StitchIcon from '@/components/StitchIcon.vue';
-import { OrderStatus } from '@/models';
+import { OrderStatus, Role } from '@/models';
 import type { GeoPoint, Telemetry } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { latestOrderFrom } from '@/services/app-flow';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
 import { useTelemetryStore } from '@/stores/telemetry';
+import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 import { displayTelemetryAlert } from '@/utils/telemetry-alerts';
 
 const orderStore = useOrderStore();
 const telemetryStore = useTelemetryStore();
 const localeStore = useLocaleStore();
+const userStore = useUserStore();
+ensureRole(Role.Client);
 const message = ref('');
 const routeOrderId = ref('');
 const altitudeBars = [18, 27, 45, 64, 88, 72];
@@ -294,7 +298,9 @@ function back() {
 }
 
 function switchIdentity() {
-  uni.reLaunch({ url: '/pages/login/index' });
+  void userStore.logout().finally(() => {
+    uni.reLaunch({ url: '/pages/login/index' });
+  });
 }
 
 async function startTelemetry() {

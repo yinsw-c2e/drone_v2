@@ -185,6 +185,7 @@ import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditAction, OrderStatus, Role } from '@/models';
 import type { GeoPoint, Order, Telemetry } from '@/models';
 import { canTriggerEmergency, emergencyClosedReason } from '@/services/action-plans';
+import { ensureRole } from '@/services/auth-guard';
 import { orderRequiresPilotQualification, pilotQualificationIssue } from '@/services/compliance';
 import { demoBatteryPct } from '@/services/device-status';
 import { orderStatusLabel } from '@/services/display-labels';
@@ -209,9 +210,7 @@ const feedback = ref('');
 const showEmergencySheet = ref(false);
 const showEventsSheet = ref(false);
 
-if (userStore.user.currentRole !== Role.Pilot) {
-  userStore.loginAs(Role.Pilot);
-}
+ensureRole(Role.Pilot);
 
 const TASK_COPY = {
   en: {

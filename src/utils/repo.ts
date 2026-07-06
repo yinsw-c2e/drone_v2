@@ -1,5 +1,5 @@
 import { db, DBShape } from './db';
-import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, CreditScore, InsurancePolicy, Claim, AirspaceRequest, TelemetrySnapshot, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
+import type { User, UserRoleProfile, AuthSession, SMSCode, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, PaymentOrder, CreditScore, InsurancePolicy, Claim, AirspaceRequest, TelemetrySnapshot, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
 function makeRepo<T extends object>(coll: keyof DBShape, key: keyof T = 'id' as keyof T) {
   const arr = () => db[coll] as unknown as T[];
   const idOf = (x: T) => (x as any)[key];
@@ -14,12 +14,16 @@ function makeRepo<T extends object>(coll: keyof DBShape, key: keyof T = 'id' as 
 }
 export const repo = {
   users: makeRepo<User>('users'),
+  userRoleProfiles: makeRepo<UserRoleProfile>('userRoleProfiles'),
+  authSessions: makeRepo<AuthSession>('authSessions', 'accessToken'),
+  smsCodes: makeRepo<SMSCode>('smsCodes'),
   pilots: makeRepo<PilotProfile>('pilots', 'userId'),
   owners: makeRepo<OwnerProfile>('owners', 'userId'),
   clients: makeRepo<ClientProfile>('clients', 'userId'),
   drones: makeRepo<Drone>('drones'),
   capacity: makeRepo<CapacityUnit>('capacity'),
   orders: makeRepo<Order>('orders'),
+  paymentOrders: makeRepo<PaymentOrder>('paymentOrders'),
   credits: makeRepo<CreditScore>('credits', 'userId'),
   policies: makeRepo<InsurancePolicy>('policies'),
   claims: makeRepo<Claim>('claims'),

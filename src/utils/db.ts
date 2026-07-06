@@ -1,9 +1,11 @@
 import { reactive, watch } from 'vue';
-import type { User, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, CreditScore, InsurancePolicy, Claim, AirspaceRequest, TelemetrySnapshot, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
+import { AuditStatus, RoleProfileStatus } from '@/models';
+import type { User, UserRoleProfile, AuthSession, SMSCode, PilotProfile, OwnerProfile, ClientProfile, Drone, CapacityUnit, Order, PaymentOrder, CreditScore, InsurancePolicy, Claim, AirspaceRequest, TelemetrySnapshot, Review, Wallet, LedgerEntry, Notification, CertificationApplication, AuditLog } from '@/models';
 import { buildSeed, buildSeedCertQueue, buildSeedLedger, buildSeedWallets } from '@/mock/seed';
 export interface DBShape {
-  users: User[]; pilots: PilotProfile[]; owners: OwnerProfile[]; clients: ClientProfile[];
-  drones: Drone[]; capacity: CapacityUnit[]; orders: Order[]; credits: CreditScore[];
+  users: User[]; userRoleProfiles: UserRoleProfile[]; authSessions: AuthSession[]; smsCodes: SMSCode[];
+  pilots: PilotProfile[]; owners: OwnerProfile[]; clients: ClientProfile[];
+  drones: Drone[]; capacity: CapacityUnit[]; orders: Order[]; paymentOrders: PaymentOrder[]; credits: CreditScore[];
   policies: InsurancePolicy[]; claims: Claim[]; airspace: AirspaceRequest[]; telemetry: TelemetrySnapshot[]; reviews: Review[];
   wallets: Wallet[]; ledger: LedgerEntry[]; notifications: Notification[]; authApplications: CertificationApplication[]; auditLogs: AuditLog[]; _seededAt: string;
 }
@@ -19,16 +21,30 @@ function load(): DBShape | null {
 }
 function migrate(input: DBShape | null): DBShape {
   const next = input ?? buildSeed();
+  next.userRoleProfiles ??= [];
+  next.authSessions ??= [];
+  next.smsCodes ??= [];
   next.authApplications ??= [];
   next.auditLogs ??= [];
   next.telemetry ??= [];
+  next.paymentOrders ??= [];
   // 旧存档回填演示初始数据：仅在对应集合为空时注入，避免覆盖已产生的业务数据
   if (!next.wallets?.length) {
     next.wallets = buildSeedWallets();
     next.ledger = next.ledger?.length ? next.ledger : buildSeedLedger();
   }
   if (!next.authApplications.length) next.authApplications = buildSeedCertQueue();
-  next.users?.forEach((u) => { u.blacklisted ??= false; });
+  next.users?.forEach((u) => {
+    u.blacklisted ??= false;
+    u.disabled ??= false;
+    u.createdAt ??= next._seededAt || new Date().toISOString();
+    u.authStatus ??= u.realNameVerified ? AuditStatus.Approved : AuditStatus.Pending;
+    u.roles?.forEach((role) => {
+      if (!next.userRoleProfiles.some((profile) => profile.userId === u.id && profile.role === role)) {
+        next.userRoleProfiles.push({ id: `${u.id}_${role}`, userId: u.id, role, status: RoleProfileStatus.Active, createdAt: u.createdAt!, updatedAt: u.createdAt! });
+      }
+    });
+  });
   next.orders?.forEach((o) => {
     o.paymentMode ??= 'escrow' as any;
     o.timeRequirement ??= '';

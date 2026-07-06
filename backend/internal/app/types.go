@@ -11,6 +11,8 @@ type NotificationType string
 type LedgerStatus string
 type LedgerType string
 type AuditAction string
+type RoleProfileStatus string
+type PaymentStatus string
 
 const (
 	RoleClient Role = "client"
@@ -53,12 +55,22 @@ const (
 	LedgerPending  LedgerStatus = "pending"
 	LedgerAvail    LedgerStatus = "available"
 
+	RoleProfileActive   RoleProfileStatus = "active"
+	RoleProfilePending  RoleProfileStatus = "pending"
+	RoleProfileRejected RoleProfileStatus = "rejected"
+
+	ActionLogin         AuditAction = "login"
 	ActionCertification AuditAction = "certification"
 	ActionPayment       AuditAction = "payment"
 	ActionAirspace      AuditAction = "airspace"
 	ActionOrder         AuditAction = "order"
 	ActionInsurance     AuditAction = "insurance"
 	ActionRisk          AuditAction = "risk"
+
+	PaymentPending   PaymentStatus = "pending"
+	PaymentPaid      PaymentStatus = "paid"
+	PaymentFailed    PaymentStatus = "failed"
+	PaymentCancelled PaymentStatus = "cancelled"
 )
 
 type GeoPoint struct {
@@ -71,10 +83,50 @@ type User struct {
 	ID               string `json:"id"`
 	Phone            string `json:"phone"`
 	Nickname         string `json:"nickname"`
+	Avatar           string `json:"avatar,omitempty"`
 	Roles            []Role `json:"roles"`
 	CurrentRole      Role   `json:"currentRole"`
+	AuthStatus       string `json:"authStatus,omitempty"`
 	RealNameVerified bool   `json:"realNameVerified"`
+	CreatedAt        string `json:"createdAt,omitempty"`
+	LastLoginAt      string `json:"lastLoginAt,omitempty"`
+	Disabled         bool   `json:"disabled,omitempty"`
 	Blacklisted      bool   `json:"blacklisted,omitempty"`
+}
+
+type UserRoleProfile struct {
+	ID              string            `json:"id"`
+	UserID          string            `json:"userId"`
+	Role            Role              `json:"role"`
+	Status          RoleProfileStatus `json:"status"`
+	CertificationID string            `json:"certificationId,omitempty"`
+	CreatedAt       string            `json:"createdAt"`
+	UpdatedAt       string            `json:"updatedAt"`
+}
+
+type AuthSession struct {
+	AccessToken      string `json:"accessToken"`
+	RefreshToken     string `json:"refreshToken"`
+	UserID           string `json:"userId"`
+	ExpiresAt        string `json:"expiresAt"`
+	RefreshExpiresAt string `json:"refreshExpiresAt"`
+	CreatedAt        string `json:"createdAt"`
+}
+
+type SMSCode struct {
+	ID         string `json:"id"`
+	Phone      string `json:"phone"`
+	Code       string `json:"code"`
+	SentAt     string `json:"sentAt"`
+	ExpiresAt  string `json:"expiresAt"`
+	Attempts   int    `json:"attempts"`
+	ConsumedAt string `json:"consumedAt,omitempty"`
+}
+
+type TokenPair struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	ExpiresAt    string `json:"expiresAt"`
 }
 
 type PilotStats struct {
@@ -212,6 +264,7 @@ type Order struct {
 	Needs           Needs           `json:"needs"`
 	BudgetCent      int             `json:"budgetCent"`
 	PaymentMode     string          `json:"paymentMode,omitempty"`
+	PaymentID       string          `json:"paymentId,omitempty"`
 	InvoiceTitle    string          `json:"invoiceTitle,omitempty"`
 	Status          OrderStatus     `json:"status"`
 	PilotID         string          `json:"pilotId,omitempty"`
@@ -222,6 +275,33 @@ type Order struct {
 	Settlement      *Settlement     `json:"settlement,omitempty"`
 	Events          []OrderEvent    `json:"events"`
 	CreatedAt       string          `json:"createdAt"`
+}
+
+type PaymentSDKParams struct {
+	Provider  string `json:"provider,omitempty"`
+	AppID     string `json:"appId,omitempty"`
+	TimeStamp string `json:"timeStamp"`
+	NonceStr  string `json:"nonceStr"`
+	Package   string `json:"package"`
+	SignType  string `json:"signType"`
+	PaySign   string `json:"paySign"`
+	PrepayID  string `json:"prepayId,omitempty"`
+}
+
+type PaymentOrder struct {
+	ID              string            `json:"id"`
+	OrderID         string            `json:"orderId"`
+	AmountCent      int               `json:"amountCent"`
+	Mode            string            `json:"mode"`
+	Status          PaymentStatus     `json:"status"`
+	Provider        string            `json:"provider"`
+	ProviderTradeNo string            `json:"providerTradeNo"`
+	PrepayID        string            `json:"prepayId,omitempty"`
+	SDKParams       *PaymentSDKParams `json:"sdkParams,omitempty"`
+	CreatedAt       string            `json:"createdAt"`
+	UpdatedAt       string            `json:"updatedAt"`
+	PaidAt          string            `json:"paidAt,omitempty"`
+	FailedReason    string            `json:"failedReason,omitempty"`
 }
 
 type MatchCandidate struct {
@@ -245,15 +325,25 @@ type InsurancePolicy struct {
 	InsuredAmountCent int       `json:"insuredAmountCent"`
 	PremiumCent       int       `json:"premiumCent"`
 	Status            string    `json:"status"`
+	Provider          string    `json:"provider,omitempty"`
+	ProviderPolicyNo  string    `json:"providerPolicyNo,omitempty"`
+	ProviderQuoteID   string    `json:"providerQuoteId,omitempty"`
+	ActivatedAt       string    `json:"activatedAt,omitempty"`
 }
 
 type AirspaceRequest struct {
-	ID        string     `json:"id"`
-	OrderID   string     `json:"orderId"`
-	Area      []GeoPoint `json:"area"`
-	AltitudeM int        `json:"altitudeM"`
-	Window    TimeWindow `json:"window"`
-	Status    string     `json:"status"`
+	ID                string     `json:"id"`
+	OrderID           string     `json:"orderId"`
+	Area              []GeoPoint `json:"area"`
+	AltitudeM         int        `json:"altitudeM"`
+	Window            TimeWindow `json:"window"`
+	Status            string     `json:"status"`
+	Provider          string     `json:"provider,omitempty"`
+	ProviderRequestID string     `json:"providerRequestId,omitempty"`
+	ApprovalNo        string     `json:"approvalNo,omitempty"`
+	ValidFrom         string     `json:"validFrom,omitempty"`
+	ValidTo           string     `json:"validTo,omitempty"`
+	RouteGeometry     []GeoPoint `json:"routeGeometry,omitempty"`
 }
 
 type Telemetry struct {
@@ -272,6 +362,8 @@ type TelemetrySnapshot struct {
 	Frame     Telemetry `json:"frame"`
 	Source    string    `json:"source"`
 	UpdatedAt string    `json:"updatedAt"`
+	Provider  string    `json:"provider,omitempty"`
+	DeviceSN  string    `json:"deviceSn,omitempty"`
 }
 
 type TimeWindow struct {
@@ -341,10 +433,14 @@ type AuditLog struct {
 }
 
 type CreditScore struct {
-	UserID string `json:"userId"`
-	Role   Role   `json:"role"`
-	Total  int    `json:"total"`
-	Level  string `json:"level"`
+	UserID          string `json:"userId"`
+	Role            Role   `json:"role"`
+	Total           int    `json:"total"`
+	Level           string `json:"level"`
+	Provider        string `json:"provider,omitempty"`
+	ProviderTraceID string `json:"providerTraceId,omitempty"`
+	AuthorizedAt    string `json:"authorizedAt,omitempty"`
+	ExpiresAt       string `json:"expiresAt,omitempty"`
 }
 
 type Claim struct {
@@ -360,12 +456,16 @@ type Claim struct {
 
 type DBShape struct {
 	Users            []User                     `json:"users"`
+	UserRoleProfiles []UserRoleProfile          `json:"userRoleProfiles"`
+	AuthSessions     []AuthSession              `json:"authSessions"`
+	SMSCodes         []SMSCode                  `json:"smsCodes"`
 	Pilots           []PilotProfile             `json:"pilots"`
 	Owners           []OwnerProfile             `json:"owners"`
 	Clients          []ClientProfile            `json:"clients"`
 	Drones           []Drone                    `json:"drones"`
 	Capacity         []CapacityUnit             `json:"capacity"`
 	Orders           []Order                    `json:"orders"`
+	PaymentOrders    []PaymentOrder             `json:"paymentOrders"`
 	Credits          []CreditScore              `json:"credits"`
 	Policies         []InsurancePolicy          `json:"policies"`
 	Claims           []Claim                    `json:"claims"`

@@ -146,6 +146,7 @@ import { computed } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { CargoType, OrderStatus, Role } from '@/models';
 import type { GeoPoint } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { currentPilotOrder, matchingOrdersForPilot } from '@/services/app-flow';
 import { pilotQualificationIssue } from '@/services/compliance';
 import { demoBatteryPct } from '@/services/device-status';
@@ -163,9 +164,7 @@ const userStore = useUserStore();
 const orderStore = useOrderStore();
 const localeStore = useLocaleStore();
 
-if (userStore.user.currentRole !== Role.Pilot) {
-  userStore.loginAs(Role.Pilot);
-}
+ensureRole(Role.Pilot);
 
 const PILOT_HOME_COPY = {
   en: {
@@ -417,7 +416,7 @@ function openCredit() {
 }
 
 function openProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 
 function showToast(title: string) {

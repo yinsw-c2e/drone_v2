@@ -245,16 +245,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AdminConsolePanels from '@/components/AdminConsolePanels.vue';
 import type { ConsolePanelKey } from '@/components/AdminConsolePanels.vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, OrderStatus, Role } from '@/models';
 import type { CertificationApplication, Claim, Order } from '@/models';
 import { useOrderStore } from '@/stores/order';
-import { useUserStore } from '@/stores/user';
+import { approveCertificationRemote, fetchCertificationsRemote, rejectCertificationRemote } from '@/api/backend';
 import { adminRunFlowAction, adminRunFlowPanel } from '@/services/action-plans';
 import type { AdminRunFlowFeedback } from '@/services/action-plans';
+import { ensureRole } from '@/services/auth-guard';
 import {
   advanceClaim,
   analyticsReport,
@@ -318,8 +319,7 @@ interface RiskRow {
   sourceId: string;
 }
 
-const userStore = useUserStore();
-userStore.loginAs(Role.Admin);
+ensureRole(Role.Admin);
 const orderStore = useOrderStore();
 const feedback = ref('');
 const refreshTick = ref(0);
@@ -328,6 +328,16 @@ const activeRange = ref<ChartRange>('24H');
 const mapZoom = ref(1);
 const panels = ref<{ open: (panel: ConsolePanelKey) => void } | null>(null);
 const flowFeedback = ref<AdminRunFlowFeedback>({ kind: 'idle', message: '' });
+
+onMounted(() => {
+  void refreshRemoteCertifications();
+});
+
+async function refreshRemoteCertifications() {
+  await fetchCertificationsRemote();
+  bumpRefresh();
+}
+
 const metrics = computed(() => {
   void refreshTick.value;
   return dashboardMetrics();
@@ -587,9 +597,10 @@ async function runFlow() {
   }
 }
 
-function rejectQueue(item: QueueRow) {
+async function rejectQueue(item: QueueRow) {
   if (item.kind === 'application' && item.sourceId) {
-    rejectCertification(item.sourceId);
+    const remote = await rejectCertificationRemote(item.sourceId);
+    if (!remote) rejectCertification(item.sourceId);
   } else if (item.kind === 'pilot' && item.sourceId) {
     rejectPilotQualification(item.sourceId);
   }
@@ -597,9 +608,10 @@ function rejectQueue(item: QueueRow) {
   showToast(`${item.id} 已驳回`);
 }
 
-function reviewQueue(item: QueueRow) {
+async function reviewQueue(item: QueueRow) {
   if (item.kind === 'application' && item.sourceId) {
-    approveCertification(item.sourceId);
+    const remote = await approveCertificationRemote(item.sourceId);
+    if (!remote) approveCertification(item.sourceId);
   } else if (item.kind === 'pilot' && item.sourceId) {
     approvePilotQualification(item.sourceId);
   }

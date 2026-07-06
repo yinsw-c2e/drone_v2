@@ -161,15 +161,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, CapacityStatus, OrderStatus, Role } from '@/models';
 import type { Order } from '@/models';
+import { fetchCertificationsRemote } from '@/api/backend';
 import { adminRunFlowAction } from '@/services/action-plans';
+import { ensureRole } from '@/services/auth-guard';
 import { dashboardMetrics } from '@/services/app-flow';
 import { orderStatusLabel, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
-import { useUserStore } from '@/stores/user';
 import { repo } from '@/utils/repo';
 
 interface KpiCard {
@@ -196,10 +197,18 @@ interface RiskRow {
   pilotId?: string;
 }
 
-const userStore = useUserStore();
-userStore.loginAs(Role.Admin);
+ensureRole(Role.Admin);
 const orderStore = useOrderStore();
 const refreshTick = ref(0);
+
+onMounted(() => {
+  void refreshRemoteCertifications();
+});
+
+async function refreshRemoteCertifications() {
+  await fetchCertificationsRemote();
+  refreshTick.value += 1;
+}
 
 const timestamp = computed(() => {
   const now = new Date();
@@ -284,7 +293,7 @@ function openDashboard() {
 }
 
 function openAuth() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages-admin/certifications/index' });
 }
 
 function openAudit(item: AuditRow) {

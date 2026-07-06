@@ -1,4 +1,4 @@
-import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role } from '@/models';
+import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role, RoleProfileStatus } from '@/models';
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review, TelemetrySnapshot, User } from '@/models';
 import { saveBackendSnapshotNow } from '@/api/backend';
 import { createCapacity, createOrder } from '@/models/factory';
@@ -471,10 +471,16 @@ function ensureDestinationReached(order: Order) {
 }
 
 export function pilotOperationalIssue(pilotId: string) {
+  const profile = repo.userRoleProfiles.where((item) => item.userId === pilotId && item.role === Role.Pilot)[0];
+  if (profile?.status === RoleProfileStatus.Rejected) return '飞手资质审核未通过，请补充认证材料后重新提交审核';
+  if (!profile || profile.status !== RoleProfileStatus.Active) return '飞手身份仍在审核中，审核通过后才能接单或起飞';
   return pilotQualificationIssue(repo.pilots.find(pilotId));
 }
 
 export function ownerOperationalIssue(ownerId: string) {
+  const profile = repo.userRoleProfiles.where((item) => item.userId === ownerId && item.role === Role.Owner)[0];
+  if (profile?.status === RoleProfileStatus.Rejected) return '机主资质未通过，请补充认证材料后重新提交审核';
+  if (!profile || profile.status !== RoleProfileStatus.Active) return '机主身份仍在审核中，审核通过后才能投放设备或运力';
   return ownerQualificationIssue(repo.owners.find(ownerId), repo.users.find(ownerId));
 }
 
@@ -529,17 +535,19 @@ export function dashboardMetrics() {
 }
 
 export function submitCertification(role: Role, userId: string, fields: CertificationApplication['fields']): CertificationApplication {
+  ensureLocalRoleData(userId, role);
   let appFields = fields;
   if (role === Role.Owner) {
     const drone = submitOwnerDeviceCertification(userId, fields);
     appFields = { ...fields, droneSn: drone.sn };
   }
   const app = repo.authApplications.insert({ id: genId('cert'), userId, role, status: AuditStatus.Pending, submittedAt: new Date().toISOString(), fields: appFields });
+  if (role === Role.Pilot || role === Role.Owner) setLocalRoleProfile(userId, role, RoleProfileStatus.Pending, app.id);
   if (role === Role.Pilot) repo.pilots.update(userId, { noCrimeProof: AuditStatus.Pending, healthProof: AuditStatus.Pending, trainingCerts: Array.isArray(fields.trainingCerts) ? fields.trainingCerts as string[] : [] });
   if (role === Role.Owner) {
     repo.owners.update(userId, { uomVerified: false });
   }
-  if (role === Role.Client) repo.users.update(userId, { realNameVerified: false });
+  if (role === Role.Client) repo.users.update(userId, { realNameVerified: false, authStatus: AuditStatus.Pending });
   recordAudit(AuditAction.Certification, userId, role, 'certification', app.id, '提交三方认证材料');
   notify(userId, NotificationType.Audit, '认证已提交', '材料已进入审核中状态', app.id);
   persistBackendSnapshot();
@@ -696,12 +704,18 @@ export function approveCertification(appId: string): CertificationApplication {
   const app = repo.authApplications.find(appId);
   if (!app) throw new Error('认证申请不存在');
   repo.authApplications.update(app.id, { status: AuditStatus.Approved, reviewedAt: new Date().toISOString() });
-  if (app.role === Role.Pilot) repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
+  if (app.role === Role.Pilot) {
+    setLocalRoleProfile(app.userId, app.role, RoleProfileStatus.Active, app.id);
+    repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Approved, healthProof: AuditStatus.Approved });
+    repo.users.update(app.userId, { realNameVerified: true, authStatus: AuditStatus.Approved });
+  }
   if (app.role === Role.Owner) {
+    setLocalRoleProfile(app.userId, app.role, RoleProfileStatus.Active, app.id);
     repo.owners.update(app.userId, { uomVerified: true });
+    repo.users.update(app.userId, { realNameVerified: true, authStatus: AuditStatus.Approved });
     approveOwnerDeviceFromCertification(app.userId, app.fields);
   }
-  if (app.role === Role.Client) repo.users.update(app.userId, { realNameVerified: true });
+  if (app.role === Role.Client) repo.users.update(app.userId, { realNameVerified: true, authStatus: AuditStatus.Approved });
   recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'certification', app.id, '后台通过认证');
   notify(app.userId, NotificationType.Audit, '认证通过', '后台已通过认证申请', app.id);
   persistBackendSnapshot();
@@ -712,15 +726,46 @@ export function rejectCertification(appId: string): CertificationApplication {
   const app = repo.authApplications.find(appId);
   if (!app) throw new Error('认证申请不存在');
   repo.authApplications.update(app.id, { status: AuditStatus.Rejected, reviewedAt: new Date().toISOString() });
-  if (app.role === Role.Pilot) repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Rejected });
+  if (app.role === Role.Pilot) {
+    setLocalRoleProfile(app.userId, app.role, RoleProfileStatus.Rejected, app.id);
+    repo.pilots.update(app.userId, { noCrimeProof: AuditStatus.Rejected });
+  }
   if (app.role === Role.Owner) {
+    setLocalRoleProfile(app.userId, app.role, RoleProfileStatus.Rejected, app.id);
     repo.owners.update(app.userId, { uomVerified: false });
     rejectOwnerDeviceFromCertification(app.userId, app.fields);
   }
+  if (app.role === Role.Client) repo.users.update(app.userId, { realNameVerified: false, authStatus: AuditStatus.Rejected });
   recordAudit(AuditAction.Certification, 'admin', Role.Admin, 'certification', app.id, '后台驳回认证');
   notify(app.userId, NotificationType.Audit, '认证驳回', '请补充认证材料后重新提交', app.id);
   persistBackendSnapshot();
   return repo.authApplications.find(app.id)!;
+}
+
+function setLocalRoleProfile(userId: string, role: Role, status: RoleProfileStatus, certificationId?: string) {
+  const now = new Date().toISOString();
+  const id = `${userId}_${role}`;
+  const existing = repo.userRoleProfiles.find(id);
+  const patch = { status, certificationId, updatedAt: now };
+  if (existing) return repo.userRoleProfiles.update(id, patch);
+  const user = repo.users.find(userId);
+  if (user && !user.roles.includes(role)) repo.users.update(userId, { roles: [...user.roles, role] });
+  return repo.userRoleProfiles.insert({ id, userId, role, status, certificationId, createdAt: now, updatedAt: now });
+}
+
+function ensureLocalRoleData(userId: string, role: Role) {
+  const user = repo.users.find(userId);
+  if (user && !user.roles.includes(role)) repo.users.update(userId, { roles: [...user.roles, role] });
+  if (role === Role.Client && !repo.clients.find(userId)) {
+    repo.clients.insert({ userId, entityType: 'person', creditBureauScore: 0, stats: { payTimely: 1, defaultCount: 0, infoTrust: .8, complaintRate: 0, orderAccuracy: .9, cancelRate: 0 } });
+    setLocalRoleProfile(userId, role, RoleProfileStatus.Active);
+  }
+  if (role === Role.Pilot && !repo.pilots.find(userId)) {
+    repo.pilots.insert({ userId, caacLevel: 'VLOS', caacExpire: '', noCrimeProof: AuditStatus.Pending, healthProof: AuditStatus.Pending, trainingCerts: [], online: false, location: { lng: 116.4, lat: 39.9 }, stats: { orders: 0, completed: 0, cancelled: 0, onTimeRate: 0, complaintRate: 0, accidentRate: 0, violationCount: 0, flightHours: 0, onlineHours: 0, avgRespSec: 0, avgStar: 0 } });
+  }
+  if (role === Role.Owner && !repo.owners.find(userId)) {
+    repo.owners.insert({ userId, entityType: 'person', drones: [], uomVerified: false, stats: { deviceUptime: 0, faultRate: 0, maintainTimely: 0, completeRate: 0, cancelRate: 0, respSec: 0, cooperation: 0 } });
+  }
 }
 
 export function setUserBlacklist(userId: string, blacklisted: boolean) {

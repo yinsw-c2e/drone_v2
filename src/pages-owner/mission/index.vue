@@ -172,6 +172,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { LedgerStatus, OrderStatus, Role } from '@/models';
 import type { Order } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { demoBatteryPct } from '@/services/device-status';
 import {
   capacityStatusLabel,
@@ -205,9 +206,7 @@ const orderId = ref('');
 const localeStore = useLocaleStore();
 const userStore = useUserStore();
 
-if (userStore.user.currentRole !== Role.Owner) {
-  userStore.loginAs(Role.Owner);
-}
+ensureRole(Role.Owner);
 
 const user = computed(() => userStore.user);
 const ownerRule = SETTLEMENT_RULES.find((rule) => rule.party === 'owner');

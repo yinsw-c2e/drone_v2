@@ -150,6 +150,7 @@ import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { OrderStatus, Role } from '@/models';
 import type { GeoPoint, MatchCandidate, Order } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { pilotQualificationIssue } from '@/services/compliance';
 import { matchingOrdersForPilot } from '@/services/app-flow';
 import { orderStatusLabel } from '@/services/display-labels';
@@ -182,9 +183,7 @@ const localeStore = useLocaleStore();
 const feedback = ref('');
 const feedbackTone = ref<'info' | 'warning' | 'success'>('info');
 
-if (userStore.user.currentRole !== Role.Pilot) {
-  userStore.loginAs(Role.Pilot);
-}
+ensureRole(Role.Pilot);
 
 const user = computed(() => userStore.user);
 const orders = computed(() => matchingOrdersForPilot(user.value.id));
@@ -488,7 +487,7 @@ function goWallet() {
 }
 
 function goProfile() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 
 function showToast(title: string) {

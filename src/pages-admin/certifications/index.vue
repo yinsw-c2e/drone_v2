@@ -7,7 +7,7 @@
         <text class="module-subtitle">三方认证、飞手资质与机主设备材料集中复核</text>
       </view>
       <view class="module-actions">
-        <view class="ghost-button" hover-class="tap-press" @click="refresh">刷新队列</view>
+        <view class="ghost-button" hover-class="tap-press" @click="refresh()">刷新队列</view>
         <view v-if="selected" class="action-button" hover-class="tap-press" @click="approve(selected)">通过当前</view>
       </view>
     </view>
@@ -97,10 +97,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AdminConsoleShell from '@/components/AdminConsoleShell.vue';
 import type { AdminCertificationRow } from '@/services/admin-console';
 import { adminCertificationRows, approveAdminCertification, rejectAdminCertification } from '@/services/admin-console';
+import { approveCertificationRemote, fetchCertificationsRemote, rejectCertificationRemote } from '@/api/backend';
 
 const refreshTick = ref(0);
 const selectedId = ref('');
@@ -114,14 +115,20 @@ const applicationCount = computed(() => rows.value.filter((row) => row.kind === 
 const pilotProfileCount = computed(() => rows.value.filter((row) => row.kind === 'pilot').length);
 const overdueCount = computed(() => rows.value.filter((row) => row.tone === 'danger').length);
 
-function refresh() {
+onMounted(() => {
+  void refresh(false);
+});
+
+async function refresh(showMessage = true) {
+  await fetchCertificationsRemote();
   refreshTick.value += 1;
-  uni.showToast({ title: '审核队列已刷新', icon: 'none' });
+  if (showMessage) uni.showToast({ title: '审核队列已刷新', icon: 'none' });
 }
 
-function approve(row: AdminCertificationRow) {
+async function approve(row: AdminCertificationRow) {
   try {
-    approveAdminCertification(row);
+    const remote = row.kind === 'application' ? await approveCertificationRemote(row.sourceId) : undefined;
+    if (!remote) approveAdminCertification(row);
     refreshTick.value += 1;
     uni.showToast({ title: `${row.code} 已通过`, icon: 'none' });
   } catch (error) {
@@ -129,9 +136,10 @@ function approve(row: AdminCertificationRow) {
   }
 }
 
-function reject(row: AdminCertificationRow) {
+async function reject(row: AdminCertificationRow) {
   try {
-    rejectAdminCertification(row);
+    const remote = row.kind === 'application' ? await rejectCertificationRemote(row.sourceId) : undefined;
+    if (!remote) rejectAdminCertification(row);
     refreshTick.value += 1;
     uni.showToast({ title: `${row.code} 已驳回`, icon: 'none' });
   } catch (error) {

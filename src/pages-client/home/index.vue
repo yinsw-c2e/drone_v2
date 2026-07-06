@@ -88,25 +88,21 @@
       <view class="list-section">
         <view class="section-title">{{ copy.commonRoutes }}</view>
         <view class="route-list">
-          <view class="route-item" hover-class="item-press" @click="goOrder">
+          <view
+            v-for="route in commonRoutes"
+            :key="route.id"
+            class="route-item"
+            hover-class="item-press"
+            @click="goOrder(route.id)"
+          >
             <view class="route-left">
               <view class="route-icon"><StitchIcon name="route" size="34rpx" /></view>
               <view>
-                <view class="route-name"><text>{{ copy.routeAFrom }}</text><StitchIcon name="arrow_forward" size="22rpx" /><text>{{ copy.routeATo }}</text></view>
-                <text class="route-meta">{{ copy.routeAMeta }}</text>
+                <view class="route-name"><text>{{ route.label.from }}</text><StitchIcon name="arrow_forward" size="22rpx" /><text>{{ route.label.to }}</text></view>
+                <text class="route-meta">{{ route.label.meta }}</text>
               </view>
             </view>
-            <view class="route-price"><text>¥800</text><text>{{ copy.basePrice }}</text></view>
-          </view>
-          <view class="route-item" hover-class="item-press" @click="goOrder">
-            <view class="route-left">
-              <view class="route-icon"><StitchIcon name="route" size="34rpx" /></view>
-              <view>
-                <view class="route-name"><text>{{ copy.routeBFrom }}</text><StitchIcon name="arrow_forward" size="22rpx" /><text>{{ copy.routeBTo }}</text></view>
-                <text class="route-meta">{{ copy.routeBMeta }}</text>
-              </view>
-            </view>
-            <view class="route-price"><text>¥1,850</text><text>{{ copy.basePrice }}</text></view>
+            <view class="route-price"><text>¥{{ route.price }}</text><text>{{ copy.basePrice }}</text></view>
           </view>
         </view>
       </view>
@@ -138,7 +134,7 @@
               </view>
             </view>
           </view>
-          <view class="history-link" hover-class="item-press" @click="toggleHistory">
+          <view v-if="hasMoreHistory" class="history-link" hover-class="item-press" @click="toggleHistory">
             <text>{{ historyExpanded ? copy.collapseHistory : copy.viewHistory }}</text>
             <StitchIcon name="chevron_right" size="24rpx" />
           </view>
@@ -151,7 +147,7 @@
         <StitchIcon name="grid_view" size="38rpx" fill />
         <text>{{ copy.home }}</text>
       </view>
-      <view class="nav-item" @click="goOrder">
+      <view class="nav-item" @click="goOrder()">
         <StitchIcon name="assignment" size="38rpx" />
         <text>{{ copy.tasks }}</text>
       </view>
@@ -171,7 +167,9 @@
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { CapacityStatus, OrderStatus, Role } from '@/models';
+import { ensureRole } from '@/services/auth-guard';
 import { ensureDemoCredit, ordersNewestFirst } from '@/services/app-flow';
+import { commonRoutePresets } from '@/services/common-routes';
 import { orderStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
@@ -184,7 +182,7 @@ import { repo } from '@/utils/repo';
 const userStore = useUserStore();
 const orderStore = useOrderStore();
 const localeStore = useLocaleStore();
-if (userStore.user.currentRole !== Role.Client) userStore.loginAs(Role.Client);
+ensureRole(Role.Client);
 ensureDemoCredit();
 const HOME_COPY = {
   en: {
@@ -210,13 +208,7 @@ const HOME_COPY = {
     reviewCta: 'View Settlement Review',
     completeCta: 'Generate Settlement Review',
     commonRoutes: 'Common Routes & Budget',
-    routeAFrom: 'Tech Park',
-    routeATo: 'Shekou Port',
-    routeAMeta: 'Standard cargo | about 15 min',
-    routeBFrom: 'Longhua Center',
-    routeBTo: 'Yantian Port',
-    routeBMeta: 'Heavy cargo | about 32 min',
-    basePrice: 'Base',
+    basePrice: 'Reference',
     recentOrders: 'Recent Orders',
     noOrders: 'No orders yet. Launch your first lift.',
     startOrder: 'Launch First Order',
@@ -253,13 +245,7 @@ const HOME_COPY = {
     reviewCta: '查看结算评价',
     completeCta: '生成结算评价',
     commonRoutes: '常用航线与预算',
-    routeAFrom: '科技园',
-    routeATo: '蛇口港',
-    routeAMeta: '标准件 ｜ 约15分钟',
-    routeBFrom: '龙华中心',
-    routeBTo: '盐田港',
-    routeBMeta: '重型件 ｜ 约32分钟',
-    basePrice: '基准价',
+    basePrice: '参考价',
     recentOrders: '最近订单',
     noOrders: '还没有订单，先去发起首单吧。',
     startOrder: '发起首单',
@@ -282,6 +268,11 @@ const creditScore = computed(() => credit.value?.total ?? '—');
 const onlineCapacityText = computed(() => String(repo.capacity.where((c) => c.status === CapacityStatus.Online).length).padStart(2, '0'));
 const wallet = computed(() => repo.wallets.find(user.value.id));
 const budgetText = computed(() => Math.round((wallet.value?.balanceCent ?? 0) / 100).toLocaleString('en-US'));
+const commonRoutes = computed(() => commonRoutePresets().map((route) => ({
+  id: route.id,
+  label: route.labels[localeStore.locale],
+  price: Math.round(route.referencePriceCent / 100).toLocaleString('en-US'),
+})));
 
 const activeOrder = computed(() => orderStore.activeOrder);
 const activeOrderCode = computed(() => activeOrder.value ? activeOrder.value.id.toUpperCase() : '—');
@@ -318,8 +309,11 @@ const ctaText = computed(() => {
 });
 
 const historyExpanded = ref(false);
+const RECENT_ORDER_LIMIT = 2;
 const clientOrders = computed(() => ordersNewestFirst(repo.orders.where((o) => o.clientId === user.value.id)));
-const recentOrders = computed(() => clientOrders.value.slice(0, historyExpanded.value ? 10 : 2).map((order) => ({
+const hasMoreHistory = computed(() => clientOrders.value.length > RECENT_ORDER_LIMIT);
+const visibleClientOrders = computed(() => historyExpanded.value ? clientOrders.value : clientOrders.value.slice(0, RECENT_ORDER_LIMIT));
+const recentOrders = computed(() => visibleClientOrders.value.map((order) => ({
   id: order.id,
   code: order.id.toUpperCase(),
   done: order.status === OrderStatus.Completed || order.status === OrderStatus.Settled,
@@ -349,8 +343,9 @@ function latestEventTime(order: NonNullable<typeof activeOrder.value>) {
   return order.events[order.events.length - 1]?.at ?? order.createdAt;
 }
 
-function goOrder() {
-  uni.navigateTo({ url: '/pages-client/order/index' });
+function goOrder(presetId?: string) {
+  const query = presetId ? `?preset=${encodeURIComponent(presetId)}` : '';
+  uni.navigateTo({ url: `/pages-client/order/index${query}` });
 }
 
 function goMatch() {
@@ -386,6 +381,7 @@ function openTrack(orderId: string) {
 }
 
 function toggleHistory() {
+  if (!hasMoreHistory.value) return;
   historyExpanded.value = !historyExpanded.value;
 }
 
@@ -394,7 +390,7 @@ function goInsurance() {
 }
 
 function goAuth() {
-  uni.navigateTo({ url: '/pages/auth/index' });
+  uni.navigateTo({ url: '/pages/profile/index' });
 }
 
 function toast(title: string) {
