@@ -143,7 +143,40 @@ jobs:
           COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
           PREVIOUS_SHA="$(cat "$APP_ROOT/.deploy/deployed-main.commit" 2>/dev/null || true)"
           PREVIOUS_TAG="${PREVIOUS_SHA:-prod}"
+          if ! docker image inspect "drone-v2-api:$PREVIOUS_TAG" >/dev/null 2>&1; then
+            PREVIOUS_TAG=prod
+          fi
           DEPLOYMENT_STARTED=false
+
+          env_value() {
+            sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1
+          }
+
+          validate_server_env() {
+            local sms_provider sms_endpoint
+            sms_provider="$(env_value SMS_PROVIDER | tr '[:upper:]' '[:lower:]')"
+            case "$sms_provider" in
+              http)
+                sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
+                ;;
+              aliyun)
+                sms_endpoint="$(env_value ALIYUN_SMS_HTTP_ENDPOINT)"
+                [ -n "$sms_endpoint" ] || sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
+                ;;
+              tencent)
+                sms_endpoint="$(env_value TENCENT_SMS_HTTP_ENDPOINT)"
+                [ -n "$sms_endpoint" ] || sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
+                ;;
+              *)
+                echo "::error::Server .env must set SMS_PROVIDER=http, aliyun, or tencent before production deployment."
+                return 1
+                ;;
+            esac
+            if [ -z "$sms_endpoint" ]; then
+              echo "::error::Server .env is missing the configured SMS HTTP endpoint."
+              return 1
+            fi
+          }
 
           rollback() {
             if [ "$DEPLOYMENT_STARTED" != true ]; then
@@ -173,6 +206,7 @@ jobs:
           test -f "$ARCHIVE"
           test -f "$ENV_FILE"
           test -f "$COMPOSE_FILE"
+          validate_server_env
 
           mkdir -p "$RELEASES_DIR" "$APP_ROOT/.deploy"
           rm -rf "$RELEASE_DIR"
