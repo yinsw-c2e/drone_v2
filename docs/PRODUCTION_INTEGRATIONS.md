@@ -1,142 +1,67 @@
 # Production integration checklist
 
-This project keeps local/test mock flows available, but production must not silently use them.
+生产前端只允许调用带用户 access token 的业务后端；供应商地址、鉴权头和密钥只能存在于后端运行环境，不能使用 `VITE_*` 下发。
 
-## Provider bridge
+## Integration mode
 
-Frontend provider selection is controlled by:
+- 闭环内测：`INTEGRATION_MODE=sandbox`。后端返回明确标记为 `provider=sandbox` 的支付、空域、保险、征信和飞控结果，不静默伪装成真实供应商。
+- 正式生产：`INTEGRATION_MODE=live`。后端启动及 `/api/v1/ready` 会校验全部供应商配置，缺项即拒绝就绪。
+- 前端：`VITE_PROVIDER_MODE=backend`，只配置 `VITE_BACKEND_URL=https://...`。禁止配置 `VITE_PROVIDER_BRIDGE_URL` 或 `VITE_PROVIDER_BRIDGE_TOKEN`。
 
-- `VITE_PROVIDER_MODE=mock|bridge`
-- `VITE_PROVIDER_BRIDGE_URL=https://api.example.com/api/v1/provider`
-- `VITE_PROVIDER_BRIDGE_TOKEN=` bearer token for calling the backend bridge
+Live 模式后端必需配置：
 
-Production mode requires `VITE_PROVIDER_MODE=bridge`, `VITE_PROVIDER_BRIDGE_URL`, and `VITE_PROVIDER_BRIDGE_TOKEN`. The bridge must expose:
-
-- `POST /payment/prepay`
-- `POST /airspace/apply`
-- `POST /insurance/quote`
-- `POST /credit/bureau-score`
-- `POST /drone/arm`
-
-Each endpoint may return either the direct response payload or `{ "ok": true, "data": ... }`. A failed upstream call must return a non-2xx HTTP status or `{ "ok": false, "error": "..." }`.
-
-The backend now also exposes the same bridge contract under `/api/v1/provider/*`. Production deployments should point `VITE_PROVIDER_BRIDGE_URL` to the backend bridge, for example:
-
-```bash
-VITE_PROVIDER_BRIDGE_URL=https://api.example.com/api/v1/provider
-VITE_PROVIDER_BRIDGE_TOKEN=<same value as PROVIDER_BRIDGE_AUTH_TOKEN>
-```
-
-Required backend bridge variables:
-
-- `PROVIDER_BRIDGE_AUTH_TOKEN` for inbound frontend-to-backend bridge calls
 - `PROVIDER_PAYMENT_PREPAY_URL`
 - `PROVIDER_PAYMENT_NOTIFY_SECRET`
 - `PROVIDER_AIRSPACE_APPLY_URL`
 - `PROVIDER_INSURANCE_QUOTE_URL`
 - `PROVIDER_CREDIT_SCORE_URL`
 - `PROVIDER_DRONE_ARM_URL`
-- `PROVIDER_HTTP_AUTH_HEADER` or `PROVIDER_HTTP_AUTH_TOKEN` when the supplier gateway requires auth
+- `PROVIDER_HTTP_AUTH_HEADER` 或 `PROVIDER_HTTP_AUTH_TOKEN`（供应商网关要求鉴权时）
 
-The backend records provider results into `payment_orders`, `airspace_requests`, `policies`, `credits`, `telemetry_snapshots`, and `audit_logs`. In production, order confirmation requires an already paid `payment_orders` record and provider insurance receipt when insurance is needed.
+业务端点均位于 `/api/v1/provider/*`，由普通用户 access token 和订单归属/RBAC 保护，不存在供客户端使用的全局共享 bridge token。供应商结果写入支付、空域、保单、征信、遥测和审计记录。
 
 ## Payment
 
-Production payment is not complete when prepay succeeds. Required flow:
+1. 客户端调用 `/api/v1/provider/payment/prepay`。
+2. 后端调用支付供应商并创建 `status=pending` 的支付单。
+3. 小程序执行 `uni.requestPayment`。
+4. 支付供应商回调 `/api/v1/provider/payment/notify`。
+5. 后端使用 `PROVIDER_PAYMENT_NOTIFY_SECRET` 验签并更新最终状态。
+6. 客户端轮询 `/api/v1/payments/{paymentId}/sync`；订单确认只接受后端已支付记录。
 
-1. Frontend calls `/api/v1/provider/payment/prepay`.
-2. Backend calls `PROVIDER_PAYMENT_PREPAY_URL`, creates a `payment_orders` row with `status=pending`, and returns platform SDK params.
-3. Mini-program calls `uni.requestPayment`.
-4. Payment provider calls `/api/v1/provider/payment/notify`.
-5. Backend verifies `X-Provider-Signature` using `PROVIDER_PAYMENT_NOTIFY_SECRET` and marks the payment `paid`, `failed`, or `cancelled`.
-6. Frontend polls `/api/v1/payments/{paymentId}/sync` until the backend row is `paid`.
-7. `/api/v1/orders/{id}/confirm` only confirms the order when the payment row is `paid`.
+客户端 SDK 成功不是最终结算依据。生产空域、保险、征信、飞控和遥测结果同样只能由服务端供应商适配器写入。
 
-`uni.requestPayment` success is treated as a client-side SDK result only; it is not accepted as final settlement without the signed backend callback.
+## SMS and authentication
 
-Production airspace, insurance, credit, drone arm, and telemetry writes must enter through provider bridge endpoints. Local admin airspace approval and ordinary pilot/client telemetry writes are local/test tools and are rejected by the production server options.
+本地可使用 `SMS_PROVIDER=mock`。生产必须配置 `SMS_PROVIDER=http|aliyun|tencent` 及真实网关；mock code 不会在非 mock 模式返回。验证码和 access/refresh token 均只保存哈希，access token 15 分钟过期，refresh token 每次使用都轮换；短信同时按手机号和来源 IP 限流。
 
-## SMS
+## Release builds
 
-Local/test may use `SMS_PROVIDER=mock`. Production must set `SMS_PROVIDER=http`, `aliyun`, or `tencent` and configure a real HTTP gateway endpoint:
-
-- `SMS_HTTP_ENDPOINT=` for generic HTTP gateway
-- `ALIYUN_SMS_HTTP_ENDPOINT=` or `TENCENT_SMS_HTTP_ENDPOINT=` for provider-specific gateways
-- `SMS_HTTP_AUTH_HEADER=` or `SMS_HTTP_AUTH_TOKEN=` for gateway auth
-- `SMS_HTTP_TEMPLATE_ID=` / `SMS_HTTP_TEMPLATE_SIGN=` or provider-specific template variables
-
-The backend does not expose `mockCode` for non-mock providers. HTTP gateway failures are returned to the caller and are not treated as success.
-
-## WeChat release
-
-Before packaging a release build, run:
+H5：
 
 ```bash
-pnpm preflight:release
+VITE_BACKEND_URL=https://api.example.com \
+VITE_PROVIDER_MODE=backend \
+pnpm build:h5:release
 ```
 
-Required release inputs:
-
-- `VITE_BACKEND_URL=https://api.example.com`
-- `VITE_DISABLE_BACKEND` must be unset or false
-- `VITE_PROVIDER_MODE=bridge`
-- `VITE_PROVIDER_BRIDGE_URL`
-- `VITE_PROVIDER_BRIDGE_TOKEN`
-- `PROVIDER_BRIDGE_AUTH_TOKEN`
-- `PROVIDER_PAYMENT_PREPAY_URL`
-- `PROVIDER_PAYMENT_NOTIFY_SECRET`
-- `PROVIDER_AIRSPACE_APPLY_URL`
-- `PROVIDER_INSURANCE_QUOTE_URL`
-- `PROVIDER_CREDIT_SCORE_URL`
-- `PROVIDER_DRONE_ARM_URL`
-- `SMS_PROVIDER=http|aliyun|tencent`
-- `SMS_HTTP_ENDPOINT` or provider-specific SMS HTTP endpoint
-- `CORS_ALLOW_ORIGIN`
-- `UNI_APP_ID`
-- `MP_WEIXIN_APPID`
-- `MP_WEIXIN_URL_CHECK=true`
-- `MP_WEIXIN_REQUEST_DOMAINS`
-- `MP_WEIXIN_BUSINESS_DOMAINS`
-
-The domain values must match the legal request domains and business domains configured in the WeChat public platform.
-
-Release packaging must use:
+微信小程序还必须设置 `UNI_APP_ID`、`MP_WEIXIN_APPID`、`MP_WEIXIN_URL_CHECK=true`、`MP_WEIXIN_REQUEST_DOMAINS` 和 `MP_WEIXIN_BUSINESS_DOMAINS`，并运行：
 
 ```bash
 pnpm build:mp-weixin:release
 ```
 
-`pnpm build:mp-weixin` remains a development build command and must not be treated as a publishable package when AppID or release env is empty.
-
-For manual H5 acceptance while code is still changing, avoid the Vite dev server HMR path. Build and serve static H5 output instead:
-
-```bash
-pnpm exec uni build -p h5
-pnpm exec vite preview --host 0.0.0.0
-```
-
-## Backend CORS
-
-Production backend startup requires:
+## Runtime gates
 
 - `APP_ENV=production`
-- `CORS_ALLOW_ORIGIN=https://h5.example.com,https://admin.example.com`
+- `CORS_ALLOW_ORIGIN` 必须是逗号分隔的精确 HTTPS origin，不允许 `*`。
+- `/api/v1/health` 只证明进程存活；发布和容器健康检查必须使用 `/api/v1/ready`。
+- 生产禁用 snapshot/reset 写入口；快照读取也不对匿名请求开放。
+- 发布流水线使用 commit SHA 镜像，切换失败自动恢复上一前端目录和上一 API 镜像。
 
-`CORS_ALLOW_ORIGIN=*` is only acceptable for local development.
+## External credentials still required for live mode
 
-## AMap key hygiene
-
-Do not commit real map keys. Keep them in `.env.local` or CI secrets:
-
-- `VITE_AMAP_WEB_KEY`
-- `VITE_AMAP_SECURITY_CODE`
-- `VITE_AMAP_WEB_SERVICE_KEY`
-
-## External credentials still required
-
-- Payment merchant account, app ID, private key/certificate, notify URL, and callback verification material.
-- SMS provider account, signature, template, and HTTP gateway or direct vendor integration credentials.
-- UOM/airspace platform credentials and approval callback contract.
-- Insurance quote/bind API credentials and policy callback contract.
-- Credit bureau or scoring vendor credentials and authorization contract.
-- Drone/telemetry SDK credentials, device binding material, and flight/arm callback contract.
+- 支付商户、证书/私钥和回调验签材料。
+- 短信账号、签名、模板与网关凭证。
+- UOM/空域、保险、征信、无人机/遥测供应商账号及回调合同。
+- 微信正式 AppID、合法域名、备案与平台审核。

@@ -35,13 +35,13 @@ func TestValidateRuntimeConfigBlocksMissingProductionCORS(t *testing.T) {
 	}
 }
 
-func TestValidateRuntimeConfigDefersSMSConfigToAuthSendCode(t *testing.T) {
+func TestValidateRuntimeConfigBlocksMockSMS(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "mock")
 	setProviderBridgeEnv(t)
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
-	if err != nil {
-		t.Fatalf("sms rollout should not block backend startup: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "禁止使用 SMS_PROVIDER=mock") {
+		t.Fatalf("expected production SMS config failure, got %v", err)
 	}
 }
 
@@ -64,13 +64,24 @@ func TestValidateRuntimeConfigAllowsProductionWhitelistAndHTTPSMS(t *testing.T) 
 	}
 }
 
-func TestValidateRuntimeConfigAllowsMissingProviderBridgeAtStartup(t *testing.T) {
+func TestValidateRuntimeConfigBlocksMissingLiveProviderBridgeAtStartup(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
+	t.Setenv("INTEGRATION_MODE", "live")
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
-	if err != nil {
-		t.Fatalf("provider endpoint rollout should not block backend startup: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "provider bridge 配置缺失") {
+		t.Fatalf("expected provider bridge startup failure, got %v", err)
+	}
+}
+
+func TestValidateRuntimeConfigAllowsExplicitSandboxForClosedBeta(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "http")
+	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
+	t.Setenv("INTEGRATION_MODE", "sandbox")
+
+	if err := validateRuntimeConfig(true, "https://h5.example.test"); err != nil {
+		t.Fatalf("explicit closed-beta sandbox should pass: %v", err)
 	}
 }
 
@@ -83,7 +94,7 @@ func TestValidateProviderBridgeEnvBlocksMissingProductionProviderBridge(t *testi
 
 func setProviderBridgeEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("PROVIDER_BRIDGE_AUTH_TOKEN", "bridge-token")
+	t.Setenv("INTEGRATION_MODE", "live")
 	t.Setenv("PROVIDER_PAYMENT_PREPAY_URL", "https://provider.example.test/payment")
 	t.Setenv("PROVIDER_PAYMENT_NOTIFY_SECRET", "notify-secret")
 	t.Setenv("PROVIDER_AIRSPACE_APPLY_URL", "https://provider.example.test/airspace")

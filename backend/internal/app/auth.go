@@ -2,7 +2,9 @@ package app
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,7 +12,7 @@ import (
 )
 
 const (
-	accessTokenTTL  = 2 * time.Hour
+	accessTokenTTL  = 15 * time.Minute
 	refreshTokenTTL = 30 * 24 * time.Hour
 	smsCodeTTL      = 5 * time.Minute
 	smsSendInterval = 60 * time.Second
@@ -92,16 +94,32 @@ func issueSMSCode(state *DBShape, phoneInput string) (*SMSCode, error) {
 			return nil, errors.New("验证码发送过于频繁，请稍后再试")
 		}
 	}
+	hourAgo := time.Now().Add(-time.Hour)
+	sentThisHour := 0
+	for _, item := range state.SMSCodes {
+		if item.Phone != phone {
+			continue
+		}
+		if sentAt, ok := parseTime(item.SentAt); ok && sentAt.After(hourAgo) {
+			sentThisHour++
+		}
+	}
+	if sentThisHour >= 5 {
+		return nil, errors.New("该手机号验证码请求过于频繁，请一小时后再试")
+	}
 	now := time.Now()
+	plainCode := generateNumericCode()
 	code := SMSCode{
 		ID:        genID("sms"),
 		Phone:     phone,
-		Code:      generateNumericCode(),
+		Code:      hashSecret(plainCode),
 		SentAt:    now.Format(time.RFC3339Nano),
 		ExpiresAt: now.Add(smsCodeTTL).Format(time.RFC3339Nano),
 	}
 	state.SMSCodes = append(state.SMSCodes, code)
-	return &state.SMSCodes[len(state.SMSCodes)-1], nil
+	dispatch := state.SMSCodes[len(state.SMSCodes)-1]
+	dispatch.Code = plainCode
+	return &dispatch, nil
 }
 
 func loginWithCode(state *DBShape, phoneInput string, code string) (*authPayload, error) {
@@ -172,16 +190,20 @@ func refreshAuthSession(state *DBShape, refreshToken string) (*authPayload, erro
 	}
 	refreshExpiresAt, ok := parseTime(session.RefreshExpiresAt)
 	if !ok || time.Now().After(refreshExpiresAt) {
-		removeSession(state, session.AccessToken, session.RefreshToken)
+		removeSessionByHash(state, session.AccessToken, session.RefreshToken)
 		return nil, errors.New("登录态已过期，请重新登录")
 	}
 	user := findUser(state, session.UserID)
 	if user == nil || user.Disabled {
 		return nil, errors.New("账号不可用，请重新登录")
 	}
-	session.AccessToken = genID("atk")
+	accessToken := genID("atk")
+	newRefreshToken := genID("rtk")
+	session.AccessToken = hashSecret(accessToken)
+	session.RefreshToken = hashSecret(newRefreshToken)
 	session.ExpiresAt = time.Now().Add(accessTokenTTL).Format(time.RFC3339Nano)
-	return &authPayload{User: user, Token: TokenPair{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: publicSnapshot(state)}, nil
+	session.RefreshExpiresAt = time.Now().Add(refreshTokenTTL).Format(time.RFC3339Nano)
+	return &authPayload{User: user, Token: TokenPair{AccessToken: accessToken, RefreshToken: newRefreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: snapshotForUser(state, user)}, nil
 }
 
 func authUserByAccessToken(state *DBShape, accessToken string) (*User, *AuthSession, error) {
@@ -208,7 +230,7 @@ func authMe(state *DBShape, accessToken string) (*authPayload, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &authPayload{User: user, Token: TokenPair{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: publicSnapshot(state)}, nil
+	return &authPayload{User: user, Token: TokenPair{ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: snapshotForUser(state, user)}, nil
 }
 
 func logoutAuthSession(state *DBShape, accessToken string, refreshToken string) {
@@ -249,6 +271,7 @@ func switchUserRole(state *DBShape, userID string, role Role) (*authPayload, err
 	}
 	user.CurrentRole = role
 	addUserRole(user, role)
+	removeSessionsForUser(state, userID)
 	recordAudit(state, ActionLogin, userID, role, "role", profile.ID, "切换当前业务身份")
 	return createAuthPayload(state, user, false), nil
 }
@@ -334,9 +357,11 @@ func selfRegisterRole(role Role) bool {
 
 func createAuthPayload(state *DBShape, user *User, markLogin bool) *authPayload {
 	now := time.Now()
+	accessToken := genID("atk")
+	refreshToken := genID("rtk")
 	session := AuthSession{
-		AccessToken:      genID("atk"),
-		RefreshToken:     genID("rtk"),
+		AccessToken:      hashSecret(accessToken),
+		RefreshToken:     hashSecret(refreshToken),
 		UserID:           user.ID,
 		ExpiresAt:        now.Add(accessTokenTTL).Format(time.RFC3339Nano),
 		RefreshExpiresAt: now.Add(refreshTokenTTL).Format(time.RFC3339Nano),
@@ -347,7 +372,7 @@ func createAuthPayload(state *DBShape, user *User, markLogin bool) *authPayload 
 		user.LastLoginAt = session.CreatedAt
 		recordAudit(state, ActionLogin, user.ID, user.CurrentRole, "user", user.ID, "手机号验证码登录")
 	}
-	return &authPayload{User: user, Token: TokenPair{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: publicSnapshot(state)}
+	return &authPayload{User: user, Token: TokenPair{AccessToken: accessToken, RefreshToken: refreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: snapshotForUser(state, user)}
 }
 
 func verifySMSCode(state *DBShape, phone string, code string) error {
@@ -365,7 +390,7 @@ func verifySMSCode(state *DBShape, phone string, code string) error {
 	if sms.Attempts >= maxSMSAttempts {
 		return errors.New("验证码错误次数过多，请重新获取")
 	}
-	if sms.Code != strings.TrimSpace(code) {
+	if sms.Code != hashSecret(strings.TrimSpace(code)) {
 		sms.Attempts++
 		return errors.New("验证码错误")
 	}
@@ -399,8 +424,9 @@ func findUserByPhone(state *DBShape, phone string) *User {
 }
 
 func findSessionByAccessToken(state *DBShape, accessToken string) *AuthSession {
+	hash := hashSecret(accessToken)
 	for i := range state.AuthSessions {
-		if state.AuthSessions[i].AccessToken == accessToken {
+		if state.AuthSessions[i].AccessToken == hash {
 			return &state.AuthSessions[i]
 		}
 	}
@@ -408,8 +434,9 @@ func findSessionByAccessToken(state *DBShape, accessToken string) *AuthSession {
 }
 
 func findSessionByRefreshToken(state *DBShape, refreshToken string) *AuthSession {
+	hash := hashSecret(refreshToken)
 	for i := range state.AuthSessions {
-		if state.AuthSessions[i].RefreshToken == refreshToken {
+		if state.AuthSessions[i].RefreshToken == hash {
 			return &state.AuthSessions[i]
 		}
 	}
@@ -417,14 +444,39 @@ func findSessionByRefreshToken(state *DBShape, refreshToken string) *AuthSession
 }
 
 func removeSession(state *DBShape, accessToken string, refreshToken string) {
+	accessHash := hashSecret(accessToken)
+	refreshHash := hashSecret(refreshToken)
+	removeSessionByHash(state, accessHash, refreshHash)
+}
+
+func removeSessionByHash(state *DBShape, accessHash string, refreshHash string) {
 	out := state.AuthSessions[:0]
 	for _, session := range state.AuthSessions {
-		if (accessToken != "" && session.AccessToken == accessToken) || (refreshToken != "" && session.RefreshToken == refreshToken) {
+		if (accessHash != "" && session.AccessToken == accessHash) || (refreshHash != "" && session.RefreshToken == refreshHash) {
 			continue
 		}
 		out = append(out, session)
 	}
 	state.AuthSessions = out
+}
+
+func removeSessionsForUser(state *DBShape, userID string) {
+	out := state.AuthSessions[:0]
+	for _, session := range state.AuthSessions {
+		if session.UserID != userID {
+			out = append(out, session)
+		}
+	}
+	state.AuthSessions = out
+}
+
+func hashSecret(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }
 
 func normalizeAndValidatePhone(phoneInput string) (string, error) {

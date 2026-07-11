@@ -73,7 +73,8 @@ export const useUserStore = defineStore('user', {
       try {
         const payload = await loadMeRemote();
         if (payload) {
-          this.applyAuth(payload.user, payload.token);
+          this.userId = payload.user.id;
+          writeStorage(USER_KEY, payload.user.id);
           this.initialized = true;
           return true;
         }

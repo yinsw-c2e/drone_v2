@@ -4,7 +4,7 @@ services:
   api:
     build:
       context: .
-    image: drone-v2-api:prod
+    image: "drone-v2-api:${API_IMAGE_TAG:-prod}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -15,11 +15,11 @@ services:
       ENABLE_RESET_ENDPOINT: "${ENABLE_RESET_ENDPOINT:-false}"
       ENABLE_SNAPSHOT_WRITE_ENDPOINT: "${ENABLE_SNAPSHOT_WRITE_ENDPOINT:-false}"
       CORS_ALLOW_ORIGIN: "https://swvictory.com"
+      INTEGRATION_MODE: "${INTEGRATION_MODE:-sandbox}"
       SMS_PROVIDER: "${SMS_PROVIDER:-}"
       SMS_HTTP_ENDPOINT: "${SMS_HTTP_ENDPOINT:-}"
       SMS_HTTP_AUTH_HEADER: "${SMS_HTTP_AUTH_HEADER:-}"
       SMS_HTTP_TEMPLATE_ID: "${SMS_HTTP_TEMPLATE_ID:-}"
-      PROVIDER_BRIDGE_AUTH_TOKEN: "${PROVIDER_BRIDGE_AUTH_TOKEN:-}"
       PROVIDER_PAYMENT_PREPAY_URL: "${PROVIDER_PAYMENT_PREPAY_URL:-}"
       PROVIDER_PAYMENT_NOTIFY_SECRET: "${PROVIDER_PAYMENT_NOTIFY_SECRET:-}"
       PROVIDER_AIRSPACE_APPLY_URL: "${PROVIDER_AIRSPACE_APPLY_URL:-}"
@@ -29,6 +29,12 @@ services:
       PROVIDER_HTTP_AUTH_HEADER: "${PROVIDER_HTTP_AUTH_HEADER:-}"
     expose:
       - "8088"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8088/api/v1/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
     restart: unless-stopped
 
   mysql:

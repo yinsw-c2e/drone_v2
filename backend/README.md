@@ -29,6 +29,7 @@ PORT=8088
 ## API
 
 - `GET /api/v1/health`
+- `GET /api/v1/ready`（数据库及生产 SMS/provider 配置就绪）
 - `GET /api/v1/snapshot`
 - `POST /api/v1/snapshot`
 - `POST /api/v1/reset`

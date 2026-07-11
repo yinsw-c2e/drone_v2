@@ -19,6 +19,7 @@ jobs:
     env:
       VITE_BACKEND_URL: https://swvictory.com
       VITE_DISABLE_LOCAL_DB_PERSIST: "1"
+      VITE_PROVIDER_MODE: backend
       VITE_AMAP_WEB_KEY: ${{ secrets.VITE_AMAP_WEB_KEY }}
       VITE_AMAP_SECURITY_CODE: ${{ secrets.VITE_AMAP_SECURITY_CODE }}
       VITE_AMAP_WEB_SERVICE_KEY: ${{ secrets.VITE_AMAP_WEB_SERVICE_KEY }}
@@ -54,8 +55,17 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
-      - name: Build H5
-        run: pnpm exec uni build -p h5
+      - name: Lint
+        run: pnpm lint
+
+      - name: Frontend tests
+        run: pnpm test
+
+      - name: Backend tests
+        run: pnpm backend:test
+
+      - name: Release preflight and H5 build
+        run: pnpm build:h5:release
 
       - name: Package release
         run: |
@@ -130,6 +140,20 @@ jobs:
           BACKEND_DIR="$APP_ROOT/backend"
           ENV_FILE="$BACKEND_DIR/.env"
           COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
+          PREVIOUS_SHA="$(cat "$APP_ROOT/.deploy/deployed-main.commit" 2>/dev/null || true)"
+          PREVIOUS_TAG="${PREVIOUS_SHA:-prod}"
+          DEPLOYMENT_STARTED=false
+
+          rollback() {
+            if [ "$DEPLOYMENT_STARTED" != true ]; then
+              return
+            fi
+            echo "Deployment failed; rolling back frontend and API to $PREVIOUS_TAG"
+            rsync -a --delete "$BACKUP_FRONTEND_DIR"/ "$FRONTEND_DIR"/ || true
+            if docker image inspect "drone-v2-api:$PREVIOUS_TAG" >/dev/null 2>&1; then
+              API_IMAGE_TAG="$PREVIOUS_TAG" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy || true
+            fi
+          }
 
           dump_deploy_state() {
             echo "::group::docker compose ps"
@@ -143,7 +167,7 @@ jobs:
             echo "::endgroup::"
           }
 
-          trap 'status=$?; if [ "$status" -ne 0 ]; then dump_deploy_state; fi' EXIT
+          trap 'status=$?; if [ "$status" -ne 0 ]; then rollback; dump_deploy_state; fi' EXIT
 
           test -f "$ARCHIVE"
           test -f "$ENV_FILE"
@@ -159,18 +183,19 @@ jobs:
           test -f "$RELEASE_DIR/backend/Caddyfile"
           test -f "$RELEASE_DIR/backend/docker-compose.prod.yml"
 
-          docker build -t drone-v2-api:prod "$RELEASE_DIR/backend"
+          docker build -t "drone-v2-api:$RELEASE_SHA" "$RELEASE_DIR/backend"
 
           install -m 0644 "$RELEASE_DIR/backend/Caddyfile" "$BACKEND_DIR/Caddyfile"
           install -m 0644 "$RELEASE_DIR/backend/docker-compose.prod.yml" "$COMPOSE_FILE"
 
           mkdir -p "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
           rsync -a --delete "$FRONTEND_DIR"/ "$BACKUP_FRONTEND_DIR"/
+          DEPLOYMENT_STARTED=true
           rsync -a --delete "$RELEASE_DIR/dist/build/h5"/ "$FRONTEND_DIR"/
 
-          docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy
+          API_IMAGE_TAG="$RELEASE_SHA" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy
           for attempt in $(seq 1 12); do
-            if curl -fsS --max-time 10 https://swvictory.com/api/v1/health >/dev/null; then
+            if curl -fsS --max-time 10 https://swvictory.com/api/v1/ready >/dev/null; then
               break
             fi
             if [ "$attempt" -eq 12 ]; then
@@ -180,6 +205,7 @@ jobs:
           done
 
           printf '%s' "$RELEASE_SHA" > "$APP_ROOT/.deploy/deployed-main.commit"
+          DEPLOYMENT_STARTED=false
           rm -f "$ARCHIVE"
           find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
             | sort -n \

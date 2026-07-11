@@ -22,6 +22,7 @@ type ProviderBridge struct {
 	authHeader   string
 	headerName   string
 	notifySecret string
+	sandbox      bool
 }
 
 type providerEndpoints struct {
@@ -153,6 +154,7 @@ func NewProviderBridgeFromEnv(production bool) *ProviderBridge {
 		authHeader:   providerAuthHeader(),
 		headerName:   headerName,
 		notifySecret: firstEnv("PROVIDER_PAYMENT_NOTIFY_SECRET"),
+		sandbox:      integrationMode(production) == "sandbox",
 	}
 }
 
@@ -160,8 +162,14 @@ func ValidateProviderBridgeEnv(production bool) error {
 	if !production {
 		return nil
 	}
+	mode := integrationMode(production)
+	if mode == "sandbox" {
+		return nil
+	}
+	if mode != "live" {
+		return fmt.Errorf("未知 INTEGRATION_MODE: %s", mode)
+	}
 	required := map[string]string{
-		"PROVIDER_BRIDGE_AUTH_TOKEN":     firstEnv("PROVIDER_BRIDGE_AUTH_TOKEN"),
 		"PROVIDER_PAYMENT_PREPAY_URL":    firstEnv("PROVIDER_PAYMENT_PREPAY_URL"),
 		"PROVIDER_PAYMENT_NOTIFY_SECRET": firstEnv("PROVIDER_PAYMENT_NOTIFY_SECRET"),
 		"PROVIDER_AIRSPACE_APPLY_URL":    firstEnv("PROVIDER_AIRSPACE_APPLY_URL"),
@@ -181,6 +189,17 @@ func ValidateProviderBridgeEnv(production bool) error {
 	return nil
 }
 
+func integrationMode(production bool) string {
+	mode := strings.TrimSpace(strings.ToLower(firstEnv("INTEGRATION_MODE")))
+	if mode != "" {
+		return mode
+	}
+	if production {
+		return "live"
+	}
+	return "sandbox"
+}
+
 func providerAuthHeader() string {
 	if value := firstEnv("PROVIDER_HTTP_AUTH_HEADER"); value != "" {
 		return value
@@ -193,6 +212,15 @@ func providerAuthHeader() string {
 }
 
 func (b *ProviderBridge) PaymentPrepay(ctx context.Context, req ProviderPaymentPrepayRequest) (*ProviderPaymentPrepayResult, error) {
+	if b.sandbox {
+		return &ProviderPaymentPrepayResult{
+			TradeNo:  genID("sandbox_trade"),
+			PaidCent: req.AmountCent,
+			Mode:     req.Mode,
+			Provider: "sandbox",
+			PrepayID: genID("sandbox_prepay"),
+		}, nil
+	}
 	var out ProviderPaymentPrepayResult
 	if err := b.postJSON(ctx, "payment prepay", b.endpoints.PaymentPrepay, req, &out); err != nil {
 		return nil, err
@@ -216,6 +244,17 @@ func (b *ProviderBridge) PaymentPrepay(ctx context.Context, req ProviderPaymentP
 }
 
 func (b *ProviderBridge) AirspaceApply(ctx context.Context, req ProviderAirspaceApplyRequest) (*ProviderAirspaceApplyResult, error) {
+	if b.sandbox {
+		now := time.Now()
+		return &ProviderAirspaceApplyResult{
+			RequestID:  genID("sandbox_air"),
+			Status:     "approved",
+			Provider:   "sandbox",
+			ApprovalNo: genID("sandbox_approval"),
+			ValidFrom:  now.Format(time.RFC3339Nano),
+			ValidTo:    now.Add(90 * time.Minute).Format(time.RFC3339Nano),
+		}, nil
+	}
 	var out ProviderAirspaceApplyResult
 	if err := b.postJSON(ctx, "airspace apply", b.endpoints.AirspaceApply, req, &out); err != nil {
 		return nil, err
@@ -233,6 +272,21 @@ func (b *ProviderBridge) AirspaceApply(ctx context.Context, req ProviderAirspace
 }
 
 func (b *ProviderBridge) InsuranceQuote(ctx context.Context, req ProviderInsuranceQuoteRequest) (*ProviderInsuranceQuoteResult, error) {
+	if b.sandbox {
+		premium := int(float64(req.ValueCent) * 0.03)
+		if premium <= 0 {
+			premium = 1
+		}
+		return &ProviderInsuranceQuoteResult{
+			QuoteID:           genID("sandbox_quote"),
+			PolicyNo:          genID("sandbox_policy"),
+			Provider:          "sandbox",
+			PremiumCent:       premium,
+			InsuredAmountCent: req.ValueCent * 2,
+			Coverages:         []string{"封闭内测沙箱保障"},
+			ActivatedAt:       nowISO(),
+		}, nil
+	}
 	var out ProviderInsuranceQuoteResult
 	if err := b.postJSON(ctx, "insurance quote", b.endpoints.InsuranceQuote, req, &out); err != nil {
 		return nil, err
@@ -253,6 +307,17 @@ func (b *ProviderBridge) InsuranceQuote(ctx context.Context, req ProviderInsuran
 }
 
 func (b *ProviderBridge) CreditScore(ctx context.Context, req ProviderCreditScoreRequest) (*ProviderCreditScoreResult, error) {
+	if b.sandbox {
+		now := time.Now()
+		return &ProviderCreditScoreResult{
+			UserID:          req.UserID,
+			Score:           720,
+			Provider:        "sandbox",
+			ProviderTraceID: genID("sandbox_credit"),
+			AuthorizedAt:    now.Format(time.RFC3339Nano),
+			ExpiresAt:       now.Add(24 * time.Hour).Format(time.RFC3339Nano),
+		}, nil
+	}
 	var out ProviderCreditScoreResult
 	if err := b.postJSON(ctx, "credit score", b.endpoints.CreditScore, req, &out); err != nil {
 		return nil, err
@@ -273,6 +338,14 @@ func (b *ProviderBridge) CreditScore(ctx context.Context, req ProviderCreditScor
 }
 
 func (b *ProviderBridge) DroneArm(ctx context.Context, req ProviderDroneArmRequest) (*ProviderDroneArmResult, error) {
+	if b.sandbox {
+		return &ProviderDroneArmResult{
+			DroneID:  req.DroneID,
+			Ready:    true,
+			Provider: "sandbox",
+			DeviceSN: "sandbox-" + req.DroneID,
+		}, nil
+	}
 	var out ProviderDroneArmResult
 	if err := b.postJSON(ctx, "drone arm", b.endpoints.DroneArm, req, &out); err != nil {
 		return nil, err

@@ -68,38 +68,32 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
   const urlCheck = urlCheckEnv ? boolValue(urlCheckEnv) : setting.urlCheck === true;
   const requestDomains = envValue(env, ['MP_WEIXIN_REQUEST_DOMAINS', 'VITE_MP_WEIXIN_REQUEST_DOMAINS']);
   const businessDomains = envValue(env, ['MP_WEIXIN_BUSINESS_DOMAINS', 'VITE_MP_WEIXIN_BUSINESS_DOMAINS']);
+  const releaseTarget = envValue(env, ['RELEASE_TARGET']) || 'mp-weixin';
   const backendURL = envValue(env, ['VITE_BACKEND_URL']);
   const backendDisabled = boolValue(envValue(env, ['VITE_DISABLE_BACKEND']));
   const providerMode = envValue(env, ['VITE_PROVIDER_MODE']);
   const providerBridgeURL = envValue(env, ['VITE_PROVIDER_BRIDGE_URL']);
   const providerBridgeToken = envValue(env, ['VITE_PROVIDER_BRIDGE_TOKEN']);
-  const providerBridgeAuthToken = envValue(env, ['PROVIDER_BRIDGE_AUTH_TOKEN']);
-  const corsAllowOrigin = envValue(env, ['CORS_ALLOW_ORIGIN']);
-  const smsProvider = envValue(env, ['SMS_PROVIDER']);
-  const smsEndpoint = envValue(env, ['SMS_HTTP_ENDPOINT', 'ALIYUN_SMS_HTTP_ENDPOINT', 'TENCENT_SMS_HTTP_ENDPOINT']);
-  const backendProviderVars = [
-    'PROVIDER_PAYMENT_PREPAY_URL',
-    'PROVIDER_PAYMENT_NOTIFY_SECRET',
-    'PROVIDER_AIRSPACE_APPLY_URL',
-    'PROVIDER_INSURANCE_QUOTE_URL',
-    'PROVIDER_CREDIT_SCORE_URL',
-    'PROVIDER_DRONE_ARM_URL',
-  ];
 
-  if (!uniAppID) {
-    errors.push('缺少 UNI_APP_ID/VITE_UNI_APPID 或 manifest 顶层 appid');
+  if (!['h5', 'mp-weixin'].includes(releaseTarget)) {
+    errors.push('RELEASE_TARGET 只允许 h5 或 mp-weixin');
   }
-  if (!mpWeixinAppID) {
-    errors.push('缺少 MP_WEIXIN_APPID/VITE_MP_WEIXIN_APPID 或 manifest mp-weixin.appid');
-  }
-  if (urlCheck !== true) {
-    errors.push('发布模式必须启用 mp-weixin.setting.urlCheck，不允许 urlCheck=false');
-  }
-  if (!requestDomains) {
-    errors.push('缺少 MP_WEIXIN_REQUEST_DOMAINS，请列出已在微信公众平台配置的 request 合法域名');
-  }
-  if (!businessDomains) {
-    errors.push('缺少 MP_WEIXIN_BUSINESS_DOMAINS，请列出已在微信公众平台配置的业务域名');
+  if (releaseTarget === 'mp-weixin') {
+    if (!uniAppID) {
+      errors.push('缺少 UNI_APP_ID/VITE_UNI_APPID 或 manifest 顶层 appid');
+    }
+    if (!mpWeixinAppID) {
+      errors.push('缺少 MP_WEIXIN_APPID/VITE_MP_WEIXIN_APPID 或 manifest mp-weixin.appid');
+    }
+    if (urlCheck !== true) {
+      errors.push('发布模式必须启用 mp-weixin.setting.urlCheck，不允许 urlCheck=false');
+    }
+    if (!requestDomains) {
+      errors.push('缺少 MP_WEIXIN_REQUEST_DOMAINS，请列出已在微信公众平台配置的 request 合法域名');
+    }
+    if (!businessDomains) {
+      errors.push('缺少 MP_WEIXIN_BUSINESS_DOMAINS，请列出已在微信公众平台配置的业务域名');
+    }
   }
   if (!backendURL) {
     errors.push('缺少 VITE_BACKEND_URL，发布包不能回退到 localhost 后端');
@@ -111,40 +105,21 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
   if (backendDisabled === true) {
     errors.push('发布模式禁止设置 VITE_DISABLE_BACKEND=1/true');
   }
-  if (providerMode !== 'bridge') {
-    errors.push('发布模式必须设置 VITE_PROVIDER_MODE=bridge，不能使用 mock provider');
+  if (providerMode && providerMode !== 'backend') {
+    errors.push('发布模式 VITE_PROVIDER_MODE 只允许 backend，不能使用 mock/bridge provider');
   }
-  if (!providerBridgeURL) {
-    errors.push('缺少 VITE_PROVIDER_BRIDGE_URL，无法连接支付、空域、保险、征信、无人机外部服务桥接层');
+  if (providerBridgeURL) {
+    errors.push('禁止设置 VITE_PROVIDER_BRIDGE_URL，生产前端必须通过 VITE_BACKEND_URL 调用鉴权业务 API');
   }
-  if (!providerBridgeToken) {
-    errors.push('缺少 VITE_PROVIDER_BRIDGE_TOKEN，前端无法鉴权调用 backend provider bridge');
-  }
-  if (!providerBridgeAuthToken) {
-    errors.push('缺少 PROVIDER_BRIDGE_AUTH_TOKEN，backend provider bridge 入站接口将无法鉴权');
-  }
-  if (providerBridgeToken && providerBridgeAuthToken && providerBridgeToken !== providerBridgeAuthToken) {
-    errors.push('VITE_PROVIDER_BRIDGE_TOKEN 必须与 PROVIDER_BRIDGE_AUTH_TOKEN 保持一致');
-  }
-  if (!corsAllowOrigin || corsAllowOrigin === '*') {
-    errors.push('发布模式必须设置 CORS_ALLOW_ORIGIN 为可信域名白名单，不能为 *');
-  }
-  if (!smsProvider || smsProvider === 'mock') {
-    errors.push('发布模式必须设置 SMS_PROVIDER=http/aliyun/tencent，不能使用 mock 短信');
-  }
-  if (!smsEndpoint) {
-    errors.push('缺少 SMS_HTTP_ENDPOINT 或 provider 专属短信 HTTP endpoint');
-  }
-  for (const key of backendProviderVars) {
-    if (!envValue(env, [key])) {
-      errors.push(`缺少 ${key}`);
-    }
+  if (providerBridgeToken) {
+    errors.push('禁止设置 VITE_PROVIDER_BRIDGE_TOKEN，服务端密钥不得编译进客户端产物');
   }
 
   return {
     ok: errors.length === 0,
     errors,
     config: {
+      releaseTarget,
       uniAppID,
       mpWeixinAppID,
       urlCheck,
@@ -155,10 +130,6 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
       providerMode,
       providerBridgeURL,
       providerBridgeToken,
-      providerBridgeAuthToken,
-      corsAllowOrigin,
-      smsProvider,
-      smsEndpoint,
     },
   };
 }

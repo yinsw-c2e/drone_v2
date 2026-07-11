@@ -1,6 +1,6 @@
 # drone_v2 云端后端部署说明
 
-更新时间：2026-06-20
+更新时间：2026-07-10
 
 本文用于把当前 `backend/` Go API + MySQL 8 后端部署到单台云服务器。当前建议先按内测/演示云后端上线，不要直接承载真实交易、实名、支付或飞控数据。
 
@@ -8,7 +8,7 @@
 
 - 后端入口：`backend/cmd/server`。
 - 默认端口：`8088`。
-- 健康检查：`GET /api/v1/health`。
+- 存活检查：`GET /api/v1/health`；发布就绪检查：`GET /api/v1/ready`。
 - 数据库：MySQL 8，业务数据以 JSON 文档表为主。
 - 本地启动：`pnpm backend:up`。
 - 生产示例：`backend/docker-compose.prod.yml`，包含 `api`、`mysql`、`caddy`。
@@ -62,7 +62,7 @@
 4. 启动 `docker compose -f docker-compose.prod.yml up -d --build`。
 5. 配置 HTTPS 反向代理。
 6. 验证：
-   - `curl https://api.your-domain.com/api/v1/health`
+   - `curl https://api.your-domain.com/api/v1/ready`
    - `docker compose ps`
    - `docker compose logs`
    - MySQL 表和数据是否正常。
@@ -136,7 +136,7 @@ MYSQL_ROOT_PASSWORD=<another-long-random-password>
 API_DOMAIN=:80
 ```
 
-然后用 `http://公网IP/api/v1/health` 验证。拿到域名和备案后，再改回 `API_DOMAIN=api.your-domain.com` 并重启 compose。
+然后用 `http://公网IP/api/v1/ready` 验证。拿到域名和备案后，再改回 `API_DOMAIN=api.your-domain.com` 并重启 compose。
 
 可生成随机密码：
 
@@ -155,19 +155,19 @@ docker compose --env-file .env -f docker-compose.prod.yml ps
 验证 HTTPS：
 
 ```bash
-curl -s https://api.your-domain.com/api/v1/health
+curl -s https://api.your-domain.com/api/v1/ready
 ```
 
 期望：
 
 ```json
-{"data":{"status":"ok"},"ok":true}
+{"data":{"status":"ready"},"ok":true}
 ```
 
 如果是无域名临时烟测：
 
 ```bash
-curl -s http://<server-ip>/api/v1/health
+curl -s http://<server-ip>/api/v1/ready
 ```
 
 ### 5.5 备份数据库
@@ -186,9 +186,7 @@ H5 或小程序构建前设置后端地址。小程序正式发布必须走 rele
 
 ```bash
 VITE_BACKEND_URL=https://api.your-domain.com \
-VITE_PROVIDER_MODE=bridge \
-VITE_PROVIDER_BRIDGE_URL=https://api.your-domain.com/api/v1/provider \
-VITE_PROVIDER_BRIDGE_TOKEN=<same value as PROVIDER_BRIDGE_AUTH_TOKEN> \
+VITE_PROVIDER_MODE=backend \
 pnpm build:mp-weixin:release
 ```
 
@@ -211,11 +209,8 @@ rsync -az --delete dist/build/h5/ ubuntu@<server-ip>:/opt/drone_v2/frontend/
 
 ## 7. 上线前必须补的生产项
 
-当前后端适合内测和演示闭环。真实生产前至少要补：
+当前代码已补齐基础鉴权、角色权限、服务端供应商隔离、就绪探针和发布回滚。正式交易开放前仍需完成：
 
-- 登录鉴权和角色权限，避免任何人直接调用订单/审核接口。
-- 管理后台接口鉴权。
-- 审计日志不可被普通接口覆盖。
 - 支付、提现、保险、实名、飞控硬件接口的真实资质和回调验签。
 - 自动数据库备份和恢复演练。
 - 监控告警：服务存活、磁盘空间、MySQL 错误、HTTPS 证书状态。

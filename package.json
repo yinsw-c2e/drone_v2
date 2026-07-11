@@ -14,7 +14,9 @@
     "lint": "eslint \"src/**/*.{ts,vue}\" --max-warnings=0",
     "test": "vitest run --coverage",
     "build:mp-weixin": "uni build -p mp-weixin",
-    "preflight:release": "node scripts/preflight-release.mjs",
+    "preflight:release": "RELEASE_TARGET=mp-weixin node scripts/preflight-release.mjs",
+    "preflight:h5": "RELEASE_TARGET=h5 node scripts/preflight-release.mjs",
+    "build:h5:release": "pnpm preflight:h5 && uni build -p h5",
     "build:mp-weixin:release": "pnpm preflight:release && uni build -p mp-weixin",
     "check:integrity": "node scripts/check-integrity.mjs",
     "verify": "pnpm install && pnpm type-check && pnpm lint && pnpm test && pnpm build:mp-weixin && pnpm check:integrity"
@@ -63,7 +65,7 @@
     "playwright-core": "^1.60.0",
     "sass": "^1.83.0",
     "typescript": "^5.7.2",
-    "vite": "5.2.8",
+    "vite": "5.4.21",
     "vitest": "^1.6.1",
     "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.2.0"

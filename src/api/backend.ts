@@ -1,7 +1,7 @@
 import { CargoType, PaymentMode } from '@/models';
 import type { DBShape } from '@/utils/db';
 import { hydrateDB } from '@/utils/db';
-import type { AirspaceRequest, CertificationApplication, GeoPoint, MatchCandidate, Order, PaymentOrder, Review, Telemetry, TelemetrySnapshot, TokenPair, User, UserRoleProfile } from '@/models';
+import type { AirspaceRequest, CertificationApplication, GeoPoint, MatchCandidate, Order, PaymentOrder, PaymentPrepayResult, Review, Telemetry, TelemetrySnapshot, TokenPair, User, UserRoleProfile } from '@/models';
 import type { Role } from '@/models';
 
 type HttpMethod = 'GET' | 'POST';
@@ -179,9 +179,34 @@ async function refreshStoredToken() {
 }
 
 export async function syncBackendSnapshot() {
+  if (getStoredAccessToken()) {
+    const session = await loadMeRemote();
+    return session?.snapshot;
+  }
+  if (env.PROD === true || env.MODE === 'production') return undefined;
   const data = await requestBackend<{ snapshot: DBShape }>('/api/v1/snapshot');
   hydrateSnapshot(data);
   return data?.snapshot;
+}
+
+export async function providerPaymentPrepayRemote(orderId: string, amountCent: number, mode: PaymentMode) {
+  return requestBackend<PaymentPrepayResult>('/api/v1/provider/payment/prepay', 'POST', { orderId, amountCent, mode });
+}
+
+export async function providerAirspaceApplyRemote(orderId: string) {
+  return requestBackend<{ requestId: string; status: 'approved' | 'rejected' }>('/api/v1/provider/airspace/apply', 'POST', { orderId });
+}
+
+export async function providerInsuranceQuoteRemote(orderId: string, valueCent: number) {
+  return requestBackend<{ premiumCent: number; insuredAmountCent: number }>('/api/v1/provider/insurance/quote', 'POST', { orderId, valueCent });
+}
+
+export async function providerCreditScoreRemote(userId: string) {
+  return requestBackend<{ userId: string; score: number }>('/api/v1/provider/credit/bureau-score', 'POST', { userId });
+}
+
+export async function providerDroneArmRemote(droneId: string, orderId?: string) {
+  return requestBackend<{ droneId: string; ready: boolean }>('/api/v1/provider/drone/arm', 'POST', { droneId, orderId });
 }
 
 export async function sendCodeRemote(phone: string) {

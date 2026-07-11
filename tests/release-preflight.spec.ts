@@ -18,19 +18,7 @@ const validReleaseEnv = {
   MP_WEIXIN_REQUEST_DOMAINS: 'https://api.example.test',
   MP_WEIXIN_BUSINESS_DOMAINS: 'https://h5.example.test',
   VITE_BACKEND_URL: 'https://api.example.test',
-  VITE_PROVIDER_MODE: 'bridge',
-  VITE_PROVIDER_BRIDGE_URL: 'https://api.example.test/api/v1/provider',
-  VITE_PROVIDER_BRIDGE_TOKEN: 'bridge-token',
-  PROVIDER_BRIDGE_AUTH_TOKEN: 'bridge-token',
-  CORS_ALLOW_ORIGIN: 'https://h5.example.test,https://admin.example.test',
-  SMS_PROVIDER: 'http',
-  SMS_HTTP_ENDPOINT: 'https://sms.example.test/send',
-  PROVIDER_PAYMENT_PREPAY_URL: 'https://provider.example.test/payment',
-  PROVIDER_PAYMENT_NOTIFY_SECRET: 'notify-secret',
-  PROVIDER_AIRSPACE_APPLY_URL: 'https://provider.example.test/airspace',
-  PROVIDER_INSURANCE_QUOTE_URL: 'https://provider.example.test/insurance',
-  PROVIDER_CREDIT_SCORE_URL: 'https://provider.example.test/credit',
-  PROVIDER_DRONE_ARM_URL: 'https://provider.example.test/drone',
+  VITE_PROVIDER_MODE: 'backend',
 };
 
 it('blocks release packaging when app ids and domains are missing', () => {
@@ -43,13 +31,6 @@ it('blocks release packaging when app ids and domains are missing', () => {
   expect(result.errors.join('\n')).toContain('MP_WEIXIN_REQUEST_DOMAINS');
   expect(result.errors.join('\n')).toContain('MP_WEIXIN_BUSINESS_DOMAINS');
   expect(result.errors.join('\n')).toContain('VITE_BACKEND_URL');
-  expect(result.errors.join('\n')).toContain('VITE_PROVIDER_MODE=bridge');
-  expect(result.errors.join('\n')).toContain('VITE_PROVIDER_BRIDGE_URL');
-  expect(result.errors.join('\n')).toContain('VITE_PROVIDER_BRIDGE_TOKEN');
-  expect(result.errors.join('\n')).toContain('PROVIDER_BRIDGE_AUTH_TOKEN');
-  expect(result.errors.join('\n')).toContain('CORS_ALLOW_ORIGIN');
-  expect(result.errors.join('\n')).toContain('SMS_PROVIDER');
-  expect(result.errors.join('\n')).toContain('PROVIDER_PAYMENT_PREPAY_URL');
 });
 
 it('blocks release packaging when backend url points to localhost', () => {
@@ -82,4 +63,27 @@ it('accepts release packaging only with app ids, url check, and WeChat domains',
 
   expect(result.ok).toBe(true);
   expect(result.errors).toHaveLength(0);
+});
+
+it('accepts an H5 release without mini-program-only configuration', () => {
+  const result = checkReleaseConfig({
+    manifestText: emptyManifest,
+    env: {
+      RELEASE_TARGET: 'h5',
+      VITE_BACKEND_URL: 'https://api.example.test',
+      VITE_PROVIDER_MODE: 'backend',
+    },
+  });
+
+  expect(result.ok).toBe(true);
+});
+
+it('rejects client-side provider bridge secrets', () => {
+  const result = checkReleaseConfig({
+    manifestText: emptyManifest,
+    env: { ...validReleaseEnv, VITE_PROVIDER_BRIDGE_TOKEN: 'must-not-ship' },
+  });
+
+  expect(result.ok).toBe(false);
+  expect(result.errors.join('\n')).toContain('服务端密钥不得编译进客户端产物');
 });

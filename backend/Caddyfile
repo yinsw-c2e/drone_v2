@@ -26,6 +26,12 @@ v1.swvictory.com {
 
 {$API_DOMAIN} {
 	handle /api/* {
+		header {
+			Strict-Transport-Security "max-age=31536000; includeSubDomains"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "DENY"
+			Referrer-Policy "strict-origin-when-cross-origin"
+		}
 		reverse_proxy api:8088
 	}
 
@@ -35,6 +41,11 @@ v1.swvictory.com {
 			Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
 			Pragma "no-cache"
 			Expires "0"
+			Strict-Transport-Security "max-age=31536000; includeSubDomains"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "DENY"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
 		}
 		try_files {path} /index.html
 		file_server {

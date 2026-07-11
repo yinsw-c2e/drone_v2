@@ -392,12 +392,18 @@ func TestPhoneRegistrationLoginAndRoleActivation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("issueSMSCode failed: %v", err)
 	}
+	if stored := latestSMSCode(&state, "13812345678"); stored == nil || stored.Code == code.Code {
+		t.Fatal("raw SMS code must not be stored")
+	}
 	registered, err := registerWithCode(&state, "13812345678", code.Code, "新飞手", RolePilot)
 	if err != nil {
 		t.Fatalf("registerWithCode failed: %v", err)
 	}
 	if registered.Token.AccessToken == "" || registered.Token.RefreshToken == "" {
 		t.Fatalf("expected token pair, got %#v", registered.Token)
+	}
+	if len(state.AuthSessions) == 0 || state.AuthSessions[len(state.AuthSessions)-1].AccessToken == registered.Token.AccessToken || state.AuthSessions[len(state.AuthSessions)-1].RefreshToken == registered.Token.RefreshToken {
+		t.Fatal("raw auth tokens must not be stored")
 	}
 	if got := findRoleProfile(&state, registered.User.ID, RolePilot); got == nil || got.Status != RoleProfilePending {
 		t.Fatalf("expected pending pilot role, got %#v", got)
@@ -437,12 +443,22 @@ func TestPhoneRegistrationLoginAndRoleActivation(t *testing.T) {
 	if login.User.ID != registered.User.ID {
 		t.Fatalf("expected same user login, got %s / %s", login.User.ID, registered.User.ID)
 	}
+	me, err := authMe(&state, login.Token.AccessToken)
+	if err != nil {
+		t.Fatalf("authMe failed: %v", err)
+	}
+	if me.Token.AccessToken != "" || me.Token.RefreshToken != "" {
+		t.Fatal("authMe must not return stored token hashes")
+	}
 	refreshed, err := refreshAuthSession(&state, login.Token.RefreshToken)
 	if err != nil {
 		t.Fatalf("refreshAuthSession failed: %v", err)
 	}
-	if refreshed.Token.AccessToken == "" || refreshed.Token.AccessToken == login.Token.AccessToken {
+	if refreshed.Token.AccessToken == "" || refreshed.Token.AccessToken == login.Token.AccessToken || refreshed.Token.RefreshToken == login.Token.RefreshToken {
 		t.Fatalf("expected rotated access token, got %#v -> %#v", login.Token, refreshed.Token)
+	}
+	if _, err := refreshAuthSession(&state, login.Token.RefreshToken); err == nil {
+		t.Fatal("rotated refresh token must not be reusable")
 	}
 }
 
@@ -482,5 +498,11 @@ func TestPendingRoleCannotSwitchUntilApproved(t *testing.T) {
 	}
 	if switched.User.CurrentRole != RoleOwner {
 		t.Fatalf("expected owner role after switch, got %#v", switched.User)
+	}
+	if _, _, err := authUserByAccessToken(&state, registered.Token.AccessToken); err == nil {
+		t.Fatal("role switch must revoke the previous session")
+	}
+	if switched.Token.AccessToken == "" || switched.Token.RefreshToken == "" {
+		t.Fatal("role switch must issue a fresh token pair")
 	}
 }

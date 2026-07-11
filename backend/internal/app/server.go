@@ -1,12 +1,12 @@
 package app
 
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,9 +17,12 @@ type Server struct {
 	corsAllowOrigin         string
 	smsProvider             SMSProvider
 	providerBridge          *ProviderBridge
-	providerBridgeAuthToken string
 	requirePaidPayment      bool
 	requireProviderReceipts bool
+	production              bool
+	mutationMu              sync.Mutex
+	smsRateMu               sync.Mutex
+	smsIPAttempts           map[string][]time.Time
 }
 
 type ServerOptions struct {
@@ -28,9 +31,9 @@ type ServerOptions struct {
 	CORSAllowOrigin         string
 	SMSProvider             SMSProvider
 	ProviderBridge          *ProviderBridge
-	ProviderBridgeAuthToken string
 	RequirePaidPayment      bool
 	RequireProviderReceipts bool
+	Production              bool
 }
 
 func NewServer(store *Store) *Server {
@@ -54,10 +57,6 @@ func NewServerWithOptions(store *Store, options ServerOptions) *Server {
 	if providerBridge == nil {
 		providerBridge = NewProviderBridgeFromEnv(options.RequirePaidPayment || options.RequireProviderReceipts)
 	}
-	providerBridgeAuthToken := strings.TrimSpace(options.ProviderBridgeAuthToken)
-	if providerBridgeAuthToken == "" {
-		providerBridgeAuthToken = firstEnv("PROVIDER_BRIDGE_AUTH_TOKEN")
-	}
 	return &Server{
 		store:                   store,
 		resetEnabled:            options.ResetEnabled,
@@ -65,15 +64,17 @@ func NewServerWithOptions(store *Store, options ServerOptions) *Server {
 		corsAllowOrigin:         origin,
 		smsProvider:             smsProvider,
 		providerBridge:          providerBridge,
-		providerBridgeAuthToken: providerBridgeAuthToken,
 		requirePaidPayment:      options.RequirePaidPayment,
 		requireProviderReceipts: options.RequireProviderReceipts,
+		production:              options.Production,
+		smsIPAttempts:           map[string][]time.Time{},
 	}
 }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/health", s.health)
+	mux.HandleFunc("/api/v1/ready", s.ready)
 	mux.HandleFunc("/api/v1/snapshot", s.snapshot)
 	mux.HandleFunc("/api/v1/reset", s.reset)
 	mux.HandleFunc("/api/v1/auth/send-code", s.authSendCode)
@@ -95,14 +96,36 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/provider/drone/arm", s.providerDroneArm)
 	mux.HandleFunc("/api/v1/certifications", s.certifications)
 	mux.HandleFunc("/api/v1/certifications/", s.certificationSubroutes)
-	return cors(mux, s.corsAllowOrigin)
+	return cors(s.limitRequestBodies(s.serializeMutations(s.authorizeRequests(mux))), s.corsAllowOrigin)
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": map[string]string{"status": "ok"}})
 }
 
+func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.store.Load(r.Context()); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "database is not ready"})
+		return
+	}
+	if s.production {
+		if err := ValidateSMSProviderEnv(true); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "sms provider is not ready"})
+			return
+		}
+		if err := ValidateProviderBridgeEnv(true); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "integration provider is not ready"})
+			return
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": map[string]string{"status": "ready"}})
+}
+
 func (s *Server) snapshot(w http.ResponseWriter, r *http.Request) {
+	if s.production {
+		writeJSON(w, http.StatusNotFound, envelope{OK: false, Error: "snapshot endpoint is not available in production"})
+		return
+	}
 	if r.Method == http.MethodPost {
 		if !s.snapshotWriteEnabled {
 			writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "snapshot write endpoint disabled"})
@@ -155,6 +178,10 @@ func (s *Server) saveSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) reset(w http.ResponseWriter, r *http.Request) {
+	if s.production {
+		writeJSON(w, http.StatusNotFound, envelope{OK: false, Error: "reset endpoint is not available in production"})
+		return
+	}
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -174,6 +201,10 @@ func (s *Server) reset(w http.ResponseWriter, r *http.Request) {
 func (s *Server) authSendCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.allowSMSRequest(clientIP(r)) {
+		writeJSON(w, http.StatusTooManyRequests, envelope{OK: false, Error: "验证码请求过于频繁，请稍后再试"})
 		return
 	}
 	var req authPhoneRequest
@@ -230,7 +261,7 @@ func (s *Server) authRegister(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	payload.Snapshot = publicSnapshot(state)
+	payload.Snapshot = snapshotForUser(state, payload.User)
 	writeJSON(w, http.StatusOK, envelope{OK: true, Data: payload})
 }
 
@@ -258,7 +289,7 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	payload.Snapshot = publicSnapshot(state)
+	payload.Snapshot = snapshotForUser(state, payload.User)
 	writeJSON(w, http.StatusOK, envelope{OK: true, Data: payload})
 }
 
@@ -324,7 +355,7 @@ func (s *Server) authLogout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) authRoles(w http.ResponseWriter, r *http.Request) {
@@ -356,7 +387,7 @@ func (s *Server) authRoles(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"role": profile, "user": user, "roles": rolesForUser(state, user.ID), "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"role": profile, "user": user, "roles": rolesForUser(state, user.ID), "snapshot": snapshotForUser(state, user)}})
 }
 
 func (s *Server) authSwitchRole(w http.ResponseWriter, r *http.Request) {
@@ -388,7 +419,7 @@ func (s *Server) authSwitchRole(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	payload.Snapshot = publicSnapshot(state)
+	payload.Snapshot = snapshotForUser(state, payload.User)
 	writeJSON(w, http.StatusOK, envelope{OK: true, Data: payload})
 }
 
@@ -407,13 +438,12 @@ func (s *Server) orders(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	if user, _, err := authUserByAccessToken(state, bearerToken(r)); err == nil {
-		if user.CurrentRole != RoleClient && !roleProfileActive(state, user.ID, RoleClient) {
-			writeError(w, errors.New("当前账号没有业主发单权限"))
-			return
-		}
-		req.ClientID = user.ID
+	actor := actorFromRequest(r)
+	if actor == nil || actor.User == nil {
+		writeUnauthorized(w, errors.New("缺少登录 token"))
+		return
 	}
+	req.ClientID = actor.User.ID
 	order, err := submitOrderWithOptions(state, req, !s.requireProviderReceipts)
 	if err != nil {
 		writeError(w, err)
@@ -423,7 +453,7 @@ func (s *Server) orders(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
@@ -443,7 +473,7 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"applications": items, "snapshot": publicSnapshot(state)}})
+		writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"applications": items, "snapshot": snapshotForRequest(state, r)}})
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -455,8 +485,15 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	if user, _, err := authUserByAccessToken(state, bearerToken(r)); err == nil {
-		req.UserID = user.ID
+	actor := actorFromRequest(r)
+	if actor == nil || actor.User == nil {
+		writeUnauthorized(w, errors.New("缺少登录 token"))
+		return
+	}
+	req.UserID = actor.User.ID
+	if findRoleProfile(state, req.UserID, req.Role) == nil {
+		writeAccessError(w, forbidden("请先申请该业务身份，再提交认证材料"))
+		return
 	}
 	app, err := submitCertification(state, req.Role, req.UserID, req.Fields)
 	if err != nil {
@@ -467,7 +504,7 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"application": app, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"application": app, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) certificationSubroutes(w http.ResponseWriter, r *http.Request) {
@@ -506,7 +543,7 @@ func (s *Server) certificationSubroutes(w http.ResponseWriter, r *http.Request) 
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"application": app, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"application": app, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) orderSubroutes(w http.ResponseWriter, r *http.Request) {
@@ -562,7 +599,7 @@ func (s *Server) paymentSubroutes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, errors.New("支付单不存在"))
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"payment": payment, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"payment": payment, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) candidates(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -577,7 +614,7 @@ func (s *Server) candidates(w http.ResponseWriter, r *http.Request, orderID stri
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"candidates": items, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"candidates": items, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) confirm(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -601,7 +638,7 @@ func (s *Server) confirm(w http.ResponseWriter, r *http.Request, orderID string)
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "payment": findPaymentOrder(state, req.PaymentID), "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "payment": findPaymentOrder(state, req.PaymentID), "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) advance(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -636,7 +673,7 @@ func (s *Server) advance(w http.ResponseWriter, r *http.Request, orderID string)
 				writeError(w, err)
 				return
 			}
-			writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "airspace": airspace, "snapshot": publicSnapshot(state)}})
+			writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "airspace": airspace, "snapshot": snapshotForRequest(state, r)}})
 			return
 		}
 	}
@@ -649,7 +686,7 @@ func (s *Server) advance(w http.ResponseWriter, r *http.Request, orderID string)
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) decideAirspace(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -677,7 +714,7 @@ func (s *Server) decideAirspace(w http.ResponseWriter, r *http.Request, orderID 
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "airspace": airspace, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "airspace": airspace, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) telemetry(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -691,7 +728,7 @@ func (s *Server) telemetry(w http.ResponseWriter, r *http.Request, orderID strin
 		return
 	}
 	if r.Method == http.MethodGet {
-		writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"telemetry": latestTelemetry(state, orderID), "snapshot": publicSnapshot(state)}})
+		writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"telemetry": latestTelemetry(state, orderID), "snapshot": snapshotForRequest(state, r)}})
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -712,7 +749,7 @@ func (s *Server) telemetry(w http.ResponseWriter, r *http.Request, orderID strin
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"telemetry": snapshot, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"telemetry": snapshot, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) finish(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -734,7 +771,7 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request, orderID string) 
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"order": order, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) review(w http.ResponseWriter, r *http.Request, orderID string) {
@@ -761,15 +798,12 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, orderID string) 
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"review": review, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"review": review, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.authorizeProviderBridge(w, r) {
 		return
 	}
 	var req ProviderPaymentPrepayRequest
@@ -785,6 +819,10 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 	order := findOrder(state, req.OrderID)
 	if order == nil {
 		writeError(w, errors.New("订单不存在"))
+		return
+	}
+	if err := requireProviderOrderAccess(state, actorFromRequest(r), order, RoleClient); err != nil {
+		writeAccessError(w, err)
 		return
 	}
 	if req.AmountCent <= 0 {
@@ -809,6 +847,10 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		SDKParams:       result.SDKParams,
 		CreatedAt:       now,
 		UpdatedAt:       now,
+	}
+	if s.providerBridge.sandbox {
+		payment.Status = PaymentPaid
+		payment.PaidAt = now
 	}
 	state.PaymentOrders = append(state.PaymentOrders, payment)
 	recordAudit(state, ActionPayment, order.ClientID, RoleClient, "payment", payment.ID, "支付预下单已提交至"+payment.Provider)
@@ -862,15 +904,12 @@ func (s *Server) providerPaymentNotify(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"payment": payment, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"payment": payment}})
 }
 
 func (s *Server) providerAirspaceApply(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.authorizeProviderBridge(w, r) {
 		return
 	}
 	var req ProviderAirspaceApplyRequest
@@ -886,6 +925,10 @@ func (s *Server) providerAirspaceApply(w http.ResponseWriter, r *http.Request) {
 	order := findOrder(state, req.OrderID)
 	if order == nil {
 		writeError(w, errors.New("订单不存在"))
+		return
+	}
+	if err := requireProviderOrderAccess(state, actorFromRequest(r), order, RolePilot); err != nil {
+		writeAccessError(w, err)
 		return
 	}
 	if len(req.Area) == 0 {
@@ -909,15 +952,12 @@ func (s *Server) providerAirspaceApply(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"airspace": airspace, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"airspace": airspace, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) providerInsuranceQuote(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.authorizeProviderBridge(w, r) {
 		return
 	}
 	var req ProviderInsuranceQuoteRequest
@@ -933,6 +973,10 @@ func (s *Server) providerInsuranceQuote(w http.ResponseWriter, r *http.Request) 
 	order := findOrder(state, req.OrderID)
 	if order == nil {
 		writeError(w, errors.New("订单不存在"))
+		return
+	}
+	if err := requireProviderOrderAccess(state, actorFromRequest(r), order, RoleClient); err != nil {
+		writeAccessError(w, err)
 		return
 	}
 	if req.CargoType == "" {
@@ -952,7 +996,7 @@ func (s *Server) providerInsuranceQuote(w http.ResponseWriter, r *http.Request) 
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"premiumCent": policy.PremiumCent, "insuredAmountCent": policy.InsuredAmountCent, "policy": policy, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"premiumCent": policy.PremiumCent, "insuredAmountCent": policy.InsuredAmountCent, "policy": policy, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) providerCreditScore(w http.ResponseWriter, r *http.Request) {
@@ -960,20 +1004,26 @@ func (s *Server) providerCreditScore(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.authorizeProviderBridge(w, r) {
-		return
-	}
 	var req ProviderCreditScoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, err)
 		return
 	}
-	result, err := s.providerBridge.CreditScore(r.Context(), req)
+	state, err := s.store.Load(r.Context())
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	state, err := s.store.Load(r.Context())
+	actor := actorFromRequest(r)
+	if actor == nil || actor.User == nil {
+		writeUnauthorized(w, errors.New("缺少登录 token"))
+		return
+	}
+	if !hasActiveRole(state, actor.User, RoleAdmin) {
+		req.UserID = actor.User.ID
+		req.Role = actor.User.CurrentRole
+	}
+	result, err := s.providerBridge.CreditScore(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -984,7 +1034,7 @@ func (s *Server) providerCreditScore(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"userId": credit.UserID, "score": credit.Total, "credit": credit, "snapshot": publicSnapshot(state)}})
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"userId": credit.UserID, "score": credit.Total, "credit": credit, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func (s *Server) providerDroneArm(w http.ResponseWriter, r *http.Request) {
@@ -992,20 +1042,36 @@ func (s *Server) providerDroneArm(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.authorizeProviderBridge(w, r) {
-		return
-	}
 	var req ProviderDroneArmRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, err)
 		return
 	}
-	result, err := s.providerBridge.DroneArm(r.Context(), req)
+	state, err := s.store.Load(r.Context())
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	state, err := s.store.Load(r.Context())
+	actor := actorFromRequest(r)
+	if req.OrderID == "" && actor != nil && actor.User != nil {
+		for i := range state.Orders {
+			candidate := &state.Orders[i]
+			if candidate.DroneID == req.DroneID && candidate.PilotID == actor.User.ID && candidate.Status != StatusCompleted && candidate.Status != StatusSettled && candidate.Status != StatusCancelled {
+				req.OrderID = candidate.ID
+				break
+			}
+		}
+	}
+	order := findOrder(state, req.OrderID)
+	if order == nil {
+		writeAccessError(w, notFound("订单不存在"))
+		return
+	}
+	if err := requireProviderOrderAccess(state, actor, order, RolePilot); err != nil {
+		writeAccessError(w, err)
+		return
+	}
+	result, err := s.providerBridge.DroneArm(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -1020,27 +1086,7 @@ func (s *Server) providerDroneArm(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"droneId": result.DroneID, "ready": result.Ready, "provider": result.Provider, "snapshot": publicSnapshot(state)}})
-}
-
-func (s *Server) authorizeProviderBridge(w http.ResponseWriter, r *http.Request) bool {
-	expected := strings.TrimSpace(s.providerBridgeAuthToken)
-	if expected == "" {
-		if s.requirePaidPayment || s.requireProviderReceipts {
-			writeJSON(w, http.StatusUnauthorized, envelope{OK: false, Error: "PROVIDER_BRIDGE_AUTH_TOKEN 未配置，拒绝 provider bridge 入站调用"})
-			return false
-		}
-		return true
-	}
-	actual := bearerToken(r)
-	if actual == "" {
-		actual = strings.TrimSpace(r.Header.Get("X-Provider-Bridge-Token"))
-	}
-	if subtle.ConstantTimeCompare([]byte(actual), []byte(expected)) != 1 {
-		writeJSON(w, http.StatusUnauthorized, envelope{OK: false, Error: "provider bridge token 无效"})
-		return false
-	}
-	return true
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"droneId": result.DroneID, "ready": result.Ready, "provider": result.Provider, "snapshot": snapshotForRequest(state, r)}})
 }
 
 func paymentSignature(r *http.Request) string {
@@ -1259,14 +1305,31 @@ func bearerToken(r *http.Request) string {
 }
 
 func cors(next http.Handler, allowOrigin string) http.Handler {
-	if strings.TrimSpace(allowOrigin) == "" {
-		allowOrigin = "*"
+	allowed := map[string]bool{}
+	wildcard := false
+	for _, origin := range strings.Split(allowOrigin, ",") {
+		origin = strings.TrimSpace(origin)
+		if origin == "*" {
+			wildcard = true
+		} else if origin != "" {
+			allowed[origin] = true
+		}
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("access-control-allow-origin", allowOrigin)
+		origin := strings.TrimSpace(r.Header.Get("Origin"))
+		if wildcard {
+			w.Header().Set("access-control-allow-origin", "*")
+		} else if allowed[origin] {
+			w.Header().Set("access-control-allow-origin", origin)
+			w.Header().Add("Vary", "Origin")
+		}
 		w.Header().Set("access-control-allow-methods", "GET,POST,OPTIONS")
-		w.Header().Set("access-control-allow-headers", "authorization,content-type,x-provider-bridge-token")
+		w.Header().Set("access-control-allow-headers", "authorization,content-type")
 		if r.Method == http.MethodOptions {
+			if !wildcard && origin != "" && !allowed[origin] {
+				writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "origin is not allowed"})
+				return
+			}
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}

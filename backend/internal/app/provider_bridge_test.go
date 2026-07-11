@@ -107,22 +107,3 @@ func TestProviderBridgeAdaptersDecodeEnvelopeResponses(t *testing.T) {
 		t.Fatalf("drone adapter failed: %#v / %v", drone, err)
 	}
 }
-
-func TestProviderBridgeIngressRequiresTokenInProduction(t *testing.T) {
-	server := &Server{providerBridgeAuthToken: "bridge-token", requirePaidPayment: true}
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/provider/payment/prepay", nil)
-	rec := httptest.NewRecorder()
-	if server.authorizeProviderBridge(rec, req) {
-		t.Fatal("expected missing token to be rejected")
-	}
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rec.Code)
-	}
-
-	req = httptest.NewRequest(http.MethodPost, "/api/v1/provider/payment/prepay", nil)
-	req.Header.Set("Authorization", "Bearer bridge-token")
-	rec = httptest.NewRecorder()
-	if !server.authorizeProviderBridge(rec, req) {
-		t.Fatal("expected valid bridge token to pass")
-	}
-}

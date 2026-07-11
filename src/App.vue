@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app';
 import { watch } from 'vue';
-import { isBackendSnapshotPushEnabled, queueBackendSnapshotSync, syncBackendSnapshot } from '@/api/backend';
+import { isBackendSnapshotPushEnabled, queueBackendSnapshotSync } from '@/api/backend';
 import { ensureDemoCredit } from '@/services/app-flow';
 import { useUserStore } from '@/stores/user';
 import { db } from '@/utils/db';
@@ -9,9 +9,7 @@ import { db } from '@/utils/db';
 onLaunch(() => {
   const userStore = useUserStore();
   ensureDemoCredit();
-  void syncBackendSnapshot()
-    .then(() => userStore.loadMe())
-    .finally(() => ensureDemoCredit());
+  void userStore.loadMe().finally(() => ensureDemoCredit());
 });
 
 if (isBackendSnapshotPushEnabled()) {

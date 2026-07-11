@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -48,11 +49,12 @@ func main() {
 	}
 
 	server := app.NewServerWithOptions(store, app.ServerOptions{
-		ResetEnabled:            getenvBool("ENABLE_RESET_ENDPOINT", true),
-		SnapshotWriteEnabled:    getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", true),
+		ResetEnabled:            getenvBool("ENABLE_RESET_ENDPOINT", !production),
+		SnapshotWriteEnabled:    getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", !production),
 		CORSAllowOrigin:         corsAllowOrigin,
 		RequirePaidPayment:      production,
 		RequireProviderReceipts: production,
+		Production:              production,
 	})
 	log.Printf("drone_v2 backend listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, server.Routes()); err != nil {
@@ -129,6 +131,18 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	}
 	if origin == "*" {
 		return errors.New("生产环境禁止 CORS_ALLOW_ORIGIN=*")
+	}
+	for _, item := range strings.Split(origin, ",") {
+		parsed, err := url.Parse(strings.TrimSpace(item))
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Path != "" {
+			return errors.New("生产环境 CORS_ALLOW_ORIGIN 必须是逗号分隔的 HTTPS origin，不能包含路径")
+		}
+	}
+	if err := app.ValidateSMSProviderEnv(true); err != nil {
+		return err
+	}
+	if err := app.ValidateProviderBridgeEnv(true); err != nil {
+		return err
 	}
 	return nil
 }
