@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -44,7 +46,7 @@ func main() {
 	if err := store.EnsureSchema(context.Background()); err != nil {
 		log.Fatalf("ensure schema: %v", err)
 	}
-	if err := store.SeedIfEmpty(context.Background()); err != nil {
+	if err := store.SeedIfEmpty(context.Background(), !production); err != nil {
 		log.Fatalf("seed: %v", err)
 	}
 
@@ -56,8 +58,27 @@ func main() {
 		RequireProviderReceipts: production,
 		Production:              production,
 	})
+	httpServer := &http.Server{
+		Addr:              ":" + port,
+		Handler:           server.Routes(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+	shutdownCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-shutdownCtx.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+		}
+	}()
 	log.Printf("drone_v2 backend listening on :%s", port)
-	if err := http.ListenAndServe(":"+port, server.Routes()); err != nil {
+	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }
@@ -134,12 +155,15 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	}
 	for _, item := range strings.Split(origin, ",") {
 		parsed, err := url.Parse(strings.TrimSpace(item))
-		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Path != "" {
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil {
 			return errors.New("生产环境 CORS_ALLOW_ORIGIN 必须是逗号分隔的 HTTPS origin，不能包含路径")
 		}
 	}
 	if err := app.ValidateSMSProviderEnv(true); err != nil {
 		return err
+	}
+	if strings.TrimSpace(os.Getenv("SMS_CODE_PEPPER")) == "" {
+		return errors.New("生产环境必须设置 SMS_CODE_PEPPER")
 	}
 	if err := app.ValidateProviderBridgeEnv(true); err != nil {
 		return err

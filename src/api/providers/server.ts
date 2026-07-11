@@ -17,8 +17,8 @@ async function requireRemote<T>(operation: string, request: Promise<T | undefine
 export function createBackendProviders(): Providers {
   return {
     payment: {
-      prepay(orderId: string, amountCent: number, mode: PaymentMode) {
-        return requireRemote('支付', providerPaymentPrepayRemote(orderId, amountCent, mode));
+      prepay(orderId: string, amountCent: number, mode: PaymentMode, capacityId?: string) {
+        return requireRemote('支付', providerPaymentPrepayRemote(orderId, amountCent, mode, capacityId));
       },
     },
     airspace: {

@@ -5,6 +5,10 @@ allowBuilds:
   vue-demi: true
 overrides:
   jpeg-js: 0.4.4
-  '@intlify/core-base': 9.1.11
+  '@intlify/core-base': 9.14.5
   '@intlify/message-resolver': 9.1.11
   ws: 8.21.0
+  phin: 3.7.1
+  postcss: 8.5.10
+  '@babel/core': 7.29.6
+  esbuild: 0.25.0

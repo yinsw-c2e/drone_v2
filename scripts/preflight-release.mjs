@@ -48,9 +48,10 @@ function isLocalBackendURL(value) {
   }
 }
 
-function isHTTPSURL(value) {
+function isHTTPSOrigin(value) {
   try {
-    return new URL(value).protocol === 'https:';
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password && (url.pathname === '/' || url.pathname === '') && !url.search && !url.hash;
   } catch {
     return false;
   }
@@ -71,6 +72,9 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
   const releaseTarget = envValue(env, ['RELEASE_TARGET']) || 'mp-weixin';
   const backendURL = envValue(env, ['VITE_BACKEND_URL']);
   const backendDisabled = boolValue(envValue(env, ['VITE_DISABLE_BACKEND']));
+  const localDBPersistDisabled = boolValue(envValue(env, ['VITE_DISABLE_LOCAL_DB_PERSIST']));
+  const snapshotPushEnabled = boolValue(envValue(env, ['VITE_ENABLE_SNAPSHOT_PUSH']));
+  const demoLoginEnabled = boolValue(envValue(env, ['VITE_DEMO_LOGIN']));
   const providerMode = envValue(env, ['VITE_PROVIDER_MODE']);
   const providerBridgeURL = envValue(env, ['VITE_PROVIDER_BRIDGE_URL']);
   const providerBridgeToken = envValue(env, ['VITE_PROVIDER_BRIDGE_TOKEN']);
@@ -97,15 +101,24 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
   }
   if (!backendURL) {
     errors.push('缺少 VITE_BACKEND_URL，发布包不能回退到 localhost 后端');
-  } else if (!isHTTPSURL(backendURL)) {
-    errors.push('发布模式 VITE_BACKEND_URL 必须是 https:// 开头的真实后端域名');
+  } else if (!isHTTPSOrigin(backendURL)) {
+    errors.push('发布模式 VITE_BACKEND_URL 必须是无路径、查询参数和内嵌凭证的 HTTPS origin');
   } else if (isLocalBackendURL(backendURL)) {
     errors.push('发布模式 VITE_BACKEND_URL 不能指向 localhost/127.0.0.1/0.0.0.0/::1');
   }
   if (backendDisabled === true) {
     errors.push('发布模式禁止设置 VITE_DISABLE_BACKEND=1/true');
   }
-  if (providerMode && providerMode !== 'backend') {
+  if (localDBPersistDisabled !== true) {
+    errors.push('发布模式必须设置 VITE_DISABLE_LOCAL_DB_PERSIST=1/true，禁止持久化演示数据库');
+  }
+  if (snapshotPushEnabled === true) {
+    errors.push('发布模式禁止设置 VITE_ENABLE_SNAPSHOT_PUSH=1/true');
+  }
+  if (demoLoginEnabled === true) {
+    errors.push('发布模式禁止设置 VITE_DEMO_LOGIN=1/true');
+  }
+  if (providerMode !== 'backend') {
     errors.push('发布模式 VITE_PROVIDER_MODE 只允许 backend，不能使用 mock/bridge provider');
   }
   if (providerBridgeURL) {
@@ -127,6 +140,9 @@ export function checkReleaseConfig({ manifestText, env = process.env } = {}) {
       businessDomains,
       backendURL,
       backendDisabled: backendDisabled === true,
+      localDBPersistDisabled: localDBPersistDisabled === true,
+      snapshotPushEnabled: snapshotPushEnabled === true,
+      demoLoginEnabled: demoLoginEnabled === true,
       providerMode,
       providerBridgeURL,
       providerBridgeToken,

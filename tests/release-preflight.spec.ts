@@ -19,6 +19,7 @@ const validReleaseEnv = {
   MP_WEIXIN_BUSINESS_DOMAINS: 'https://h5.example.test',
   VITE_BACKEND_URL: 'https://api.example.test',
   VITE_PROVIDER_MODE: 'backend',
+  VITE_DISABLE_LOCAL_DB_PERSIST: '1',
 };
 
 it('blocks release packaging when app ids and domains are missing', () => {
@@ -42,6 +43,14 @@ it('blocks release packaging when backend url points to localhost', () => {
 
     expect(result.ok).toBe(false);
     expect(result.errors.join('\n')).toContain('VITE_BACKEND_URL 不能指向 localhost');
+  }
+});
+
+it('blocks backend URLs containing paths, query strings, or embedded credentials', () => {
+  for (const backendURL of ['https://api.example.test/api', 'https://api.example.test?token=x', 'https://user:pass@api.example.test']) {
+    const result = checkReleaseConfig({ manifestText: emptyManifest, env: { ...validReleaseEnv, VITE_BACKEND_URL: backendURL } });
+    expect(result.ok).toBe(false);
+    expect(result.errors.join('\n')).toContain('HTTPS origin');
   }
 });
 
@@ -72,10 +81,23 @@ it('accepts an H5 release without mini-program-only configuration', () => {
       RELEASE_TARGET: 'h5',
       VITE_BACKEND_URL: 'https://api.example.test',
       VITE_PROVIDER_MODE: 'backend',
+      VITE_DISABLE_LOCAL_DB_PERSIST: '1',
     },
   });
 
   expect(result.ok).toBe(true);
+});
+
+it('rejects demo persistence, snapshot push, and demo login in release artifacts', () => {
+  for (const unsafe of [
+    { VITE_DISABLE_LOCAL_DB_PERSIST: 'false' },
+    { VITE_ENABLE_SNAPSHOT_PUSH: 'true' },
+    { VITE_DEMO_LOGIN: 'true' },
+    { VITE_PROVIDER_MODE: '' },
+  ]) {
+    const result = checkReleaseConfig({ manifestText: emptyManifest, env: { ...validReleaseEnv, ...unsafe } });
+    expect(result.ok).toBe(false);
+  }
 });
 
 it('rejects client-side provider bridge secrets', () => {

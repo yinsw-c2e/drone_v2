@@ -196,6 +196,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { DispatchStrategy, OrderStatus } from '@/models';
 import type { MatchCandidate } from '@/models';
@@ -310,6 +311,12 @@ const copy = computed(() => MATCH_COPY[localeStore.locale]);
 
 orderStore.strategy = DispatchStrategy.GlobalOptimal;
 
+onShow(() => {
+  if (activeOrder.value?.status === OrderStatus.Matching) {
+    void refreshCandidates();
+  }
+});
+
 const activeOrder = computed(() => orderStore.activeOrder);
 const candidates = computed(() => activeOrder.value?.status === OrderStatus.Matching ? orderStore.candidates : []);
 const selected = computed(() => candidates.value.find((item) => item.capacityId === orderStore.selectedCapacityId) ?? candidates.value[0]);
@@ -412,8 +419,9 @@ function candidateSubtitle(candidate: MatchCandidate) {
   return `${candidateName(candidate)} · ${candidate.distanceKm.toFixed(1)}km`;
 }
 
-function changeStrategy(value: DispatchStrategy) {
+async function changeStrategy(value: DispatchStrategy) {
   orderStore.strategy = value;
+  await refreshCandidates();
   if (candidates.value[0]) {
     orderStore.chooseCandidate(candidates.value[0]);
   }
@@ -426,18 +434,27 @@ function selectRecommended() {
   }
 }
 
-function retryMatch() {
+async function retryMatch() {
   if (activeOrder.value?.status !== OrderStatus.Matching) {
     message.value = action.value.description;
     return;
   }
   orderStore.strategy = DispatchStrategy.GlobalOptimal;
+  await refreshCandidates();
   if (candidates.value[0]) {
     orderStore.chooseCandidate(candidates.value[0]);
     message.value = copy.value.rematched;
     return;
   }
   message.value = action.value.description || copy.value.noCapacity;
+}
+
+async function refreshCandidates() {
+  try {
+    await orderStore.refreshRemoteCandidates();
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : copy.value.noCapacity;
+  }
 }
 
 function ensureConfirmableCandidate(): MatchCandidate | undefined {

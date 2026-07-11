@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import type { GeoPoint, Telemetry } from '@/models';
 import { OrderStatus } from '@/models';
-import { fetchTelemetryRemote, saveTelemetryRemote } from '@/api/backend';
+import { fetchTelemetryRemote, isProductionBackendRequired, saveTelemetryRemote } from '@/api/backend';
 import { demoBatteryPct } from '@/services/device-status';
 import { insideNoFlyZone, deviationM } from '@/utils/geo';
 import { startTelemetry } from '@/utils/telemetry';
@@ -13,6 +13,7 @@ interface TelemetryState {
   frames: Telemetry[];
   alerts: string[];
   running: boolean;
+  syncError: string;
 }
 
 let stopRunner: (() => void) | undefined;
@@ -23,6 +24,7 @@ export const useTelemetryStore = defineStore('telemetry', {
     frames: [],
     alerts: [],
     running: false,
+    syncError: '',
   }),
   getters: {
     latest(state): Telemetry | undefined {
@@ -32,6 +34,14 @@ export const useTelemetryStore = defineStore('telemetry', {
   actions: {
     start(orderId: string, source: 'simulator' | 'pilot' | 'client' = 'simulator') {
       if (stopRunner) stopRunner();
+      if (isProductionBackendRequired()) {
+        stopRunner = undefined;
+        this.orderId = orderId;
+        this.running = false;
+        this.syncError = '';
+        void this.refreshShared(orderId).catch((error) => this.recordSyncError(error));
+        return;
+      }
       const order = repo.orders.find(orderId);
       if (order && order.status !== OrderStatus.InFlight) {
         this.standby(orderId);
@@ -65,6 +75,7 @@ export const useTelemetryStore = defineStore('telemetry', {
       const snapshot = remote ?? repo.telemetry.where((item) => item.orderId === orderId)[0];
       if (!snapshot) return undefined;
       this.applyFrame(orderId, snapshot.frame);
+      this.syncError = '';
       return snapshot.frame;
     },
     applyFrame(orderId: string, frame: Telemetry) {
@@ -86,6 +97,12 @@ export const useTelemetryStore = defineStore('telemetry', {
     standby(orderId: string) {
       if (stopRunner) stopRunner();
       stopRunner = undefined;
+      if (isProductionBackendRequired()) {
+        this.orderId = orderId;
+        this.running = false;
+        void this.refreshShared(orderId).catch((error) => this.recordSyncError(error));
+        return;
+      }
       const route = routeForOrder(orderId);
       if (!route) {
         this.orderId = '';
@@ -103,6 +120,12 @@ export const useTelemetryStore = defineStore('telemetry', {
     arrive(orderId: string, source: 'simulator' | 'pilot' | 'client' | 'backend' = 'pilot') {
       if (stopRunner) stopRunner();
       stopRunner = undefined;
+      if (isProductionBackendRequired()) {
+        this.orderId = orderId;
+        this.running = false;
+        void this.refreshShared(orderId).catch((error) => this.recordSyncError(error));
+        return;
+      }
       const route = routeForOrder(orderId);
       if (!route) {
         this.orderId = '';
@@ -127,6 +150,10 @@ export const useTelemetryStore = defineStore('telemetry', {
       if (stopRunner) stopRunner();
       stopRunner = undefined;
       this.running = false;
+      if (isProductionBackendRequired()) {
+        if (this.orderId) void this.refreshShared(this.orderId).catch((error) => this.recordSyncError(error));
+        return;
+      }
       const latest = this.latest;
       const route = routeForOrder(this.orderId);
       const frame = latest ? { ...latest, batteryPct: 30 } : {
@@ -140,6 +167,10 @@ export const useTelemetryStore = defineStore('telemetry', {
       };
       this.applyFrame(this.orderId, frame);
       if (this.orderId) void saveTelemetryRemote(this.orderId, frame, 'pilot');
+    },
+    recordSyncError(error: unknown) {
+      this.syncError = error instanceof Error ? error.message : '遥测服务暂不可用';
+      if (!this.alerts.includes(this.syncError)) this.alerts.push(this.syncError);
     },
   },
 });

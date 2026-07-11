@@ -24,12 +24,15 @@ func TestPaymentNotifySignatureMarksPaid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode notification: %v", err)
 	}
-	payment, err := applyPaymentNotification(&state, note)
+	payment, changed, err := applyPaymentNotification(&state, note)
 	if err != nil {
 		t.Fatalf("apply notification: %v", err)
 	}
 	if payment.Status != PaymentPaid || payment.PaidAt == "" {
 		t.Fatalf("expected paid payment, got %#v", payment)
+	}
+	if !changed {
+		t.Fatal("first payment callback must change state")
 	}
 }
 
@@ -38,6 +41,58 @@ func TestPaymentNotifyRejectsBadSignature(t *testing.T) {
 	body := []byte(`{"paymentId":"pay_1","status":"paid"}`)
 	if err := bridge.VerifyPaymentNotification(body, "bad-signature"); err == nil || err.Error() != "支付回调验签失败" {
 		t.Fatalf("expected signature error, got %v", err)
+	}
+}
+
+func TestPaymentNotifyRejectsAmountMismatchAndPaidRegression(t *testing.T) {
+	state := buildSeed()
+	state.PaymentOrders = append(state.PaymentOrders, PaymentOrder{
+		ID: "pay_strict", OrderID: "o_1", AmountCent: 12345, Mode: "escrow",
+		Status: PaymentPending, Provider: "wxpay", ProviderTradeNo: "wx_trade_strict", CreatedAt: nowISO(), UpdatedAt: nowISO(),
+	})
+	if _, _, err := applyPaymentNotification(&state, &PaymentNotification{PaymentID: "pay_strict", TradeNo: "wx_trade_strict", Status: "paid", PaidCent: 1, Provider: "wxpay"}); err == nil || !strings.Contains(err.Error(), "金额") {
+		t.Fatalf("expected amount mismatch, got %v", err)
+	}
+	payment, _, err := applyPaymentNotification(&state, &PaymentNotification{PaymentID: "pay_strict", TradeNo: "wx_trade_strict", Status: "paid", PaidCent: 12345, Provider: "wxpay"})
+	if err != nil || payment.Status != PaymentPaid {
+		t.Fatalf("expected exact payment to pass: %#v / %v", payment, err)
+	}
+	if _, _, err := applyPaymentNotification(&state, &PaymentNotification{PaymentID: "pay_strict", TradeNo: "wx_trade_strict", Status: "failed", Provider: "wxpay"}); err == nil || !strings.Contains(err.Error(), "不能回退") {
+		t.Fatalf("expected paid regression to be rejected, got %v", err)
+	}
+}
+
+func TestPaymentNotifyRejectsMismatchedTradeNumber(t *testing.T) {
+	state := buildSeed()
+	state.PaymentOrders = append(state.PaymentOrders, PaymentOrder{
+		ID: "pay_trade", OrderID: "o_1", AmountCent: 12345, Mode: "escrow",
+		Status: PaymentPending, Provider: "wxpay", ProviderTradeNo: "wx_trade_expected", CreatedAt: nowISO(), UpdatedAt: nowISO(),
+	})
+	_, _, err := applyPaymentNotification(&state, &PaymentNotification{PaymentID: "pay_trade", TradeNo: "wx_trade_other", Status: "paid", PaidCent: 12345, Provider: "wxpay"})
+	if err == nil || !strings.Contains(err.Error(), "交易号") {
+		t.Fatalf("expected trade mismatch, got %v", err)
+	}
+}
+
+func TestProductionPrepayUsesServerCandidateQuote(t *testing.T) {
+	state := buildSeed()
+	order, err := submitOrderWithOptions(&state, submitOrderRequest{
+		ClientID: "u_c1", CargoType: CargoNormal, WeightKg: 5, ValueCent: 100000, BudgetCent: 200000,
+		From: GeoPoint{Lng: 116.4, Lat: 39.91}, To: GeoPoint{Lng: 116.42, Lat: 39.92},
+	}, false)
+	if err != nil {
+		t.Fatalf("submit order: %v", err)
+	}
+	candidates, err := candidatesForOrderWithOptions(&state, order.ID, "global", false)
+	if err != nil || len(candidates) == 0 {
+		t.Fatalf("candidates: %#v / %v", candidates, err)
+	}
+	req := ProviderPaymentPrepayRequest{OrderID: order.ID, CapacityID: candidates[0].CapacityID, AmountCent: 1, Mode: "escrow"}
+	if err := preparePaymentPrepayRequest(&state, order, &req, true); err != nil {
+		t.Fatalf("prepare payment: %v", err)
+	}
+	if req.AmountCent != candidates[0].QuoteCent {
+		t.Fatalf("client amount must be replaced by server quote: %d != %d", req.AmountCent, candidates[0].QuoteCent)
 	}
 }
 

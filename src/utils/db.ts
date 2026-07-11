@@ -10,8 +10,9 @@ export interface DBShape {
   wallets: Wallet[]; ledger: LedgerEntry[]; notifications: Notification[]; authApplications: CertificationApplication[]; auditLogs: AuditLog[]; _seededAt: string;
 }
 const KEY = 'drone_mvp_db_v3';
-const env = ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {});
+const env = ((import.meta as ImportMeta & { env?: Record<string, string | boolean | undefined> }).env ?? {});
 const localPersistDisabled = env.VITE_DISABLE_LOCAL_DB_PERSIST === '1' || env.VITE_DISABLE_LOCAL_DB_PERSIST === 'true';
+const productionRuntime = env.PROD === true || env.MODE === 'production' || env.VITE_APP_ENV === 'production';
 function canUseLocalPersist() {
   return !localPersistDisabled && typeof uni !== 'undefined' && typeof uni.getStorageSync === 'function';
 }
@@ -19,21 +20,46 @@ function load(): DBShape | null {
   if (!canUseLocalPersist()) return null;
   try { const r = uni.getStorageSync(KEY); return r ? JSON.parse(r) : null; } catch { return null; }
 }
-function migrate(input: DBShape | null): DBShape {
-  const next = input ?? buildSeed();
+export function createEmptyDB(): DBShape {
+  return {
+    users: [], userRoleProfiles: [], authSessions: [], smsCodes: [], pilots: [], owners: [], clients: [],
+    drones: [], capacity: [], orders: [], paymentOrders: [], credits: [], policies: [], claims: [], airspace: [],
+    telemetry: [], reviews: [], wallets: [], ledger: [], notifications: [], authApplications: [], auditLogs: [],
+    _seededAt: '',
+  };
+}
+
+export function migrateDB(input: DBShape | null, allowDemoBackfill: boolean): DBShape {
+  const next = input ?? (allowDemoBackfill ? buildSeed() : createEmptyDB());
+  next.users ??= [];
   next.userRoleProfiles ??= [];
   next.authSessions ??= [];
   next.smsCodes ??= [];
+  next.pilots ??= [];
+  next.owners ??= [];
+  next.clients ??= [];
+  next.drones ??= [];
+  next.capacity ??= [];
+  next.orders ??= [];
+  next.paymentOrders ??= [];
+  next.credits ??= [];
+  next.policies ??= [];
+  next.claims ??= [];
   next.authApplications ??= [];
   next.auditLogs ??= [];
   next.telemetry ??= [];
-  next.paymentOrders ??= [];
+  next.reviews ??= [];
+  next.wallets ??= [];
+  next.ledger ??= [];
+  next.notifications ??= [];
+  next.airspace ??= [];
+  next._seededAt ??= '';
   // 旧存档回填演示初始数据：仅在对应集合为空时注入，避免覆盖已产生的业务数据
-  if (!next.wallets?.length) {
+  if (allowDemoBackfill && !next.wallets.length) {
     next.wallets = buildSeedWallets();
-    next.ledger = next.ledger?.length ? next.ledger : buildSeedLedger();
+    next.ledger = next.ledger.length ? next.ledger : buildSeedLedger();
   }
-  if (!next.authApplications.length) next.authApplications = buildSeedCertQueue();
+  if (allowDemoBackfill && !next.authApplications.length) next.authApplications = buildSeedCertQueue();
   next.users?.forEach((u) => {
     u.blacklisted ??= false;
     u.disabled ??= false;
@@ -53,9 +79,9 @@ function migrate(input: DBShape | null): DBShape {
   });
   return next;
 }
-export const db = reactive<DBShape>(migrate(load()));
+export const db = reactive<DBShape>(migrateDB(load(), !productionRuntime));
 if (canUseLocalPersist()) {
   watch(db, () => { try { uni.setStorageSync(KEY, JSON.stringify(db)); } catch { /* ignore persist errors */ } }, { deep: true });
 }
 export const resetDB = () => { Object.assign(db, buildSeed()); };
-export const hydrateDB = (next: DBShape) => { Object.assign(db, migrate(next)); };
+export const hydrateDB = (next: DBShape) => { Object.assign(db, migrateDB(next, false)); };

@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 type Server struct {
@@ -96,7 +99,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/provider/drone/arm", s.providerDroneArm)
 	mux.HandleFunc("/api/v1/certifications", s.certifications)
 	mux.HandleFunc("/api/v1/certifications/", s.certificationSubroutes)
-	return cors(s.limitRequestBodies(s.serializeMutations(s.authorizeRequests(mux))), s.corsAllowOrigin)
+	return cors(requestSafety(s.limitRequestBodies(s.serializeMutations(s.authorizeRequests(mux)))), s.corsAllowOrigin)
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
@@ -444,6 +447,12 @@ func (s *Server) orders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.ClientID = actor.User.ID
+	if s.production {
+		if err := validateProductionOrderFiles(req.Photos); err != nil {
+			writeError(w, err)
+			return
+		}
+	}
 	order, err := submitOrderWithOptions(state, req, !s.requireProviderReceipts)
 	if err != nil {
 		writeError(w, err)
@@ -494,6 +503,12 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 	if findRoleProfile(state, req.UserID, req.Role) == nil {
 		writeAccessError(w, forbidden("请先申请该业务身份，再提交认证材料"))
 		return
+	}
+	if s.production {
+		if err := validateProductionCertificationFiles(req.Fields); err != nil {
+			writeError(w, err)
+			return
+		}
 	}
 	app, err := submitCertification(state, req.Role, req.UserID, req.Fields)
 	if err != nil {
@@ -825,6 +840,10 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		writeAccessError(w, err)
 		return
 	}
+	if err := preparePaymentPrepayRequest(state, order, &req, s.requirePaidPayment); err != nil {
+		writeError(w, err)
+		return
+	}
 	if req.AmountCent <= 0 {
 		writeError(w, errors.New("支付金额必须大于 0"))
 		return
@@ -832,6 +851,10 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 	result, err := s.providerBridge.PaymentPrepay(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
+		return
+	}
+	if result.PaidCent != req.AmountCent {
+		writeError(w, errors.New("支付供应商预下单金额与服务端报价不一致"))
 		return
 	}
 	now := nowISO()
@@ -894,15 +917,17 @@ func (s *Server) providerPaymentNotify(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	payment, err := applyPaymentNotification(state, note)
+	payment, changed, err := applyPaymentNotification(state, note)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
-	recordAudit(state, ActionPayment, "payment-provider", RoleAdmin, "payment", payment.ID, "支付回调验签通过，状态="+string(payment.Status))
-	if err := s.store.Save(r.Context(), state); err != nil {
-		writeError(w, err)
-		return
+	if changed {
+		recordAudit(state, ActionPayment, "payment-provider", RoleAdmin, "payment", payment.ID, "支付回调验签通过，状态="+string(payment.Status))
+		if err := s.store.Save(r.Context(), state); err != nil {
+			writeError(w, err)
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, envelope{OK: true, Data: map[string]any{"payment": payment}})
 }
@@ -931,7 +956,12 @@ func (s *Server) providerAirspaceApply(w http.ResponseWriter, r *http.Request) {
 		writeAccessError(w, err)
 		return
 	}
-	if len(req.Area) == 0 {
+	if s.requireProviderReceipts {
+		req.Area = airspaceAreaForOrder(order)
+		req.AltitudeM = 120
+		now := time.Now()
+		req.Window = TimeWindow{Start: now.Format(time.RFC3339Nano), End: now.Add(90 * time.Minute).Format(time.RFC3339Nano)}
+	} else if len(req.Area) == 0 {
 		req.Area = airspaceAreaForOrder(order)
 	}
 	if req.AltitudeM == 0 {
@@ -979,12 +1009,8 @@ func (s *Server) providerInsuranceQuote(w http.ResponseWriter, r *http.Request) 
 		writeAccessError(w, err)
 		return
 	}
-	if req.CargoType == "" {
-		req.CargoType = order.Cargo.Type
-	}
-	if req.ValueCent == 0 {
-		req.ValueCent = order.Cargo.ValueCent
-	}
+	req.CargoType = order.Cargo.Type
+	req.ValueCent = order.Cargo.ValueCent
 	result, err := s.providerBridge.InsuranceQuote(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
@@ -1020,6 +1046,10 @@ func (s *Server) providerCreditScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !hasActiveRole(state, actor.User, RoleAdmin) {
+		if !hasActiveRole(state, actor.User, actor.User.CurrentRole) {
+			writeAccessError(w, forbidden("当前业务身份尚未激活"))
+			return
+		}
 		req.UserID = actor.User.ID
 		req.Role = actor.User.CurrentRole
 	}
@@ -1071,6 +1101,10 @@ func (s *Server) providerDroneArm(w http.ResponseWriter, r *http.Request) {
 		writeAccessError(w, err)
 		return
 	}
+	if order.DroneID == "" || req.DroneID != order.DroneID {
+		writeAccessError(w, notFound("订单未绑定该无人机"))
+		return
+	}
 	result, err := s.providerBridge.DroneArm(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
@@ -1096,6 +1130,53 @@ func paymentSignature(r *http.Request) string {
 		}
 	}
 	return ""
+}
+
+func preparePaymentPrepayRequest(state *DBShape, order *Order, req *ProviderPaymentPrepayRequest, requireServerQuote bool) error {
+	if !requireServerQuote {
+		return nil
+	}
+	if req.CapacityID == "" {
+		return errors.New("支付预下单缺少 capacityId")
+	}
+	candidates, err := candidatesForOrderWithOptions(state, order.ID, "global", false)
+	if err != nil {
+		return err
+	}
+	for _, candidate := range candidates {
+		if candidate.CapacityID == req.CapacityID {
+			req.AmountCent = candidate.QuoteCent
+			return nil
+		}
+	}
+	return errors.New("所选运力已不满足合规条件，请重新匹配")
+}
+
+func validateProductionCertificationFiles(fields map[string]any) error {
+	raw, ok := fields["idPhotos"]
+	if !ok {
+		return errors.New("生产认证必须先上传身份证明材料到私有对象存储")
+	}
+	items, ok := raw.([]any)
+	if !ok || len(items) == 0 {
+		return errors.New("生产认证材料格式无效")
+	}
+	for _, item := range items {
+		value, ok := item.(string)
+		if !ok || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), "https://") {
+			return errors.New("生产认证材料必须使用 HTTPS 对象存储地址")
+		}
+	}
+	return nil
+}
+
+func validateProductionOrderFiles(photos []string) error {
+	for _, value := range photos {
+		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), "https://") {
+			return errors.New("生产货物图片必须先上传到私有对象存储")
+		}
+	}
+	return nil
 }
 
 func airspaceAreaForOrder(order *Order) []GeoPoint {
@@ -1284,11 +1365,33 @@ type snapshotRequest struct {
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
 	w.Header().Set("content-type", "application/json; charset=utf-8")
+	w.Header().Set("cache-control", "no-store")
+	w.Header().Set("pragma", "no-cache")
+	w.Header().Set("x-content-type-options", "nosniff")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(value)
 }
 
 func writeError(w http.ResponseWriter, err error) {
+	var rateLimit *rateLimitError
+	if errors.As(err, &rateLimit) {
+		writeJSON(w, http.StatusTooManyRequests, envelope{OK: false, Error: rateLimit.Message})
+		return
+	}
+	if isProductionEnv() {
+		var upstream *upstreamError
+		if errors.As(err, &upstream) {
+			log.Printf("upstream request failed: %v", err)
+			writeJSON(w, http.StatusBadGateway, envelope{OK: false, Error: "外部服务暂不可用，请稍后重试"})
+			return
+		}
+		var databaseError *mysql.MySQLError
+		if errors.As(err, &databaseError) {
+			log.Printf("database request failed: %v", err)
+			writeJSON(w, http.StatusInternalServerError, envelope{OK: false, Error: "服务内部错误，请稍后重试"})
+			return
+		}
+	}
 	writeJSON(w, http.StatusBadRequest, envelope{OK: false, Error: err.Error()})
 }
 

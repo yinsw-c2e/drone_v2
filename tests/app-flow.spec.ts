@@ -496,7 +496,7 @@ it('确认订单时 payment provider 使用订单选择的支付模式', async (
   store.chooseCandidate(candidate);
   const spy = vi.spyOn(providers.payment, 'prepay');
   await store.confirmSelected();
-  expect(spy).toHaveBeenCalledWith(order.id, candidate.quoteCent, PaymentMode.Installment);
+  expect(spy).toHaveBeenCalledWith(order.id, candidate.quoteCent, PaymentMode.Installment, candidate.capacityId);
   expect(repo.auditLogs.where((log) => log.targetId === order.id && log.detail.includes('分期支付'))).toHaveLength(1);
 });
 

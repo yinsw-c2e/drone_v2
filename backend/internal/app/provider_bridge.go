@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -35,6 +36,7 @@ type providerEndpoints struct {
 
 type ProviderPaymentPrepayRequest struct {
 	OrderID    string `json:"orderId"`
+	CapacityID string `json:"capacityId,omitempty"`
 	AmountCent int    `json:"amountCent"`
 	Mode       string `json:"mode"`
 	NotifyURL  string `json:"notifyUrl,omitempty"`
@@ -185,6 +187,18 @@ func ValidateProviderBridgeEnv(production bool) error {
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("生产 provider bridge 配置缺失: %s", strings.Join(missing, ", "))
+	}
+	for key, value := range map[string]string{
+		"PROVIDER_PAYMENT_PREPAY_URL":  required["PROVIDER_PAYMENT_PREPAY_URL"],
+		"PROVIDER_AIRSPACE_APPLY_URL":  required["PROVIDER_AIRSPACE_APPLY_URL"],
+		"PROVIDER_INSURANCE_QUOTE_URL": required["PROVIDER_INSURANCE_QUOTE_URL"],
+		"PROVIDER_CREDIT_SCORE_URL":    required["PROVIDER_CREDIT_SCORE_URL"],
+		"PROVIDER_DRONE_ARM_URL":       required["PROVIDER_DRONE_ARM_URL"],
+	} {
+		parsed, err := url.Parse(value)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+			return fmt.Errorf("%s 必须是无内嵌凭证的 HTTPS URL", key)
+		}
 	}
 	return nil
 }
@@ -381,14 +395,17 @@ func (b *ProviderBridge) postJSON(ctx context.Context, name string, endpoint str
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%s provider 调用失败: %w", name, err)
+		return &upstreamError{Service: name + " provider", Err: err}
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("%s provider 调用失败: HTTP %d %s", name, resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return &upstreamError{Service: name + " provider", Err: fmt.Errorf("HTTP %d %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))}
 	}
-	return decodeProviderResponse(responseBody, out)
+	if err := decodeProviderResponse(responseBody, out); err != nil {
+		return &upstreamError{Service: name + " provider", Err: err}
+	}
+	return nil
 }
 
 func decodeProviderResponse(body []byte, out any) error {
@@ -440,7 +457,7 @@ func decodePaymentNotification(body []byte) (*PaymentNotification, error) {
 	return &note, nil
 }
 
-func applyPaymentNotification(state *DBShape, note *PaymentNotification) (*PaymentOrder, error) {
+func applyPaymentNotification(state *DBShape, note *PaymentNotification) (*PaymentOrder, bool, error) {
 	payment := findPaymentOrder(state, note.PaymentID)
 	if payment == nil && note.TradeNo != "" {
 		for i := range state.PaymentOrders {
@@ -451,30 +468,54 @@ func applyPaymentNotification(state *DBShape, note *PaymentNotification) (*Payme
 		}
 	}
 	if payment == nil {
-		return nil, errors.New("支付单不存在")
+		return nil, false, errors.New("支付单不存在")
+	}
+	if note.PaymentID != "" && note.PaymentID != payment.ID {
+		return nil, false, errors.New("支付回调 paymentId 与交易号不匹配")
+	}
+	if note.TradeNo != "" && note.TradeNo != payment.ProviderTradeNo {
+		return nil, false, errors.New("支付回调交易号不匹配")
+	}
+	if note.Provider != "" && payment.Provider != "" && payment.Provider != "provider-bridge" && note.Provider != payment.Provider {
+		return nil, false, errors.New("支付回调 provider 不匹配")
 	}
 	now := nowISO()
 	status := strings.ToLower(strings.TrimSpace(note.Status))
 	switch status {
 	case "paid", "success", "succeeded":
+		if note.PaidCent <= 0 || note.PaidCent != payment.AmountCent {
+			return nil, false, errors.New("支付回调金额与支付单不一致")
+		}
+		if payment.Status == PaymentPaid {
+			return payment, false, nil
+		}
 		payment.Status = PaymentPaid
 		payment.PaidAt = fallback(note.PaidAt, now)
 		payment.FailedReason = ""
 	case "failed", "fail":
+		if payment.Status == PaymentPaid {
+			return nil, false, errors.New("已支付订单不能回退为失败")
+		}
+		if payment.Status == PaymentFailed {
+			return payment, false, nil
+		}
 		payment.Status = PaymentFailed
 		payment.FailedReason = fallback(note.Error, "provider reported payment failed")
 	case "cancelled", "canceled", "cancel":
+		if payment.Status == PaymentPaid {
+			return nil, false, errors.New("已支付订单不能回退为取消")
+		}
+		if payment.Status == PaymentCancelled {
+			return payment, false, nil
+		}
 		payment.Status = PaymentCancelled
 		payment.FailedReason = fallback(note.Error, "provider reported payment cancelled")
 	default:
-		return nil, errors.New("支付回调状态不支持")
+		return nil, false, errors.New("支付回调状态不支持")
 	}
-	if note.PaidCent > 0 {
-		payment.AmountCent = note.PaidCent
-	}
-	if note.Provider != "" {
+	if note.Provider != "" && payment.Provider == "provider-bridge" {
 		payment.Provider = note.Provider
 	}
 	payment.UpdatedAt = now
-	return payment, nil
+	return payment, true, nil
 }

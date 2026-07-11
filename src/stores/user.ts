@@ -78,8 +78,8 @@ export const useUserStore = defineStore('user', {
           this.initialized = true;
           return true;
         }
-      } catch {
-        this.clearAuth();
+      } catch (error) {
+        if (isInvalidSessionError(error)) this.clearAuth();
       }
       this.initialized = true;
       return this.isAuthenticated;
@@ -256,6 +256,11 @@ function demoLoginEnabled() {
 
 function normalizePhone(phone: string) {
   return `${phone}`.replace(/\D/g, '');
+}
+
+function isInvalidSessionError(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  return /登录态已失效|登录态已过期|缺少登录 token|账号不可用|请重新登录/.test(message);
 }
 
 function readLocalCodes(): Record<string, LocalCode> {

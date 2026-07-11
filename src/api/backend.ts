@@ -54,16 +54,46 @@ export interface SubmitOrderPayload {
   to?: GeoPoint;
 }
 
-const env = ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {});
+export interface BackendRuntimeEnv {
+  PROD?: boolean;
+  MODE?: string;
+  VITE_APP_ENV?: string;
+  VITE_BACKEND_URL?: string;
+  VITE_DISABLE_BACKEND?: string;
+  VITE_ENABLE_SNAPSHOT_PUSH?: string;
+  VITE_BACKEND_TIMEOUT_MS?: string;
+}
+
+const env = ((import.meta as ImportMeta & { env?: BackendRuntimeEnv }).env ?? {});
 const backendURL = env.VITE_BACKEND_URL || 'http://localhost:8088';
 const disabled = env.VITE_DISABLE_BACKEND === '1' || env.VITE_DISABLE_BACKEND === 'true';
 const snapshotPushEnabled = env.VITE_ENABLE_SNAPSHOT_PUSH === '1' || env.VITE_ENABLE_SNAPSHOT_PUSH === 'true';
+const backendRequired = isProductionBackendRequired(env);
+const requestTimeoutMs = positiveNumber(env.VITE_BACKEND_TIMEOUT_MS, backendRequired ? 8_000 : 2_500);
 const ACCESS_TOKEN_KEY = 'drone_auth_access_token';
 const REFRESH_TOKEN_KEY = 'drone_auth_refresh_token';
 const TOKEN_EXPIRES_KEY = 'drone_auth_token_expires_at';
 let lastNetworkFailure = 0;
 let snapshotSyncTimer: ReturnType<typeof setTimeout> | undefined;
 let snapshotSaving = false;
+
+export function isProductionBackendRequired(runtime: BackendRuntimeEnv = env) {
+  return runtime.PROD === true || runtime.MODE === 'production' || runtime.VITE_APP_ENV === 'production';
+}
+
+export function handleUnavailableBackend(runtime: BackendRuntimeEnv = env): undefined {
+  if (isProductionBackendRequired(runtime)) throw new Error('生产服务暂不可用，请检查网络后重试');
+  return undefined;
+}
+
+export function allowsLocalBackendFallback(status: number, message: string, runtime: BackendRuntimeEnv = env) {
+  return !isProductionBackendRequired(runtime) && isRecoverableBackendMiss(status, message);
+}
+
+function positiveNumber(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 function canUseBackend() {
   if (disabled) return false;
@@ -88,7 +118,7 @@ function rawBackendRequest<T>(path: string, method: HttpMethod = 'GET', data?: R
       method,
       data,
       header: includeAuth ? authHeader() : {},
-      timeout: 2500,
+      timeout: requestTimeoutMs,
       success: (response) => {
         resolve({ statusCode: response.statusCode, data: response.data as BackendEnvelope<T> });
       },
@@ -102,18 +132,20 @@ function rawBackendRequest<T>(path: string, method: HttpMethod = 'GET', data?: R
 
 async function requestBackend<T>(path: string, method: HttpMethod = 'GET', data?: RequestBody, retryAuth = true): Promise<T | undefined> {
   const response = await rawBackendRequest<T>(path, method, data);
-  if (!response) return undefined;
+  if (!response) return handleUnavailableBackend(env);
   const status = response.statusCode ?? 0;
   const body = response.data;
   if (status >= 200 && status < 300 && body?.ok) {
     return body.data;
   }
   const message = body?.error || `后端请求失败 (${status})`;
-  if (status === 401 && retryAuth && await refreshStoredToken()) {
-    return requestBackend<T>(path, method, data, false);
+  if (status === 401 && retryAuth) {
+    const refresh = await refreshStoredToken();
+    if (refresh === 'refreshed') return requestBackend<T>(path, method, data, false);
+    if (refresh === 'unavailable') throw new Error('登录续期服务暂不可用，请稍后重试');
   }
   if (status === 401) clearStoredAuthTokens();
-  if (isRecoverableBackendMiss(status, message)) {
+  if (allowsLocalBackendFallback(status, message, env)) {
     lastNetworkFailure = Date.now();
     return undefined;
   }
@@ -163,19 +195,23 @@ export function clearStoredAuthTokens() {
   uni.removeStorageSync(TOKEN_EXPIRES_KEY);
 }
 
-async function refreshStoredToken() {
+async function refreshStoredToken(): Promise<'refreshed' | 'invalid' | 'unavailable'> {
   const refreshToken = getStoredRefreshToken();
-  if (!refreshToken) return false;
+  if (!refreshToken) return 'invalid';
   const response = await rawBackendRequest<AuthPayload>('/api/v1/auth/refresh', 'POST', { refreshToken }, false);
+  if (!response) return 'unavailable';
   const status = response?.statusCode ?? 0;
   const payload = response?.data;
   if (status >= 200 && status < 300 && payload?.ok && payload.data?.token) {
     saveAuthTokens(payload.data.token);
     hydrateAuthPayload(payload.data);
-    return true;
+    return 'refreshed';
   }
-  clearStoredAuthTokens();
-  return false;
+  if (status === 400 || status === 401 || status === 403) {
+    clearStoredAuthTokens();
+    return 'invalid';
+  }
+  return 'unavailable';
 }
 
 export async function syncBackendSnapshot() {
@@ -183,14 +219,14 @@ export async function syncBackendSnapshot() {
     const session = await loadMeRemote();
     return session?.snapshot;
   }
-  if (env.PROD === true || env.MODE === 'production') return undefined;
+  if (backendRequired) return undefined;
   const data = await requestBackend<{ snapshot: DBShape }>('/api/v1/snapshot');
   hydrateSnapshot(data);
   return data?.snapshot;
 }
 
-export async function providerPaymentPrepayRemote(orderId: string, amountCent: number, mode: PaymentMode) {
-  return requestBackend<PaymentPrepayResult>('/api/v1/provider/payment/prepay', 'POST', { orderId, amountCent, mode });
+export async function providerPaymentPrepayRemote(orderId: string, amountCent: number, mode: PaymentMode, capacityId?: string) {
+  return requestBackend<PaymentPrepayResult>('/api/v1/provider/payment/prepay', 'POST', { orderId, amountCent, mode, capacityId });
 }
 
 export async function providerAirspaceApplyRemote(orderId: string) {

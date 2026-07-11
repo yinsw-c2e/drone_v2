@@ -18,8 +18,8 @@
         <view class="corner tl" />
         <view class="corner br" />
         <view class="card-copy">
-          <text class="card-title">系统初始化完成</text>
-          <text class="card-desc">无人机群组遥测数据已就绪，安全链路连接稳定。</text>
+          <text class="card-title">安全访问入口</text>
+          <text class="card-desc">登录后加载经授权的订单、运力与遥测数据。</text>
         </view>
 
         <view class="telemetry-panel">
@@ -27,16 +27,16 @@
             <text>SYS_STATUS</text>
             <view class="online-state">
               <view class="online-dot" />
-              <text>ONLINE</text>
+              <text>AUTH_REQUIRED</text>
             </view>
           </view>
           <view class="telemetry-row">
             <text>SECURE_LINK</text>
-            <text class="value normal">VERIFIED</text>
+            <text class="value normal">HTTPS</text>
           </view>
           <view class="telemetry-row">
             <text>ACTIVE_NODES</text>
-            <text class="value accent">{{ activeNodes }}</text>
+            <text class="value accent">—</text>
           </view>
         </view>
 
@@ -52,12 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
-import { CapacityStatus } from '@/models';
-import { repo } from '@/utils/repo';
-
-const activeNodes = computed(() => repo.capacity.where((c) => c.status === CapacityStatus.Online).length.toLocaleString('en-US'));
 
 function enterConsole() {
   uni.redirectTo({ url: '/pages/login/index' });

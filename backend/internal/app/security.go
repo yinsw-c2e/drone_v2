@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -15,6 +16,25 @@ type actorContextKey struct{}
 
 type requestActor struct {
 	User *User
+}
+
+type responseStatusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *responseStatusWriter) WriteHeader(status int) {
+	if w.status == 0 {
+		w.status = status
+	}
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *responseStatusWriter) Write(body []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.ResponseWriter.Write(body)
 }
 
 type accessError struct {
@@ -60,7 +80,9 @@ func snapshotForUser(state *DBShape, user *User) *DBShape {
 	out := &DBShape{SeededAt: state.SeededAt}
 	visibleOrders := map[string]bool{}
 	for _, order := range state.Orders {
-		visible := order.ClientID == user.ID || order.PilotID == user.ID || orderOwnedBy(state, &order, user.ID)
+		visible := (order.ClientID == user.ID && hasActiveRole(state, user, RoleClient)) ||
+			(order.PilotID == user.ID && hasActiveRole(state, user, RolePilot)) ||
+			(orderOwnedBy(state, &order, user.ID) && hasActiveRole(state, user, RoleOwner))
 		if !visible && order.Status == StatusMatching && (hasActiveRole(state, user, RolePilot) || hasActiveRole(state, user, RoleOwner)) {
 			visible = true
 		}
@@ -75,6 +97,9 @@ func snapshotForUser(state *DBShape, user *User) *DBShape {
 		if item.ID != user.ID {
 			copy.Phone = ""
 			copy.LastLoginAt = ""
+			copy.CreatedAt = ""
+			copy.Disabled = false
+			copy.Blacklisted = false
 		}
 		out.Users = append(out.Users, copy)
 	}
@@ -87,15 +112,35 @@ func snapshotForUser(state *DBShape, user *User) *DBShape {
 			out.UserRoleProfiles = append(out.UserRoleProfiles, copy)
 		}
 	}
-	out.Pilots = append(out.Pilots, state.Pilots...)
+	for _, item := range state.Pilots {
+		copy := item
+		if item.UserID != user.ID {
+			copy.Location = GeoPoint{}
+			copy.TrainingCerts = nil
+		}
+		out.Pilots = append(out.Pilots, copy)
+	}
 	out.Owners = append(out.Owners, state.Owners...)
 	for _, item := range state.Clients {
 		if item.UserID == user.ID {
 			out.Clients = append(out.Clients, item)
 		}
 	}
-	out.Drones = append(out.Drones, state.Drones...)
-	out.Capacity = append(out.Capacity, state.Capacity...)
+	for _, item := range state.Drones {
+		copy := item
+		if item.OwnerID != user.ID {
+			copy.SN = maskSerial(copy.SN)
+			copy.MaintenanceLog = nil
+		}
+		out.Drones = append(out.Drones, copy)
+	}
+	for _, item := range state.Capacity {
+		copy := item
+		if item.OwnerID != user.ID && item.PilotID != user.ID {
+			copy.Location = GeoPoint{}
+		}
+		out.Capacity = append(out.Capacity, copy)
+	}
 
 	for _, item := range state.PaymentOrders {
 		if visibleOrders[item.OrderID] {
@@ -104,7 +149,14 @@ func snapshotForUser(state *DBShape, user *User) *DBShape {
 	}
 	for _, item := range state.Credits {
 		if item.UserID == user.ID || item.Role == RolePilot || item.Role == RoleOwner {
-			out.Credits = append(out.Credits, item)
+			copy := item
+			if item.UserID != user.ID {
+				copy.Dimensions = nil
+				copy.ProviderTraceID = ""
+				copy.AuthorizedAt = ""
+				copy.ExpiresAt = ""
+			}
+			out.Credits = append(out.Credits, copy)
 		}
 	}
 	for _, item := range state.Policies {
@@ -155,6 +207,29 @@ func snapshotForUser(state *DBShape, user *User) *DBShape {
 	return out
 }
 
+func requestSafety(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := genID("req")
+		w.Header().Set("x-request-id", requestID)
+		wrapped := &responseStatusWriter{ResponseWriter: w}
+		started := time.Now()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				log.Printf("request panic id=%s method=%s path=%s error=%v", requestID, r.Method, r.URL.Path, recovered)
+				if wrapped.status == 0 {
+					writeJSON(wrapped, http.StatusInternalServerError, envelope{OK: false, Error: "服务内部错误，请稍后重试"})
+				}
+			}
+			status := wrapped.status
+			if status == 0 {
+				status = http.StatusOK
+			}
+			log.Printf("request id=%s method=%s path=%s status=%d duration_ms=%d", requestID, r.Method, r.URL.Path, status, time.Since(started).Milliseconds())
+		}()
+		next.ServeHTTP(wrapped, r)
+	})
+}
+
 func (s *Server) serializeMutations(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet || r.Method == http.MethodOptions || r.Method == http.MethodHead {
@@ -169,7 +244,7 @@ func (s *Server) serializeMutations(next http.Handler) http.Handler {
 
 func (s *Server) limitRequestBodies(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead && r.URL.Path != "/api/v1/provider/payment/notify" {
+		if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead {
 			r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
 		}
 		next.ServeHTTP(w, r)
@@ -181,6 +256,21 @@ func (s *Server) allowSMSRequest(ip string) bool {
 	defer s.smsRateMu.Unlock()
 	now := time.Now()
 	cutoff := now.Add(-time.Hour)
+	if len(s.smsIPAttempts) > 10_000 {
+		for key, attempts := range s.smsIPAttempts {
+			keep := attempts[:0]
+			for _, attempt := range attempts {
+				if attempt.After(cutoff) {
+					keep = append(keep, attempt)
+				}
+			}
+			if len(keep) == 0 {
+				delete(s.smsIPAttempts, key)
+			} else {
+				s.smsIPAttempts[key] = keep
+			}
+		}
+	}
 	recent := s.smsIPAttempts[ip][:0]
 	for _, attempt := range s.smsIPAttempts[ip] {
 		if attempt.After(cutoff) {
@@ -196,8 +286,11 @@ func (s *Server) allowSMSRequest(ip string) bool {
 }
 
 func clientIP(r *http.Request) string {
-	if forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]); forwarded != "" {
-		return forwarded
+	forwarded := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	for i := len(forwarded) - 1; i >= 0; i-- {
+		if candidate := strings.TrimSpace(forwarded[i]); candidate != "" {
+			return candidate
+		}
 	}
 	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
 	if err == nil && host != "" {
@@ -305,7 +398,9 @@ func authorizeOrderRoute(state *DBShape, user *User, r *http.Request) error {
 			return nil
 		}
 	case "telemetry":
-		if order.ClientID == user.ID || order.PilotID == user.ID || orderOwnedBy(state, order, user.ID) {
+		if (order.ClientID == user.ID && hasActiveRole(state, user, RoleClient)) ||
+			(order.PilotID == user.ID && hasActiveRole(state, user, RolePilot)) ||
+			(orderOwnedBy(state, order, user.ID) && hasActiveRole(state, user, RoleOwner)) {
 			return nil
 		}
 	case "airspace":
@@ -313,11 +408,21 @@ func authorizeOrderRoute(state *DBShape, user *User, r *http.Request) error {
 			return nil
 		}
 	default:
-		if order.ClientID == user.ID || order.PilotID == user.ID || orderOwnedBy(state, order, user.ID) {
+		if (order.ClientID == user.ID && hasActiveRole(state, user, RoleClient)) ||
+			(order.PilotID == user.ID && hasActiveRole(state, user, RolePilot)) ||
+			(orderOwnedBy(state, order, user.ID) && hasActiveRole(state, user, RoleOwner)) {
 			return nil
 		}
 	}
 	return notFound("订单不存在")
+}
+
+func maskSerial(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) <= 4 {
+		return "****"
+	}
+	return "****" + value[len(value)-4:]
 }
 
 func authorizePaymentRoute(state *DBShape, user *User, path string) error {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -99,12 +100,12 @@ func (p httpSMSProvider) SendCode(phone string, code string) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%s短信发送失败: %w", p.name, err)
+		return &upstreamError{Service: p.name + " 短信", Err: err}
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("%s短信发送失败: HTTP %d %s", p.name, resp.StatusCode, strings.TrimSpace(string(responseBody)))
+		return &upstreamError{Service: p.name + " 短信", Err: fmt.Errorf("HTTP %d %s", resp.StatusCode, strings.TrimSpace(string(responseBody)))}
 	}
 	var parsed smsHTTPResponse
 	if len(responseBody) > 0 && json.Unmarshal(responseBody, &parsed) == nil {
@@ -112,7 +113,7 @@ func (p httpSMSProvider) SendCode(phone string, code string) error {
 			if parsed.Error == "" {
 				parsed.Error = "短信网关返回失败"
 			}
-			return errors.New(parsed.Error)
+			return &upstreamError{Service: p.name + " 短信", Err: errors.New(parsed.Error)}
 		}
 	}
 	log.Printf("[%s SMS] dispatched phone=%s status=%d", p.name, maskPhoneForLog(phone), resp.StatusCode)
@@ -166,8 +167,15 @@ func validateSMSProviderEnv(provider string, production bool) error {
 		}
 		return nil
 	case "http", "aliyun", "tencent":
-		if smsEndpointFor(provider) == "" {
+		endpoint := smsEndpointFor(provider)
+		if endpoint == "" {
 			return fmt.Errorf("%s短信未配置发送接口，请设置 SMS_HTTP_ENDPOINT 或 provider 专属 HTTP endpoint", provider)
+		}
+		if production {
+			parsed, err := url.Parse(endpoint)
+			if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+				return fmt.Errorf("%s短信发送接口必须是无内嵌凭证的 HTTPS URL", provider)
+			}
 		}
 		return nil
 	default:

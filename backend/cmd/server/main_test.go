@@ -54,6 +54,16 @@ func TestValidateSMSProviderEnvBlocksProductionMockSMS(t *testing.T) {
 	}
 }
 
+func TestValidateSMSProviderEnvBlocksInsecureEndpoint(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "http")
+	t.Setenv("SMS_HTTP_ENDPOINT", "http://sms.example.test/send")
+
+	err := app.ValidateSMSProviderEnv(true)
+	if err == nil || !strings.Contains(err.Error(), "HTTPS URL") {
+		t.Fatalf("expected HTTPS SMS error, got %v", err)
+	}
+}
+
 func TestValidateRuntimeConfigAllowsProductionWhitelistAndHTTPSMS(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
@@ -68,6 +78,7 @@ func TestValidateRuntimeConfigBlocksMissingLiveProviderBridgeAtStartup(t *testin
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 	t.Setenv("INTEGRATION_MODE", "live")
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
 	if err == nil || !strings.Contains(err.Error(), "provider bridge 配置缺失") {
@@ -79,9 +90,21 @@ func TestValidateRuntimeConfigAllowsExplicitSandboxForClosedBeta(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 	t.Setenv("INTEGRATION_MODE", "sandbox")
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
 
 	if err := validateRuntimeConfig(true, "https://h5.example.test"); err != nil {
 		t.Fatalf("explicit closed-beta sandbox should pass: %v", err)
+	}
+}
+
+func TestValidateRuntimeConfigBlocksMissingSMSCodePepper(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "http")
+	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
+	t.Setenv("INTEGRATION_MODE", "sandbox")
+
+	err := validateRuntimeConfig(true, "https://h5.example.test")
+	if err == nil || !strings.Contains(err.Error(), "SMS_CODE_PEPPER") {
+		t.Fatalf("expected SMS code pepper failure, got %v", err)
 	}
 }
 
@@ -94,6 +117,7 @@ func TestValidateProviderBridgeEnvBlocksMissingProductionProviderBridge(t *testi
 
 func setProviderBridgeEnv(t *testing.T) {
 	t.Helper()
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
 	t.Setenv("INTEGRATION_MODE", "live")
 	t.Setenv("PROVIDER_PAYMENT_PREPAY_URL", "https://provider.example.test/payment")
 	t.Setenv("PROVIDER_PAYMENT_NOTIFY_SECRET", "notify-secret")

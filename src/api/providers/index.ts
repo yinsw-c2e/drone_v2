@@ -4,7 +4,7 @@ import { createBackendProviders } from './server';
 import { mockProviders } from './mock';
 
 export interface PaymentProvider {
-  prepay(orderId: string, amountCent: number, mode: PaymentMode): Promise<PaymentPrepayResult>;
+  prepay(orderId: string, amountCent: number, mode: PaymentMode, capacityId?: string): Promise<PaymentPrepayResult>;
 }
 
 export interface AirspaceProvider {

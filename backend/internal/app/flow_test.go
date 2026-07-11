@@ -506,3 +506,23 @@ func TestPendingRoleCannotSwitchUntilApproved(t *testing.T) {
 		t.Fatal("role switch must issue a fresh token pair")
 	}
 }
+
+func TestAuthSessionsAreBoundedPerUser(t *testing.T) {
+	state := buildSeed()
+	user := findUser(&state, "u_c1")
+	for i := 0; i < maxUserSessions+3; i++ {
+		payload := createAuthPayload(&state, user, false)
+		if payload.Token.AccessToken == "" {
+			t.Fatal("expected access token")
+		}
+	}
+	count := 0
+	for _, session := range state.AuthSessions {
+		if session.UserID == user.ID {
+			count++
+		}
+	}
+	if count != maxUserSessions {
+		t.Fatalf("expected %d sessions, got %d", maxUserSessions, count)
+	}
+}

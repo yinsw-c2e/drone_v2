@@ -66,7 +66,7 @@ func submitOrderWithOptions(state *DBShape, input submitOrderRequest, allowDemoC
 		return nil, errors.New("预算必须大于 0")
 	}
 	photos := input.Photos
-	if len(photos) == 0 {
+	if len(photos) == 0 && allowDemoCapacity {
 		photos = []string{"cargo-demo"}
 	}
 	now := nowISO()

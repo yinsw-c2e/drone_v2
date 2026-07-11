@@ -36,12 +36,13 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "22"
+          package-manager-cache: false
 
       - name: Setup pnpm
         run: |
@@ -131,6 +132,7 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "RELEASE_SHA='${GITHUB_SHA}' bash -s" <<'REMOTE'
           set -Eeuo pipefail
+          umask 077
 
           APP_ROOT=/opt/drone_v2
           RELEASES_DIR="$APP_ROOT/releases"
@@ -139,6 +141,8 @@ jobs:
           FRONTEND_DIR="$APP_ROOT/frontend"
           BACKUP_FRONTEND_DIR="$APP_ROOT/frontend.prev"
           BACKEND_DIR="$APP_ROOT/backend"
+          BACKUP_BACKEND_DIR="$APP_ROOT/.deploy/backend.prev"
+          DATABASE_BACKUPS_DIR="$APP_ROOT/backups"
           ENV_FILE="$BACKEND_DIR/.env"
           COMPOSE_FILE="$BACKEND_DIR/docker-compose.prod.yml"
           PREVIOUS_SHA="$(cat "$APP_ROOT/.deploy/deployed-main.commit" 2>/dev/null || true)"
@@ -147,13 +151,20 @@ jobs:
             PREVIOUS_TAG=prod
           fi
           DEPLOYMENT_STARTED=false
+          CONFIG_BACKED_UP=false
+          FRONTEND_BACKED_UP=false
 
           env_value() {
             sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1
           }
 
           validate_server_env() {
-            local sms_provider sms_endpoint
+            local sms_provider sms_endpoint sms_code_pepper integration_mode key value
+            sms_code_pepper="$(env_value SMS_CODE_PEPPER)"
+            if [ -z "$sms_code_pepper" ]; then
+              echo "::error::Server .env is missing SMS_CODE_PEPPER."
+              return 1
+            fi
             sms_provider="$(env_value SMS_PROVIDER | tr '[:upper:]' '[:lower:]')"
             case "$sms_provider" in
               http)
@@ -176,6 +187,31 @@ jobs:
               echo "::error::Server .env is missing the configured SMS HTTP endpoint."
               return 1
             fi
+
+            integration_mode="$(env_value INTEGRATION_MODE | tr '[:upper:]' '[:lower:]')"
+            case "$integration_mode" in
+              sandbox)
+                ;;
+              live)
+                for key in \
+                  PROVIDER_PAYMENT_PREPAY_URL \
+                  PROVIDER_PAYMENT_NOTIFY_SECRET \
+                  PROVIDER_AIRSPACE_APPLY_URL \
+                  PROVIDER_INSURANCE_QUOTE_URL \
+                  PROVIDER_CREDIT_SCORE_URL \
+                  PROVIDER_DRONE_ARM_URL; do
+                  value="$(env_value "$key")"
+                  if [ -z "$value" ]; then
+                    echo "::error::Server .env is missing $key for INTEGRATION_MODE=live."
+                    return 1
+                  fi
+                done
+                ;;
+              *)
+                echo "::error::Server .env must explicitly set INTEGRATION_MODE=sandbox or live."
+                return 1
+                ;;
+            esac
           }
 
           rollback() {
@@ -183,7 +219,13 @@ jobs:
               return
             fi
             echo "Deployment failed; rolling back frontend and API to $PREVIOUS_TAG"
-            rsync -a --delete "$BACKUP_FRONTEND_DIR"/ "$FRONTEND_DIR"/ || true
+            if [ "$CONFIG_BACKED_UP" = true ]; then
+              install -m 0644 "$BACKUP_BACKEND_DIR/Caddyfile" "$BACKEND_DIR/Caddyfile" || true
+              install -m 0644 "$BACKUP_BACKEND_DIR/docker-compose.prod.yml" "$COMPOSE_FILE" || true
+            fi
+            if [ "$FRONTEND_BACKED_UP" = true ]; then
+              rsync -a --delete "$BACKUP_FRONTEND_DIR"/ "$FRONTEND_DIR"/ || true
+            fi
             if docker image inspect "drone-v2-api:$PREVIOUS_TAG" >/dev/null 2>&1; then
               API_IMAGE_TAG="$PREVIOUS_TAG" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy || true
             fi
@@ -208,7 +250,7 @@ jobs:
           test -f "$COMPOSE_FILE"
           validate_server_env
 
-          mkdir -p "$RELEASES_DIR" "$APP_ROOT/.deploy"
+          mkdir -p "$RELEASES_DIR" "$APP_ROOT/.deploy" "$DATABASE_BACKUPS_DIR"
           rm -rf "$RELEASE_DIR"
           mkdir -p "$RELEASE_DIR"
           tar -xzf "$ARCHIVE" -C "$RELEASE_DIR"
@@ -218,14 +260,24 @@ jobs:
           test -f "$RELEASE_DIR/backend/Caddyfile"
           test -f "$RELEASE_DIR/backend/docker-compose.prod.yml"
 
+          DATABASE_BACKUP="$DATABASE_BACKUPS_DIR/drone_v2-before-$RELEASE_SHA.sql.gz"
+          docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T mysql \
+            sh -lc 'exec mysqldump --single-transaction --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+            | gzip -9 > "$DATABASE_BACKUP"
+          test -s "$DATABASE_BACKUP"
+
           docker build -t "drone-v2-api:$RELEASE_SHA" "$RELEASE_DIR/backend"
+
+          mkdir -p "$BACKUP_BACKEND_DIR" "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
+          install -m 0644 "$BACKEND_DIR/Caddyfile" "$BACKUP_BACKEND_DIR/Caddyfile"
+          install -m 0644 "$COMPOSE_FILE" "$BACKUP_BACKEND_DIR/docker-compose.prod.yml"
+          CONFIG_BACKED_UP=true
+          rsync -a --delete "$FRONTEND_DIR"/ "$BACKUP_FRONTEND_DIR"/
+          FRONTEND_BACKED_UP=true
+          DEPLOYMENT_STARTED=true
 
           install -m 0644 "$RELEASE_DIR/backend/Caddyfile" "$BACKEND_DIR/Caddyfile"
           install -m 0644 "$RELEASE_DIR/backend/docker-compose.prod.yml" "$COMPOSE_FILE"
-
-          mkdir -p "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
-          rsync -a --delete "$FRONTEND_DIR"/ "$BACKUP_FRONTEND_DIR"/
-          DEPLOYMENT_STARTED=true
           rsync -a --delete "$RELEASE_DIR/dist/build/h5"/ "$FRONTEND_DIR"/
 
           API_IMAGE_TAG="$RELEASE_SHA" docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --no-deps --force-recreate api caddy
@@ -247,4 +299,5 @@ jobs:
             | head -n -5 \
             | cut -d' ' -f2- \
             | xargs -r rm -rf
+          find "$DATABASE_BACKUPS_DIR" -type f -name 'drone_v2-before-*.sql.gz' -mtime +14 -delete
           REMOTE

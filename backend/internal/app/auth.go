@@ -1,6 +1,7 @@
 package app
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -17,6 +18,7 @@ const (
 	smsCodeTTL      = 5 * time.Minute
 	smsSendInterval = 60 * time.Second
 	maxSMSAttempts  = 5
+	maxUserSessions = 5
 )
 
 type authPayload struct {
@@ -30,6 +32,7 @@ func normalizeAuthState(state *DBShape) {
 	if state == nil {
 		return
 	}
+	pruneExpiredAuthSessions(state)
 	now := nowISO()
 	for i := range state.Users {
 		user := &state.Users[i]
@@ -85,13 +88,14 @@ func publicSnapshot(state *DBShape) *DBShape {
 }
 
 func issueSMSCode(state *DBShape, phoneInput string) (*SMSCode, error) {
+	pruneOldSMSCodes(state)
 	phone, err := normalizeAndValidatePhone(phoneInput)
 	if err != nil {
 		return nil, err
 	}
 	if latest := latestSMSCode(state, phone); latest != nil && latest.ConsumedAt == "" {
 		if sentAt, ok := parseTime(latest.SentAt); ok && time.Since(sentAt) < smsSendInterval {
-			return nil, errors.New("验证码发送过于频繁，请稍后再试")
+			return nil, &rateLimitError{Message: "验证码发送过于频繁，请稍后再试"}
 		}
 	}
 	hourAgo := time.Now().Add(-time.Hour)
@@ -105,14 +109,14 @@ func issueSMSCode(state *DBShape, phoneInput string) (*SMSCode, error) {
 		}
 	}
 	if sentThisHour >= 5 {
-		return nil, errors.New("该手机号验证码请求过于频繁，请一小时后再试")
+		return nil, &rateLimitError{Message: "该手机号验证码请求过于频繁，请一小时后再试"}
 	}
 	now := time.Now()
 	plainCode := generateNumericCode()
 	code := SMSCode{
 		ID:        genID("sms"),
 		Phone:     phone,
-		Code:      hashSecret(plainCode),
+		Code:      hashSMSCode(phone, plainCode),
 		SentAt:    now.Format(time.RFC3339Nano),
 		ExpiresAt: now.Add(smsCodeTTL).Format(time.RFC3339Nano),
 	}
@@ -356,6 +360,8 @@ func selfRegisterRole(role Role) bool {
 }
 
 func createAuthPayload(state *DBShape, user *User, markLogin bool) *authPayload {
+	pruneExpiredAuthSessions(state)
+	trimUserSessions(state, user.ID, maxUserSessions-1)
 	now := time.Now()
 	accessToken := genID("atk")
 	refreshToken := genID("rtk")
@@ -375,6 +381,52 @@ func createAuthPayload(state *DBShape, user *User, markLogin bool) *authPayload 
 	return &authPayload{User: user, Token: TokenPair{AccessToken: accessToken, RefreshToken: refreshToken, ExpiresAt: session.ExpiresAt}, Roles: rolesForUser(state, user.ID), Snapshot: snapshotForUser(state, user)}
 }
 
+func pruneExpiredAuthSessions(state *DBShape) {
+	now := time.Now()
+	out := state.AuthSessions[:0]
+	for _, session := range state.AuthSessions {
+		expiresAt, ok := parseTime(session.RefreshExpiresAt)
+		if ok && expiresAt.After(now) {
+			out = append(out, session)
+		}
+	}
+	state.AuthSessions = out
+}
+
+func trimUserSessions(state *DBShape, userID string, keep int) {
+	count := 0
+	for _, session := range state.AuthSessions {
+		if session.UserID == userID {
+			count++
+		}
+	}
+	remove := count - keep
+	if remove <= 0 {
+		return
+	}
+	out := state.AuthSessions[:0]
+	for _, session := range state.AuthSessions {
+		if session.UserID == userID && remove > 0 {
+			remove--
+			continue
+		}
+		out = append(out, session)
+	}
+	state.AuthSessions = out
+}
+
+func pruneOldSMSCodes(state *DBShape) {
+	cutoff := time.Now().Add(-24 * time.Hour)
+	out := state.SMSCodes[:0]
+	for _, code := range state.SMSCodes {
+		sentAt, ok := parseTime(code.SentAt)
+		if ok && sentAt.After(cutoff) {
+			out = append(out, code)
+		}
+	}
+	state.SMSCodes = out
+}
+
 func verifySMSCode(state *DBShape, phone string, code string) error {
 	if strings.TrimSpace(code) == "" {
 		return errors.New("验证码不能为空")
@@ -390,7 +442,7 @@ func verifySMSCode(state *DBShape, phone string, code string) error {
 	if sms.Attempts >= maxSMSAttempts {
 		return errors.New("验证码错误次数过多，请重新获取")
 	}
-	if sms.Code != hashSecret(strings.TrimSpace(code)) {
+	if sms.Code != hashSMSCode(phone, strings.TrimSpace(code)) {
 		sms.Attempts++
 		return errors.New("验证码错误")
 	}
@@ -477,6 +529,16 @@ func hashSecret(value string) string {
 	}
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
+}
+
+func hashSMSCode(phone string, code string) string {
+	pepper := firstEnv("SMS_CODE_PEPPER")
+	if pepper == "" {
+		return hashSecret(phone + ":" + code)
+	}
+	mac := hmac.New(sha256.New, []byte(pepper))
+	_, _ = mac.Write([]byte(phone + ":" + code))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 func normalizeAndValidatePhone(phoneInput string) (string, error) {

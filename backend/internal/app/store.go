@@ -60,7 +60,7 @@ func (s *Store) EnsureSchema(ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) SeedIfEmpty(ctx context.Context) error {
+func (s *Store) SeedIfEmpty(ctx context.Context, allowDemoSeed bool) error {
 	var count int
 	if err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM users").Scan(&count); err != nil {
 		return err
@@ -68,8 +68,19 @@ func (s *Store) SeedIfEmpty(ctx context.Context) error {
 	if count > 0 {
 		return nil
 	}
+	seed, err := seedForEmptyStore(allowDemoSeed)
+	if err != nil {
+		return err
+	}
+	return s.Save(ctx, seed)
+}
+
+func seedForEmptyStore(allowDemoSeed bool) (*DBShape, error) {
+	if !allowDemoSeed {
+		return nil, fmt.Errorf("production database is empty; explicit bootstrap is required")
+	}
 	seed := buildSeed()
-	return s.Save(ctx, &seed)
+	return &seed, nil
 }
 
 func (s *Store) Reset(ctx context.Context) (*DBShape, error) {
@@ -81,9 +92,14 @@ func (s *Store) Reset(ctx context.Context) (*DBShape, error) {
 }
 
 func (s *Store) Load(ctx context.Context) (*DBShape, error) {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 	state := &DBShape{}
 	for _, coll := range collections {
-		rows, err := s.db.QueryContext(ctx, fmt.Sprintf("SELECT doc FROM %s ORDER BY updated_at, id", coll.table))
+		rows, err := tx.QueryContext(ctx, fmt.Sprintf("SELECT doc FROM %s ORDER BY updated_at, id", coll.table))
 		if err != nil {
 			return nil, err
 		}
@@ -104,6 +120,9 @@ func (s *Store) Load(ctx context.Context) (*DBShape, error) {
 		}
 	}
 	normalizeAuthState(state)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return state, nil
 }
 

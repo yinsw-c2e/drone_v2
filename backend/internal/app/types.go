@@ -2,6 +2,18 @@ package app
 
 import "time"
 
+type upstreamError struct {
+	Service string
+	Err     error
+}
+
+func (e *upstreamError) Error() string { return e.Service + " 调用失败: " + e.Err.Error() }
+func (e *upstreamError) Unwrap() error { return e.Err }
+
+type rateLimitError struct{ Message string }
+
+func (e *rateLimitError) Error() string { return e.Message }
+
 type Role string
 type CargoType string
 type AuditStatus string
@@ -433,14 +445,21 @@ type AuditLog struct {
 }
 
 type CreditScore struct {
-	UserID          string `json:"userId"`
-	Role            Role   `json:"role"`
-	Total           int    `json:"total"`
-	Level           string `json:"level"`
-	Provider        string `json:"provider,omitempty"`
-	ProviderTraceID string `json:"providerTraceId,omitempty"`
-	AuthorizedAt    string `json:"authorizedAt,omitempty"`
-	ExpiresAt       string `json:"expiresAt,omitempty"`
+	UserID          string            `json:"userId"`
+	Role            Role              `json:"role"`
+	Total           int               `json:"total"`
+	Level           string            `json:"level"`
+	Dimensions      []CreditDimension `json:"dimensions,omitempty"`
+	Provider        string            `json:"provider,omitempty"`
+	ProviderTraceID string            `json:"providerTraceId,omitempty"`
+	AuthorizedAt    string            `json:"authorizedAt,omitempty"`
+	ExpiresAt       string            `json:"expiresAt,omitempty"`
+}
+
+type CreditDimension struct {
+	Name  string `json:"name"`
+	Score int    `json:"score"`
+	Max   int    `json:"max"`
 }
 
 type Claim struct {

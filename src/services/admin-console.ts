@@ -1,6 +1,6 @@
 import { AuditAction, AuditStatus, OrderStatus, PaymentMode, Role } from '@/models';
 import type { AirspaceRequest, CertificationApplication, Claim, Order, PilotProfile, User } from '@/models';
-import { confirmOrderRemote, decideAirspaceRemote, fetchCandidatesRemote } from '@/api/backend';
+import { confirmOrderRemote, decideAirspaceRemote, fetchCandidatesRemote, isProductionBackendRequired } from '@/api/backend';
 import { providers } from '@/api/providers';
 import {
   advanceClaim,
@@ -189,11 +189,14 @@ export async function advanceAdminOrder(orderId: string): Promise<Order> {
   const order = repo.orders.find(orderId);
   if (!order) throw new Error('订单不存在');
   if (order.status === OrderStatus.Matching) {
+    if (isProductionBackendRequired()) {
+      throw new Error('生产订单必须由业主在客户端完成保险、支付与运力确认');
+    }
     const remoteCandidates = await fetchCandidatesRemote(order.id, 'global');
     const candidate = remoteCandidates?.[0] ?? candidatesForOrder(order.id)[0];
     if (!candidate) throw new Error('当前没有在线合规运力，无法锁定推荐方案');
     await providers.insurance.quote(order.id, order.cargo.valueCent);
-    await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
+    await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow, candidate.capacityId);
     const remote = await confirmOrderRemote(order.id, candidate.capacityId);
     if (remote) return remote;
     return confirmCandidate(order.id, candidate);

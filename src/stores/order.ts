@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { DispatchStrategy, OrderStatus, PaymentMode } from '@/models';
 import type { MatchCandidate, Order } from '@/models';
-import { advanceOrderRemote, confirmOrderRemote, fetchCandidatesRemote, finishOrderRemote, reviewOrderRemote, submitOrderRemote, syncPaymentRemote } from '@/api/backend';
+import { advanceOrderRemote, confirmOrderRemote, fetchCandidatesRemote, finishOrderRemote, isProductionBackendRequired, reviewOrderRemote, submitOrderRemote, syncPaymentRemote } from '@/api/backend';
 import { advanceOrder, assertOrderPilotOperational, candidatesForOrder, confirmCandidate, createAirspaceRequest, ensureActiveOrder, getLatestOrder, pilotAcceptOrder, recordClientReview, submitDemoOrder, submitOrderDraft } from '@/services/app-flow';
 import { repo } from '@/utils/repo';
 import { providers } from '@/api/providers';
@@ -14,6 +14,9 @@ interface OrderState {
   strategy: DispatchStrategy;
   loading: boolean;
   error: string;
+  remoteCandidates: MatchCandidate[];
+  remoteCandidateOrderId: string;
+  remoteCandidateStrategy: DispatchStrategy | '';
 }
 
 export const useOrderStore = defineStore('order', {
@@ -23,6 +26,9 @@ export const useOrderStore = defineStore('order', {
     strategy: DispatchStrategy.Nearest,
     loading: false,
     error: '',
+    remoteCandidates: [],
+    remoteCandidateOrderId: '',
+    remoteCandidateStrategy: '',
   }),
   getters: {
     activeOrder(state): Order | undefined {
@@ -30,6 +36,10 @@ export const useOrderStore = defineStore('order', {
     },
     candidates(state): MatchCandidate[] {
       const order = state.activeOrderId ? repo.orders.find(state.activeOrderId) : undefined;
+      if (order && state.remoteCandidateOrderId === order.id && state.remoteCandidateStrategy === state.strategy) {
+        return state.remoteCandidates;
+      }
+      if (isProductionBackendRequired()) return [];
       return order ? candidatesForOrder(order.id, state.strategy) : [];
     },
     selectedCandidate(): MatchCandidate | undefined {
@@ -45,6 +55,7 @@ export const useOrderStore = defineStore('order', {
       const order = submitDemoOrder();
       this.activeOrderId = order.id;
       this.selectedCapacityId = '';
+      this.clearRemoteCandidates();
       return order;
     },
     createOrderDraft(input: Parameters<typeof submitOrderDraft>[0]) {
@@ -52,6 +63,7 @@ export const useOrderStore = defineStore('order', {
       const order = submitOrderDraft(input);
       this.activeOrderId = order.id;
       this.selectedCapacityId = '';
+      this.clearRemoteCandidates();
       return order;
     },
     async createOrderDraftWithBackend(input: Parameters<typeof submitOrderDraft>[0]) {
@@ -60,6 +72,8 @@ export const useOrderStore = defineStore('order', {
       if (remote) {
         this.activeOrderId = remote.id;
         this.selectedCapacityId = '';
+        this.clearRemoteCandidates();
+        await this.refreshRemoteCandidates();
         return remote;
       }
       return this.createOrderDraft(input);
@@ -87,7 +101,7 @@ export const useOrderStore = defineStore('order', {
       try {
         this.error = '';
         await providers.insurance.quote(order.id, order.cargo.valueCent);
-        const prepay = await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow);
+        const prepay = await providers.payment.prepay(order.id, candidate.quoteCent, order.paymentMode ?? PaymentMode.Escrow, candidate.capacityId);
         await requestPlatformPayment(prepay);
         await waitForPaymentPaid(prepay, syncPaymentRemote);
         const paymentId = prepay.provider === 'local-mock' ? undefined : prepay.paymentId;
@@ -95,6 +109,7 @@ export const useOrderStore = defineStore('order', {
         if (remote) {
           this.activeOrderId = remote.id;
           this.selectedCapacityId = remote.capacityId ?? candidate.capacityId;
+          this.clearRemoteCandidates();
           return remote;
         }
         const confirmed = confirmCandidate(order.id, candidate);
@@ -161,7 +176,22 @@ export const useOrderStore = defineStore('order', {
     async refreshRemoteCandidates() {
       const order = this.activeOrder;
       if (!order) return this.candidates;
-      return await fetchCandidatesRemote(order.id, this.strategy) ?? this.candidates;
+      const remote = await fetchCandidatesRemote(order.id, this.strategy);
+      if (remote) {
+        this.remoteCandidates = remote;
+        this.remoteCandidateOrderId = order.id;
+        this.remoteCandidateStrategy = this.strategy;
+        if (!remote.some((item) => item.capacityId === this.selectedCapacityId)) {
+          this.selectedCapacityId = remote[0]?.capacityId ?? '';
+        }
+        return remote;
+      }
+      return this.candidates;
+    },
+    clearRemoteCandidates() {
+      this.remoteCandidates = [];
+      this.remoteCandidateOrderId = '';
+      this.remoteCandidateStrategy = '';
     },
   },
 });
