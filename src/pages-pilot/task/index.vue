@@ -182,6 +182,7 @@
 import { computed, ref } from 'vue';
 import LiveRouteMap from '@/components/LiveRouteMap.vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { AuditAction, OrderStatus, Role } from '@/models';
 import type { GeoPoint, Order, Telemetry } from '@/models';
 import { canTriggerEmergency, emergencyClosedReason } from '@/services/action-plans';
@@ -205,6 +206,7 @@ const orderStore = useOrderStore();
 const telemetryStore = useTelemetryStore();
 const localeStore = useLocaleStore();
 const userStore = useUserStore();
+const productionRuntime = isProductionBackendRequired();
 const error = ref('');
 const feedback = ref('');
 const showEmergencySheet = ref(false);
@@ -488,6 +490,7 @@ const craftTag = computed(() => {
 const mapFrame = computed(() => {
   const current = order.value;
   if (!current) return undefined;
+  if (productionRuntime && !latest.value) return undefined;
   return latest.value ?? fallbackRouteFrame(current);
 });
 const routeRatio = computed(() => {
@@ -554,8 +557,7 @@ const primaryDisabled = computed(() => action.value.disabled || orderStore.loadi
 const batteryPct = computed(() => latest.value?.batteryPct ?? 0);
 const telemetryCards = computed(() => {
   const frame = latest.value;
-  // 无遥测帧（未进入飞行）时用任务设备的演示电量，高度/速度展示 0
-  const fallbackBattery = order.value?.droneId ? demoBatteryPct(order.value.droneId) : 0;
+  const fallbackBattery = order.value?.droneId ? demoBatteryPct(order.value.droneId) : undefined;
   const low = !!frame && batteryPct.value <= 30;
   const speedKmh = frame ? Math.round(frame.speedMs * 3.6) : 0;
   const battery = frame ? batteryPct.value : fallbackBattery;
@@ -563,7 +565,7 @@ const telemetryCards = computed(() => {
   return [
     { label: copy.value.altitude, value: frame?.altM ?? 0, unit: 'm', pct: Math.min(100, ((frame?.altM ?? 0) / 150) * 100), tone: 'cyan', kind: 'bar' },
     { label: copy.value.speed, value: speedKmh, unit: 'km/h', pct: Math.min(100, (speedKmh / 145) * 100), tone: 'blue', kind: 'bar' },
-    { label: copy.value.battery, value: battery, unit: '%', pct: battery, tone: low || (battery > 0 && battery <= 30) ? 'amber' : 'green', kind: 'bar' },
+    { label: copy.value.battery, value: battery ?? '—', unit: battery === undefined ? '' : '%', pct: battery ?? 0, tone: low || (battery !== undefined && battery > 0 && battery <= 30) ? 'amber' : 'green', kind: 'bar' },
     { label: copy.value.yawDev, value: `+${swing}`, unit: '°', pct: Math.min(100, (swing / 45) * 100), tone: swing > 30 ? 'red' : 'neutral', kind: 'yaw' },
   ];
 });
@@ -643,7 +645,7 @@ function fallbackRouteFrame(current: Order): Telemetry {
     pos,
     altM: current.status === OrderStatus.InFlight ? 20 : 0,
     speedMs: current.status === OrderStatus.InFlight ? 8 : 0,
-    batteryPct: current.droneId ? demoBatteryPct(current.droneId) : 80,
+    batteryPct: current.droneId ? (demoBatteryPct(current.droneId) ?? 80) : 80,
     heading: bearing(current.from, current.to),
     swingDeg: 0,
   };
@@ -703,6 +705,10 @@ function formatRemainingDistance(km: number) {
 }
 
 function lowBattery() {
+  if (productionRuntime) {
+    feedback.value = '生产环境禁止注入模拟遥测';
+    return;
+  }
   error.value = '';
   if (!telemetryStore.latest && order.value) {
     telemetryStore.start(order.value.id, 'pilot');
@@ -712,6 +718,10 @@ function lowBattery() {
 }
 
 function recordFlightCommand(type: 'return' | 'land') {
+  if (productionRuntime) {
+    feedback.value = '返航/降落指令服务尚未接入生产后端';
+    return;
+  }
   const current = order.value;
   if (!flightCommandAvailable.value) {
     feedback.value = emergencyReason.value || copy.value.unavailableFlightSub;
@@ -743,6 +753,10 @@ function handleEmergencySelect(event: { item: { key: string; disabled?: boolean 
 }
 
 function exception() {
+  if (productionRuntime) {
+    feedback.value = '异常上报服务尚未接入生产后端';
+    return;
+  }
   const current = order.value;
   if (!current) return;
   if (!emergencyAvailable.value) {

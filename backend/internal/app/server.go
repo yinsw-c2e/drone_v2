@@ -1,11 +1,16 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +28,7 @@ type Server struct {
 	requirePaidPayment      bool
 	requireProviderReceipts bool
 	production              bool
+	objectStorageHosts      map[string]bool
 	mutationMu              sync.Mutex
 	smsRateMu               sync.Mutex
 	smsIPAttempts           map[string][]time.Time
@@ -37,6 +43,7 @@ type ServerOptions struct {
 	RequirePaidPayment      bool
 	RequireProviderReceipts bool
 	Production              bool
+	ObjectStorageHosts      string
 }
 
 func NewServer(store *Store) *Server {
@@ -60,6 +67,7 @@ func NewServerWithOptions(store *Store, options ServerOptions) *Server {
 	if providerBridge == nil {
 		providerBridge = NewProviderBridgeFromEnv(options.RequirePaidPayment || options.RequireProviderReceipts)
 	}
+	objectStorageHosts, _ := ParseObjectStorageAllowedHosts(options.ObjectStorageHosts)
 	return &Server{
 		store:                   store,
 		resetEnabled:            options.ResetEnabled,
@@ -70,6 +78,7 @@ func NewServerWithOptions(store *Store, options ServerOptions) *Server {
 		requirePaidPayment:      options.RequirePaidPayment,
 		requireProviderReceipts: options.RequireProviderReceipts,
 		production:              options.Production,
+		objectStorageHosts:      objectStorageHosts,
 		smsIPAttempts:           map[string][]time.Time{},
 	}
 }
@@ -107,11 +116,20 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.store.Load(r.Context()); err != nil {
+	state, err := s.store.Load(r.Context())
+	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "database is not ready"})
 		return
 	}
 	if s.production {
+		if err := validateProductionState(state); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "production data is not ready"})
+			return
+		}
+		if len(s.objectStorageHosts) == 0 {
+			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "object storage is not ready"})
+			return
+		}
 		if err := ValidateSMSProviderEnv(true); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "sms provider is not ready"})
 			return
@@ -448,7 +466,7 @@ func (s *Server) orders(w http.ResponseWriter, r *http.Request) {
 	}
 	req.ClientID = actor.User.ID
 	if s.production {
-		if err := validateProductionOrderFiles(req.Photos); err != nil {
+		if err := validateProductionOrderFiles(req.Photos, s.objectStorageHosts); err != nil {
 			writeError(w, err)
 			return
 		}
@@ -505,7 +523,7 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.production {
-		if err := validateProductionCertificationFiles(req.Fields); err != nil {
+		if err := validateProductionCertificationFiles(req.Fields, s.objectStorageHosts); err != nil {
 			writeError(w, err)
 			return
 		}
@@ -848,6 +866,11 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		writeError(w, errors.New("支付金额必须大于 0"))
 		return
 	}
+	if existing := reusablePaymentForPrepay(state, req.OrderID, req.CapacityID, req.AmountCent, req.Mode); existing != nil {
+		writeJSON(w, http.StatusOK, envelope{OK: true, Data: paymentPrepayResponse(existing)})
+		return
+	}
+	req.IdempotencyKey = paymentIdempotencyKey(state, req.OrderID, req.CapacityID)
 	result, err := s.providerBridge.PaymentPrepay(r.Context(), req)
 	if err != nil {
 		writeError(w, err)
@@ -861,6 +884,8 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 	payment := PaymentOrder{
 		ID:              genID("pay"),
 		OrderID:         req.OrderID,
+		CapacityID:      req.CapacityID,
+		IdempotencyKey:  req.IdempotencyKey,
 		AmountCent:      result.PaidCent,
 		Mode:            fallback(result.Mode, req.Mode),
 		Status:          PaymentPending,
@@ -881,7 +906,33 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	response := PaymentPrepayResponse{
+	response := paymentPrepayResponse(&payment)
+	writeJSON(w, http.StatusOK, envelope{OK: true, Data: response})
+}
+
+func reusablePaymentForPrepay(state *DBShape, orderID string, capacityID string, amountCent int, mode string) *PaymentOrder {
+	for i := len(state.PaymentOrders) - 1; i >= 0; i-- {
+		payment := &state.PaymentOrders[i]
+		if payment.OrderID == orderID && payment.CapacityID == capacityID && payment.AmountCent == amountCent && payment.Mode == mode && (payment.Status == PaymentPending || payment.Status == PaymentPaid) {
+			return payment
+		}
+	}
+	return nil
+}
+
+func paymentIdempotencyKey(state *DBShape, orderID string, capacityID string) string {
+	attempt := 0
+	for _, payment := range state.PaymentOrders {
+		if payment.OrderID == orderID && payment.CapacityID == capacityID {
+			attempt++
+		}
+	}
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%d", orderID, capacityID, attempt)))
+	return "pay_" + hex.EncodeToString(sum[:16])
+}
+
+func paymentPrepayResponse(payment *PaymentOrder) PaymentPrepayResponse {
+	return PaymentPrepayResponse{
 		PaymentID: payment.ID,
 		TradeNo:   payment.ProviderTradeNo,
 		PaidCent:  payment.AmountCent,
@@ -890,7 +941,6 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		Provider:  payment.Provider,
 		SDKParams: payment.SDKParams,
 	}
-	writeJSON(w, http.StatusOK, envelope{OK: true, Data: response})
 }
 
 func (s *Server) providerPaymentNotify(w http.ResponseWriter, r *http.Request) {
@@ -1111,7 +1161,7 @@ func (s *Server) providerDroneArm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if result.Frame != nil && req.OrderID != "" {
-		snapshot := upsertTelemetry(state, req.OrderID, *result.Frame, "device")
+		snapshot := upsertTelemetry(state, req.OrderID, *result.Frame, "device-arm")
 		snapshot.Provider = result.Provider
 		snapshot.DeviceSN = result.DeviceSN
 	}
@@ -1146,13 +1196,36 @@ func preparePaymentPrepayRequest(state *DBShape, order *Order, req *ProviderPaym
 	for _, candidate := range candidates {
 		if candidate.CapacityID == req.CapacityID {
 			req.AmountCent = candidate.QuoteCent
+			req.Mode = order.PaymentMode
 			return nil
 		}
 	}
 	return errors.New("所选运力已不满足合规条件，请重新匹配")
 }
 
-func validateProductionCertificationFiles(fields map[string]any) error {
+func ParseObjectStorageAllowedHosts(input string) (map[string]bool, error) {
+	allowed := map[string]bool{}
+	for _, raw := range strings.Split(input, ",") {
+		host := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(raw), "."))
+		if host == "" {
+			continue
+		}
+		if strings.Contains(host, "*") || net.ParseIP(host) != nil {
+			return nil, errors.New("OBJECT_STORAGE_ALLOWED_HOSTS 只允许精确 DNS 主机名")
+		}
+		parsed, err := url.Parse("https://" + host)
+		if err != nil || parsed.Hostname() != host || parsed.Port() != "" || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.User != nil {
+			return nil, errors.New("OBJECT_STORAGE_ALLOWED_HOSTS 必须是逗号分隔的精确 DNS 主机名")
+		}
+		allowed[host] = true
+	}
+	if len(allowed) == 0 {
+		return nil, errors.New("生产环境必须配置 OBJECT_STORAGE_ALLOWED_HOSTS")
+	}
+	return allowed, nil
+}
+
+func validateProductionCertificationFiles(fields map[string]any, allowedHosts map[string]bool) error {
 	raw, ok := fields["idPhotos"]
 	if !ok {
 		return errors.New("生产认证必须先上传身份证明材料到私有对象存储")
@@ -1163,18 +1236,33 @@ func validateProductionCertificationFiles(fields map[string]any) error {
 	}
 	for _, item := range items {
 		value, ok := item.(string)
-		if !ok || !strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), "https://") {
+		if !ok || validateObjectStorageReference(value, allowedHosts) != nil {
 			return errors.New("生产认证材料必须使用 HTTPS 对象存储地址")
 		}
 	}
 	return nil
 }
 
-func validateProductionOrderFiles(photos []string) error {
+func validateProductionOrderFiles(photos []string, allowedHosts map[string]bool) error {
 	for _, value := range photos {
-		if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), "https://") {
+		if validateObjectStorageReference(value, allowedHosts) != nil {
 			return errors.New("生产货物图片必须先上传到私有对象存储")
 		}
+	}
+	return nil
+}
+
+func validateObjectStorageReference(value string, allowedHosts map[string]bool) error {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.Port() != "" || parsed.User != nil || parsed.Fragment != "" {
+		return errors.New("对象存储地址必须是无内嵌凭证和片段的 HTTPS URL")
+	}
+	if parsed.Path == "" || parsed.Path == "/" {
+		return errors.New("对象存储地址缺少对象路径")
+	}
+	host := strings.ToLower(strings.TrimSuffix(parsed.Hostname(), "."))
+	if !allowedHosts[host] {
+		return errors.New("对象存储地址不在允许的主机名单中")
 	}
 	return nil
 }

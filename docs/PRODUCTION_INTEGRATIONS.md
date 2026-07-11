@@ -58,6 +58,8 @@ pnpm build:mp-weixin:release
 - `/api/v1/health` 只证明进程存活；发布和容器健康检查必须使用 `/api/v1/ready`。
 - 生产禁用 snapshot/reset 写入口；快照读取也不对匿名请求开放。
 - 发布流水线使用 commit SHA 镜像，切换失败自动恢复上一前端目录和上一 API 镜像。
+- `OBJECT_STORAGE_ALLOWED_HOSTS` 必须是逗号分隔的精确对象存储 DNS 主机名；材料 URL 不允许任意外域、IP、端口、内嵌凭证或 fragment。
+- 生产库不得包含内置 seed ID，并且必须存在活动管理员；首个管理员只能由 `/server bootstrap-admin` 运维命令显式初始化。
 
 ## External credentials still required for live mode
 

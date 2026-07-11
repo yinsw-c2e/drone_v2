@@ -161,20 +161,53 @@ func TestClientIPUsesProxyAppendedAddress(t *testing.T) {
 }
 
 func TestProductionCertificationRequiresHTTPSObjectStorage(t *testing.T) {
-	if err := validateProductionCertificationFiles(map[string]any{"idPhotos": []any{"wxfile://temp/id.jpg"}}); err == nil {
+	allowed, err := ParseObjectStorageAllowedHosts("private.example.test")
+	if err != nil {
+		t.Fatalf("parse hosts: %v", err)
+	}
+	if err := validateProductionCertificationFiles(map[string]any{"idPhotos": []any{"wxfile://temp/id.jpg"}}, allowed); err == nil {
 		t.Fatal("local temporary files must be rejected")
 	}
-	if err := validateProductionCertificationFiles(map[string]any{"idPhotos": []any{"https://private.example.test/id/signed"}}); err != nil {
+	if err := validateProductionCertificationFiles(map[string]any{"idPhotos": []any{"https://private.example.test/id/signed"}}, allowed); err != nil {
 		t.Fatalf("HTTPS object reference should pass: %v", err)
+	}
+	if err := validateProductionCertificationFiles(map[string]any{"idPhotos": []any{"https://tracking.example.test/id/signed"}}, allowed); err == nil {
+		t.Fatal("unapproved object storage host must be rejected")
 	}
 }
 
 func TestProductionOrderRejectsLocalPhotoReferences(t *testing.T) {
-	if err := validateProductionOrderFiles([]string{"_doc/temp/cargo.jpg"}); err == nil {
+	allowed, err := ParseObjectStorageAllowedHosts("private.example.test")
+	if err != nil {
+		t.Fatalf("parse hosts: %v", err)
+	}
+	if err := validateProductionOrderFiles([]string{"_doc/temp/cargo.jpg"}, allowed); err == nil {
 		t.Fatal("local cargo photo must be rejected")
 	}
-	if err := validateProductionOrderFiles([]string{"https://private.example.test/cargo/signed"}); err != nil {
+	if err := validateProductionOrderFiles([]string{"https://private.example.test/cargo/signed"}, allowed); err != nil {
 		t.Fatalf("HTTPS cargo reference should pass: %v", err)
+	}
+}
+
+func TestAuthorizeRouteFailsClosedForUnknownAndReset(t *testing.T) {
+	state := buildSeed()
+	client := findUser(&state, "u_c1")
+	if err := authorizeRoute(&state, client, httptest.NewRequest(http.MethodPost, "/api/v1/reset", nil)); err == nil {
+		t.Fatal("non-admin reset authorization must be rejected")
+	}
+	if err := authorizeRoute(&state, client, httptest.NewRequest(http.MethodGet, "/api/v1/unknown", nil)); err == nil {
+		t.Fatal("unknown authenticated route must fail closed")
+	}
+}
+
+func TestAuthorizeProviderRouteRequiresMinimumActiveRole(t *testing.T) {
+	state := buildSeed()
+	client := findUser(&state, "u_c1")
+	if err := authorizeRoute(&state, client, httptest.NewRequest(http.MethodPost, "/api/v1/provider/drone/arm", nil)); err == nil {
+		t.Fatal("client must not reach pilot drone provider route")
+	}
+	if err := authorizeRoute(&state, client, httptest.NewRequest(http.MethodPost, "/api/v1/provider/payment/prepay", nil)); err != nil {
+		t.Fatalf("active client should reach payment provider handler: %v", err)
 	}
 }
 

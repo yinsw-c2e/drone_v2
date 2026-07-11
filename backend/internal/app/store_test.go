@@ -21,3 +21,34 @@ func TestSeedForEmptyStoreAllowsDevelopmentDemoSeed(t *testing.T) {
 		t.Fatal("expected development demo users")
 	}
 }
+
+func TestValidateProductionStateRejectsDemoSeed(t *testing.T) {
+	state := buildSeed()
+	if err := validateProductionState(&state); err == nil {
+		t.Fatal("expected production demo seed rejection")
+	}
+}
+
+func TestBootstrapAdminStateCreatesExplicitAdministrator(t *testing.T) {
+	state := DBShape{}
+	user, err := bootstrapAdminState(&state, "13800138000")
+	if err != nil {
+		t.Fatalf("bootstrap admin: %v", err)
+	}
+	if user.Phone != "13800138000" || !roleProfileActive(&state, user.ID, RoleAdmin) {
+		t.Fatalf("expected active administrator, got %#v", user)
+	}
+	if err := validateProductionState(&state); err != nil {
+		t.Fatalf("bootstrapped state should pass production validation: %v", err)
+	}
+}
+
+func TestBootstrapAdminStateRequiresUniqueExplicitBootstrap(t *testing.T) {
+	state := DBShape{}
+	if _, err := bootstrapAdminState(&state, "13800138000"); err != nil {
+		t.Fatalf("first bootstrap: %v", err)
+	}
+	if _, err := bootstrapAdminState(&state, "13900139000"); err == nil {
+		t.Fatal("expected second bootstrap to be rejected")
+	}
+}

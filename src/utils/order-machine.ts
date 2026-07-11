@@ -1,6 +1,6 @@
 import { OrderStatus as S, Role, CapacityStatus } from '@/models';
 import type { Order } from '@/models';
-import { repo } from './repo';
+import { assertLocalBusinessMutationAllowed, repo } from './repo';
 import { nowISO } from './time';
 import { checkCompliance } from './compliance';
 import { settleOrder } from './settlement';
@@ -21,6 +21,7 @@ export const NEXT: Record<S, S[]> = {
 };
 export const canTransition = (from: S, to: S) => NEXT[from]?.includes(to) ?? false;
 export function transition(orderId: string, to: S, ctx: { actor: Role; note?: string }): Order {
+  assertLocalBusinessMutationAllowed();
   const o = repo.orders.find(orderId) as Order | undefined; if (!o) throw new Error('订单不存在');
   if (!canTransition(o.status, to)) throw new Error(`非法流转：${o.status} → ${to}`);
   if (to === S.Preparing) { const c = checkCompliance(o); if (!c.pass) throw new Error('合规不通过：' + c.failed.join('、')); }

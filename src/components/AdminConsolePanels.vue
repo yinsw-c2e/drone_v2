@@ -44,7 +44,7 @@
     <view class="pop-head">
       <text class="pop-title">系统设置</text>
       <view class="pop-head-side">
-        <text class="pop-count">演示环境</text>
+        <text class="pop-count">{{ productionRuntime ? '生产环境' : '演示环境' }}</text>
       </view>
     </view>
     <view class="pop-section">
@@ -53,7 +53,7 @@
         <text class="env-value">{{ row.value }}</text>
       </view>
     </view>
-    <view class="pop-section actions">
+    <view v-if="!productionRuntime" class="pop-section actions">
       <view class="pop-action" hover-class="tap-press" @click="exportSnapshot">
         <StitchIcon name="download" size="18px" />
         <view class="pop-action-copy">
@@ -146,6 +146,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { CapacityStatus, NotificationType, OrderStatus, Role } from '@/models';
 import { adminAuditRows, adminModuleRoute, agoLabel } from '@/services/admin-console';
 import { roleLabel } from '@/services/display-labels';
@@ -172,6 +173,7 @@ interface NoticeGroup {
 
 const emit = defineEmits<{ (e: 'changed'): void }>();
 const userStore = useUserStore();
+const productionRuntime = isProductionBackendRequired();
 const active = ref<'' | ConsolePanelKey>('');
 const confirmingReset = ref(false);
 
@@ -235,18 +237,26 @@ const noticeGroups = computed<NoticeGroup[]>(() => {
 });
 
 function markGroupRead(group: NoticeGroup) {
+  if (productionRuntime) {
+    uni.showToast({ title: '通知已读服务尚未接入', icon: 'none' });
+    return;
+  }
   group.ids.forEach((id) => repo.notifications.update(id, { read: true }));
   emit('changed');
 }
 
 function markAllRead() {
+  if (productionRuntime) {
+    uni.showToast({ title: '通知已读服务尚未接入', icon: 'none' });
+    return;
+  }
   repo.notifications.where((item) => !item.read).forEach((item) => repo.notifications.update(item.id, { read: true }));
   uni.showToast({ title: '通知已全部标记已读', icon: 'none' });
   emit('changed');
 }
 
 const envRows = computed(() => [
-  { label: '数据存储', value: '本地演示库 drone_mvp_db_v3' },
+  { label: '数据存储', value: productionRuntime ? '生产后端授权快照' : '本地演示库 drone_mvp_db_v3' },
   { label: '订单', value: `${repo.orders.all().length} 单` },
   { label: '在线运力', value: `${repo.capacity.where((c) => c.status === 'online').length} / ${repo.capacity.all().length}` },
   { label: '审计日志', value: `${repo.auditLogs.all().length} 条` },
@@ -257,7 +267,7 @@ const activeOrderCount = computed(() => repo.orders.where((order) => order.statu
 const capacityCount = computed(() => repo.capacity.all().length);
 const offlineCapacityCount = computed(() => repo.capacity.where((item) => item.status !== CapacityStatus.Online).length);
 const healthRows = computed(() => [
-  { label: '运行状态', value: '在线' },
+  { label: '数据状态', value: '已加载授权数据' },
   { label: '订单总量', value: `${repo.orders.all().length} 单` },
   { label: '流转中订单', value: `${activeOrderCount.value} 单` },
   { label: '在线运力', value: `${repo.capacity.where((item) => item.status === CapacityStatus.Online).length} / ${capacityCount.value}` },
@@ -281,6 +291,10 @@ function confirmReset() {
 }
 
 function resetDemoData() {
+  if (productionRuntime) {
+    uni.showToast({ title: '生产环境禁止重置本地数据', icon: 'none' });
+    return;
+  }
   resetDB();
   close();
   uni.showToast({ title: '演示数据已重置', icon: 'none' });

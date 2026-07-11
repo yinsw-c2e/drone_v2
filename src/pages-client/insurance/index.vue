@@ -221,6 +221,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { Role } from '@/models';
 import { ensureRole } from '@/services/auth-guard';
 import { claimAction } from '@/services/action-plans';
@@ -266,6 +267,7 @@ interface MaterialOption {
 
 const orderStore = useOrderStore();
 const localeStore = useLocaleStore();
+const productionRuntime = isProductionBackendRequired();
 ensureRole(Role.Client);
 
 const claimKeyword = ref('');
@@ -602,6 +604,10 @@ function formatDateTime(value: string) {
 }
 
 function startClaim() {
+  if (productionRuntime) {
+    message.value = '理赔报案服务尚未接入生产后端';
+    return;
+  }
   const current = order.value;
   if (!current?.policyId) {
     message.value = copy.value.noPolicyClaimBlocked;
@@ -648,6 +654,10 @@ function closeSupplementPanel() {
 }
 
 function submitSupplementMaterials() {
+  if (productionRuntime) {
+    message.value = '理赔材料服务尚未接入生产后端';
+    return;
+  }
   const claim = primaryClaim.value ?? claims.value[0];
   if (!claim) {
     message.value = copy.value.noClaimMeta;
@@ -725,6 +735,10 @@ function goProfile() {
 }
 
 function arbitrateCurrentClaim() {
+  if (productionRuntime) {
+    message.value = '理赔仲裁服务尚未接入生产后端';
+    return;
+  }
   const claim = claims.value[0];
   if (!claim) return;
   arbitrationClaim(claim.id);

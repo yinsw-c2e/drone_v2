@@ -345,7 +345,8 @@ const etaClock = computed(() => {
 const batteryText = computed(() => {
   if (telemetryStore.latest) return `${telemetryStore.latest.batteryPct}%`;
   const droneId = order.value?.droneId;
-  return droneId ? `${demoBatteryPct(droneId)}%` : '—';
+  const battery = droneId ? demoBatteryPct(droneId) : undefined;
+  return battery === undefined ? '—' : `${battery}%`;
 });
 
 const advisory = computed(() => {

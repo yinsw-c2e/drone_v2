@@ -114,7 +114,7 @@
           <text>{{ qualificationIssue ? copy.qualificationBlockedStatus : pilotOnline ? copy.readyForDispatch : copy.offlineStatus }}</text>
         </view>
       </view>
-      <view class="auto-button" :class="{ disabled: qualificationIssue }" hover-class="tap-press" @click="createMatching">
+      <view v-if="!productionRuntime" class="auto-button" :class="{ disabled: qualificationIssue }" hover-class="tap-press" @click="createMatching">
         <StitchIcon name="play_arrow" size="34rpx" />
         <text>{{ copy.autoMatch }}</text>
       </view>
@@ -148,6 +148,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { OrderStatus, Role } from '@/models';
 import type { GeoPoint, MatchCandidate, Order } from '@/models';
 import { ensureRole } from '@/services/auth-guard';
@@ -160,6 +161,8 @@ import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
 import { distanceKm } from '@/utils/geo';
 import { repo } from '@/utils/repo';
+
+const productionRuntime = isProductionBackendRequired();
 
 interface MissionCard {
   id: string;
@@ -186,7 +189,7 @@ const feedbackTone = ref<'info' | 'warning' | 'success'>('info');
 ensureRole(Role.Pilot);
 
 const user = computed(() => userStore.user);
-const orders = computed(() => matchingOrdersForPilot(user.value.id));
+const orders = computed(() => productionRuntime ? [] : matchingOrdersForPilot(user.value.id));
 const HALL_COPY = {
   en: {
     brand: 'SkyLink Logistics',
@@ -313,6 +316,7 @@ const assignedOrders = computed(() => repo.orders
 
 const missions = computed<MissionCard[]>(() => {
   const assigned = assignedOrders.value.map(toAssignedMission);
+  if (productionRuntime) return assigned;
   if (qualificationIssue.value) return assigned;
   let rows = orders.value.slice();
   if (sortMode.value === 'bounty') rows = rows.sort((a, b) => b.candidate.quoteCent - a.candidate.quoteCent);

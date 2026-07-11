@@ -373,6 +373,7 @@ const devices = computed<DeviceCard[]>(() => ownerDrones.value.map((drone) => {
   const bucket = bucketOf(drone.id);
   const compliant = !ownerIssue.value && drone.airworthiness === AuditStatus.Approved && drone.insured.thirdPartyAmount >= PRICE_CONFIG.minThirdParty;
   const battery = demoBatteryPct(drone.id);
+  const batteryText = battery === undefined ? '—' : `${battery}%`;
   if (bucket === 'offline' && ownerIssue.value) {
     return {
       id: drone.id,
@@ -407,7 +408,7 @@ const devices = computed<DeviceCard[]>(() => ownerDrones.value.map((drone) => {
       icon: 'moving',
       telemetry: [
         { label: copy.value.taskEta, value: activeOrderEta(drone.id), icon: 'timer' },
-        { label: copy.value.battery, value: `${battery}%`, icon: battery <= 45 ? 'battery_4_bar' : 'battery_charging_full', tone: battery <= 45 ? 'warning' : 'success' },
+        { label: copy.value.battery, value: batteryText, icon: battery !== undefined && battery <= 45 ? 'battery_4_bar' : 'battery_charging_full', tone: battery !== undefined && battery <= 45 ? 'warning' : 'success' },
       ],
     };
   }
@@ -420,7 +421,7 @@ const devices = computed<DeviceCard[]>(() => ownerDrones.value.map((drone) => {
     icon: bucket === 'ready' ? 'flight_takeoff' : 'power_off',
     dim: bucket !== 'ready',
     telemetry: [
-      { label: copy.value.battery, value: `${battery}%`, icon: 'battery_charging_full', tone: 'success' },
+      { label: copy.value.battery, value: batteryText, icon: 'battery_charging_full', tone: 'success' },
       { label: copy.value.signal, value: copy.value.strong, icon: 'signal_cellular_4_bar', tone: 'cyan' },
     ],
   };

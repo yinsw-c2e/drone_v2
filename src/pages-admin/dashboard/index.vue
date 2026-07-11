@@ -65,14 +65,14 @@
               <StitchIcon name="download" size="20px" />
               <text>导出报表</text>
             </view>
-            <view class="primary-action" hover-class="tap-press" @click="runFlow">
+            <view v-if="!productionRuntime" class="primary-action" hover-class="tap-press" @click="runFlow">
               <StitchIcon name="play_arrow" size="20px" fill />
               <text>流程演练</text>
             </view>
           </view>
         </view>
 
-        <view :class="['flow-feedback', flowPanel.noticeTone]">
+        <view v-if="!productionRuntime" :class="['flow-feedback', flowPanel.noticeTone]">
           <view class="flow-feedback-main">
             <StitchIcon :name="flowPanel.noticeTone === 'success' ? 'check_circle' : flowPanel.noticeTone === 'warning' ? 'warning' : flowPanel.noticeTone === 'danger' ? 'error' : 'info'" size="20px" />
             <view>
@@ -252,7 +252,7 @@ import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, OrderStatus, Role } from '@/models';
 import type { CertificationApplication, Claim, Order } from '@/models';
 import { useOrderStore } from '@/stores/order';
-import { approveCertificationRemote, fetchCertificationsRemote, rejectCertificationRemote } from '@/api/backend';
+import { approveCertificationRemote, fetchCertificationsRemote, isProductionBackendRequired, rejectCertificationRemote } from '@/api/backend';
 import { adminRunFlowAction, adminRunFlowPanel } from '@/services/action-plans';
 import type { AdminRunFlowFeedback } from '@/services/action-plans';
 import { ensureRole } from '@/services/auth-guard';
@@ -269,6 +269,8 @@ import {
 import { adminModuleRouteByLabel } from '@/services/admin-console';
 import { auditStatusLabel, claimStatusLabel, orderStatusLabel, roleLabel } from '@/services/display-labels';
 import { repo } from '@/utils/repo';
+
+const productionRuntime = isProductionBackendRequired();
 
 type ChartRange = '1H' | '24H' | '7D';
 
@@ -598,6 +600,10 @@ async function runFlow() {
 }
 
 async function rejectQueue(item: QueueRow) {
+	if (productionRuntime && item.kind !== 'application') {
+		showToast('该审核类型尚未接入生产后端', 'warning');
+		return;
+	}
   if (item.kind === 'application' && item.sourceId) {
     const remote = await rejectCertificationRemote(item.sourceId);
     if (!remote) rejectCertification(item.sourceId);
@@ -609,6 +615,10 @@ async function rejectQueue(item: QueueRow) {
 }
 
 async function reviewQueue(item: QueueRow) {
+	if (productionRuntime && item.kind !== 'application') {
+		showToast('该审核类型尚未接入生产后端', 'warning');
+		return;
+	}
   if (item.kind === 'application' && item.sourceId) {
     const remote = await approveCertificationRemote(item.sourceId);
     if (!remote) approveCertification(item.sourceId);
@@ -657,8 +667,12 @@ function handleRiskAction(item: RiskRow) {
     showToast(`${order.id.toUpperCase()} · ${latest ? orderStatusLabel(latest.status) : '暂无事件'}`);
     return;
   }
-  const claim = repo.claims.find(item.sourceId);
-  if (!claim) return;
+	const claim = repo.claims.find(item.sourceId);
+	if (!claim) return;
+	if (productionRuntime) {
+		showToast('理赔处置服务尚未接入生产后端', 'warning');
+		return;
+	}
   if (claim.status !== 'paid') {
     advanceClaim(claim.id);
     bumpRefresh();

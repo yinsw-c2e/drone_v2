@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type Store struct {
@@ -73,6 +74,148 @@ func (s *Store) SeedIfEmpty(ctx context.Context, allowDemoSeed bool) error {
 		return err
 	}
 	return s.Save(ctx, seed)
+}
+
+func (s *Store) ValidateProductionData(ctx context.Context) error {
+	state, err := s.Load(ctx)
+	if err != nil {
+		return err
+	}
+	return validateProductionState(state)
+}
+
+func (s *Store) BootstrapAdmin(ctx context.Context, phoneInput string) (*User, error) {
+	state, err := s.Load(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user, err := bootstrapAdminState(state, phoneInput)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Save(ctx, state); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func validateProductionState(state *DBShape) error {
+	if state == nil {
+		return fmt.Errorf("production database state is unavailable")
+	}
+	if artifacts := demoSeedArtifacts(state); len(artifacts) > 0 {
+		return fmt.Errorf("production database contains demo seed data: %s; back up and remove it before deployment", strings.Join(artifacts, ", "))
+	}
+	for i := range state.Users {
+		if roleProfileActive(state, state.Users[i].ID, RoleAdmin) && !state.Users[i].Disabled {
+			return nil
+		}
+	}
+	return fmt.Errorf("production database has no active administrator; run /server bootstrap-admin explicitly")
+}
+
+func bootstrapAdminState(state *DBShape, phoneInput string) (*User, error) {
+	if state == nil {
+		return nil, fmt.Errorf("database state is unavailable")
+	}
+	if artifacts := demoSeedArtifacts(state); len(artifacts) > 0 {
+		return nil, fmt.Errorf("remove demo seed data before bootstrapping an administrator: %s", strings.Join(artifacts, ", "))
+	}
+	for i := range state.Users {
+		if roleProfileActive(state, state.Users[i].ID, RoleAdmin) && !state.Users[i].Disabled {
+			return nil, fmt.Errorf("an active administrator already exists")
+		}
+	}
+	phone, err := normalizeAndValidatePhone(phoneInput)
+	if err != nil {
+		return nil, err
+	}
+	now := nowISO()
+	user := findUserByPhone(state, phone)
+	if user == nil {
+		state.Users = append(state.Users, User{
+			ID:               genID("u"),
+			Phone:            phone,
+			Nickname:         "运营管理员",
+			Roles:            []Role{RoleAdmin},
+			CurrentRole:      RoleAdmin,
+			AuthStatus:       string(AuditApproved),
+			RealNameVerified: true,
+			CreatedAt:        now,
+		})
+		user = &state.Users[len(state.Users)-1]
+	} else {
+		addUserRole(user, RoleAdmin)
+		user.CurrentRole = RoleAdmin
+		user.Disabled = false
+	}
+	setRoleProfileStatus(state, user.ID, RoleAdmin, RoleProfileActive, "")
+	ensureWallet(state, user.ID)
+	recordAudit(state, ActionCertification, user.ID, RoleAdmin, "user", user.ID, "运维命令显式初始化管理员")
+	return user, nil
+}
+
+func demoSeedArtifacts(state *DBShape) []string {
+	knownUsers := map[string]bool{
+		"u_p1": true, "u_p2": true, "u_p3": true,
+		"u_o1": true, "u_o2": true,
+		"u_c1": true, "u_c2": true,
+		"u_admin": true,
+	}
+	knownDrones := map[string]bool{"d1": true, "d2": true, "d3": true, "d4": true, "d5": true}
+	knownCapacity := map[string]bool{"cap1": true, "cap2": true, "cap3": true, "cap4": true}
+	artifacts := make([]string, 0)
+	for _, item := range state.Users {
+		if knownUsers[item.ID] {
+			artifacts = append(artifacts, "user:"+item.ID)
+		}
+	}
+	for _, item := range state.UserRoleProfiles {
+		if knownUsers[item.UserID] {
+			artifacts = append(artifacts, "role:"+item.ID)
+		}
+	}
+	for _, item := range state.Pilots {
+		if knownUsers[item.UserID] {
+			artifacts = append(artifacts, "pilot:"+item.UserID)
+		}
+	}
+	for _, item := range state.Owners {
+		if knownUsers[item.UserID] {
+			artifacts = append(artifacts, "owner:"+item.UserID)
+		}
+	}
+	for _, item := range state.Clients {
+		if knownUsers[item.UserID] {
+			artifacts = append(artifacts, "client:"+item.UserID)
+		}
+	}
+	for _, item := range state.Drones {
+		if knownDrones[item.ID] {
+			artifacts = append(artifacts, "drone:"+item.ID)
+		}
+	}
+	for _, item := range state.Capacity {
+		if knownCapacity[item.ID] {
+			artifacts = append(artifacts, "capacity:"+item.ID)
+		}
+	}
+	for _, item := range state.Ledger {
+		if strings.HasPrefix(item.ID, "le_seed_") {
+			artifacts = append(artifacts, "ledger:"+item.ID)
+		}
+	}
+	for _, item := range state.Wallets {
+		if knownUsers[item.UserID] {
+			artifacts = append(artifacts, "wallet:"+item.ID)
+		}
+	}
+	for _, item := range state.AuthApplications {
+		if strings.HasPrefix(item.ID, "cert_seed_") {
+			artifacts = append(artifacts, "certification:"+item.ID)
+		}
+	}
+	return artifacts
 }
 
 func seedForEmptyStore(allowDemoSeed bool) (*DBShape, error) {

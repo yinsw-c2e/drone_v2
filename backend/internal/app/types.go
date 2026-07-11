@@ -303,6 +303,8 @@ type PaymentSDKParams struct {
 type PaymentOrder struct {
 	ID              string            `json:"id"`
 	OrderID         string            `json:"orderId"`
+	CapacityID      string            `json:"capacityId,omitempty"`
+	IdempotencyKey  string            `json:"idempotencyKey,omitempty"`
 	AmountCent      int               `json:"amountCent"`
 	Mode            string            `json:"mode"`
 	Status          PaymentStatus     `json:"status"`

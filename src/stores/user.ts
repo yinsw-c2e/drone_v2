@@ -20,6 +20,10 @@ import { repo } from '@/utils/repo';
 const USER_KEY = 'drone_auth_user_id';
 const LEGACY_USER_KEY = 'drone_mvp_user_id';
 const LOCAL_SMS_KEY = 'drone_auth_local_sms_codes';
+const ANONYMOUS_USER: User = {
+  id: '', phone: '', nickname: '', roles: [], currentRole: Role.Client,
+  authStatus: AuditStatus.Pending, realNameVerified: false, disabled: false, blacklisted: false,
+};
 
 interface LocalCode {
   code: string;
@@ -46,7 +50,9 @@ export const useUserStore = defineStore('user', {
     },
     user(state): User {
       const user = state.userId ? repo.users.find(state.userId) : undefined;
-      return user ?? defaultUserForRole(Role.Client);
+      if (user) return user;
+      if (productionRuntime()) return ANONYMOUS_USER;
+      return defaultUserForRole(Role.Client) ?? ANONYMOUS_USER;
     },
     role(): Role {
       return this.user.currentRole;
@@ -138,6 +144,7 @@ export const useUserStore = defineStore('user', {
       if (!demoLoginEnabled()) throw new Error('演示身份直进未开启');
       ensureDemoCredit();
       const user = defaultUserForRole(role);
+      if (!user) throw new Error('演示身份不存在');
       repo.users.update(user.id, { currentRole: role });
       this.userId = user.id;
       this.accessToken = `demo-${role}`;
@@ -252,6 +259,11 @@ function localTokenPair(): TokenPair {
 function demoLoginEnabled() {
   const env = ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env ?? {});
   return env.DEV || env.VITE_DEMO_LOGIN === '1' || env.VITE_DEMO_LOGIN === 'true';
+}
+
+function productionRuntime() {
+  const env = ((import.meta as ImportMeta & { env?: Record<string, string | boolean | undefined> }).env ?? {});
+  return env.PROD === true || env.MODE === 'production' || env.VITE_APP_ENV === 'production';
 }
 
 function normalizePhone(phone: string) {

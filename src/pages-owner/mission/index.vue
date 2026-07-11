@@ -278,7 +278,7 @@ const missionMetrics = computed<MissionMetric[]>(() => {
   if (!mission) return [];
   const totalCent = mission.priceBreakdown?.totalCent ?? mission.settlement?.totalCent ?? mission.budgetCent;
   return [
-    { label: '电池', value: drone.value ? `${demoBatteryPct(drone.value.id)}%` : '待绑定', icon: 'battery_charging_full' },
+    { label: '电池', value: drone.value ? (demoBatteryPct(drone.value.id) === undefined ? '待遥测' : `${demoBatteryPct(drone.value.id)}%`) : '待绑定', icon: 'battery_charging_full' },
     { label: '载重', value: `${mission.cargo.weightKg.toFixed(1)} kg`, icon: 'scale' },
     { label: '订单金额', value: `¥${formatMoney(totalCent)}`, icon: 'payments' },
     { label: '机主收益', value: `¥${ownerRevenue.value}`, icon: 'account_balance_wallet' },

@@ -1,6 +1,6 @@
 # drone_v2 云端后端部署说明
 
-更新时间：2026-07-10
+更新时间：2026-07-11
 
 本文用于把当前 `backend/` Go API + MySQL 8 后端部署到单台云服务器。当前建议先按内测/演示云后端上线，不要直接承载真实交易、实名、支付或飞控数据。
 
@@ -128,6 +128,9 @@ nano .env
 API_DOMAIN=api.your-domain.com
 MYSQL_PASSWORD=<long-random-password>
 MYSQL_ROOT_PASSWORD=<another-long-random-password>
+SMS_CODE_PEPPER=<at-least-32-random-characters>
+OBJECT_STORAGE_ALLOWED_HOSTS=<private-bucket-host>
+INTEGRATION_MODE=sandbox
 ```
 
 如果还没有域名，只想先验证云服务器能跑，把 `API_DOMAIN` 临时改为：
@@ -215,6 +218,10 @@ rsync -az --delete dist/build/h5/ ubuntu@<server-ip>:/opt/drone_v2/frontend/
 - 自动数据库备份和恢复演练。
 - 监控告警：服务存活、磁盘空间、MySQL 错误、HTTPS 证书状态。
 - 上传图片/材料迁移到对象存储，不要长期放在业务数据库 JSON 内。
+- 生产库若来自早期演示版本，必须先备份并清理 `u_c1/u_o1/u_p1...` 等 seed 数据；新 API 会拒绝在含 seed 或无活动管理员的数据库上启动。
+- 清理后使用候选镜像执行一次 `/server bootstrap-admin`，传入受控管理员手机号；不要在客户端开放管理员自助申请。
+
+完整差距和验收证据见 `docs/PRODUCTION_GAP_AUDIT_2026-07-11.md`。
 
 ## 8. 官方参考
 

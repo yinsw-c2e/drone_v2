@@ -83,6 +83,7 @@ export const useTelemetryStore = defineStore('telemetry', {
       this.orderId = orderId;
       this.frames = [frame];
       this.alerts = telemetryAlerts(frame, route);
+      if (isProductionBackendRequired()) return;
       const existing = repo.telemetry.where((item) => item.orderId === orderId)[0];
       const snapshot = {
         id: `tel_${orderId}`,

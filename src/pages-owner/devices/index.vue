@@ -90,9 +90,9 @@
               <view :class="['metric-box', asset.dimMetrics ? 'muted' : '']">
                 <text class="metric-label">{{ copy.battery }}</text>
                 <view class="battery-row">
-                  <text class="battery-value">{{ asset.battery }}%</text>
+                  <text class="battery-value">{{ asset.battery === undefined ? '—' : `${asset.battery}%` }}</text>
                   <view class="battery-track">
-                    <view :class="['battery-fill', asset.batteryTone]" :style="{ width: `${asset.battery}%` }" />
+                    <view :class="['battery-fill', asset.batteryTone]" :style="{ width: `${asset.battery ?? 0}%` }" />
                   </view>
                 </view>
               </view>
@@ -171,7 +171,7 @@ interface FleetCard {
   name: string;
   code: string;
   payload: string;
-  battery: number;
+  battery?: number;
   batteryTone: 'cyan' | 'green' | 'blue' | 'red';
   liability: string;
   maintenance: string;
@@ -311,7 +311,8 @@ function toFleetCard(drone: Drone, index: number): FleetCard {
       : online
         ? 'deployed'
         : 'idle';
-  const battery = variant === 'maintenance' ? Math.min(20, demoBatteryPct(drone.id)) : demoBatteryPct(drone.id);
+  const observedBattery = demoBatteryPct(drone.id);
+  const battery = observedBattery === undefined ? undefined : variant === 'maintenance' ? Math.min(20, observedBattery) : observedBattery;
   const lastMaintenance = drone.maintenanceLog[drone.maintenanceLog.length - 1];
   return {
     id: `${drone.id}-${index}`,

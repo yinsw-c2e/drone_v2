@@ -175,6 +175,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { LedgerStatus, LedgerType, Role } from '@/models';
 import type { LedgerEntry } from '@/models';
 import { ensureRole } from '@/services/auth-guard';
@@ -201,6 +202,7 @@ const showReleaseSheet = ref(false);
 const ledgerLimit = ref(6);
 const ledgerFilter = ref<'all' | 'in' | 'out' | 'pending'>('all');
 const userStore = useUserStore();
+const productionRuntime = isProductionBackendRequired();
 
 ensureRole(Role.Owner);
 
@@ -271,6 +273,10 @@ function openLedgerRow(row: LedgerViewRow) {
 }
 
 function openWithdraw() {
+  if (productionRuntime) {
+    showFeedback('提现服务尚未接入生产后端');
+    return;
+  }
   if (balanceCent.value <= 0) {
     showFeedback('暂无可提现余额');
     return;
@@ -313,6 +319,10 @@ function loadMore() {
 }
 
 function release() {
+  if (productionRuntime) {
+    showFeedback('结算释放由服务端任务执行，当前尚未接入');
+    return;
+  }
   if (pendingCent.value <= 0) {
     showFeedback('暂无待结算金额');
     return;
@@ -325,6 +335,10 @@ function closeRelease() {
 }
 
 function confirmRelease() {
+  if (productionRuntime) {
+    showFeedback('生产环境禁止本地释放结算');
+    return;
+  }
   releasePending(user.value.id);
   closeRelease();
   uni.showToast({ title: '待结算已释放', icon: 'success' });

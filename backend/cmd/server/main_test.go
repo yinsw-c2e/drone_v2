@@ -78,7 +78,8 @@ func TestValidateRuntimeConfigBlocksMissingLiveProviderBridgeAtStartup(t *testin
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 	t.Setenv("INTEGRATION_MODE", "live")
-	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper-with-32-chars")
+	t.Setenv("OBJECT_STORAGE_ALLOWED_HOSTS", "private.example.test")
 
 	err := validateRuntimeConfig(true, "https://h5.example.test")
 	if err == nil || !strings.Contains(err.Error(), "provider bridge 配置缺失") {
@@ -90,7 +91,8 @@ func TestValidateRuntimeConfigAllowsExplicitSandboxForClosedBeta(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 	t.Setenv("INTEGRATION_MODE", "sandbox")
-	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper-with-32-chars")
+	t.Setenv("OBJECT_STORAGE_ALLOWED_HOSTS", "private.example.test")
 
 	if err := validateRuntimeConfig(true, "https://h5.example.test"); err != nil {
 		t.Fatalf("explicit closed-beta sandbox should pass: %v", err)
@@ -117,10 +119,11 @@ func TestValidateProviderBridgeEnvBlocksMissingProductionProviderBridge(t *testi
 
 func setProviderBridgeEnv(t *testing.T) {
 	t.Helper()
-	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper")
+	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper-with-32-chars")
+	t.Setenv("OBJECT_STORAGE_ALLOWED_HOSTS", "private.example.test")
 	t.Setenv("INTEGRATION_MODE", "live")
 	t.Setenv("PROVIDER_PAYMENT_PREPAY_URL", "https://provider.example.test/payment")
-	t.Setenv("PROVIDER_PAYMENT_NOTIFY_SECRET", "notify-secret")
+	t.Setenv("PROVIDER_PAYMENT_NOTIFY_SECRET", "notify-secret-with-at-least-32-chars")
 	t.Setenv("PROVIDER_AIRSPACE_APPLY_URL", "https://provider.example.test/airspace")
 	t.Setenv("PROVIDER_INSURANCE_QUOTE_URL", "https://provider.example.test/insurance")
 	t.Setenv("PROVIDER_CREDIT_SCORE_URL", "https://provider.example.test/credit")

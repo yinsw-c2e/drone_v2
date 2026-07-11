@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createEmptyDB, migrateDB } from '@/utils/db';
+import { allowsLocalBusinessMutation } from '@/utils/repo';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -32,4 +33,11 @@ it('production 404 is surfaced instead of activating a local fallback', async ()
   const { allowsLocalBackendFallback } = await import('@/api/backend');
   expect(allowsLocalBackendFallback(404, '订单不存在', { PROD: true })).toBe(false);
   expect(allowsLocalBackendFallback(404, '订单不存在', { MODE: 'development' })).toBe(true);
+});
+
+it('production runtime forbids local business mutations', () => {
+  expect(allowsLocalBusinessMutation({ PROD: true })).toBe(false);
+  expect(allowsLocalBusinessMutation({ MODE: 'production' })).toBe(false);
+  expect(allowsLocalBusinessMutation({ VITE_APP_ENV: 'production' })).toBe(false);
+  expect(allowsLocalBusinessMutation({ MODE: 'development' })).toBe(true);
 });

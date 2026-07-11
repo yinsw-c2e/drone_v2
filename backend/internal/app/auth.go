@@ -112,7 +112,10 @@ func issueSMSCode(state *DBShape, phoneInput string) (*SMSCode, error) {
 		return nil, &rateLimitError{Message: "该手机号验证码请求过于频繁，请一小时后再试"}
 	}
 	now := time.Now()
-	plainCode := generateNumericCode()
+	plainCode, err := generateNumericCode()
+	if err != nil {
+		return nil, err
+	}
 	code := SMSCode{
 		ID:        genID("sms"),
 		Phone:     phone,
@@ -559,12 +562,12 @@ func normalizePhone(phone string) string {
 	return b.String()
 }
 
-func generateNumericCode() string {
+func generateNumericCode() (string, error) {
 	var b [4]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return "123456"
+		return "", errors.New("安全随机数源不可用")
 	}
-	return fmt.Sprintf("%06d", binary.BigEndian.Uint32(b[:])%1_000_000)
+	return fmt.Sprintf("%06d", binary.BigEndian.Uint32(b[:])%1_000_000), nil
 }
 
 func parseTime(value string) (time.Time, bool) {

@@ -22,9 +22,18 @@ func main() {
 	dsn := getenv("MYSQL_DSN", "drone:drone@tcp(127.0.0.1:3308)/drone_v2?parseTime=true&charset=utf8mb4&loc=Local&multiStatements=true")
 	port := getenv("PORT", "8088")
 	production := isProductionRuntime()
+	command := ""
+	if len(os.Args) > 1 {
+		command = strings.TrimSpace(os.Args[1])
+	}
+	if command != "" && command != "bootstrap-admin" {
+		log.Fatalf("unknown command: %s", command)
+	}
 	corsAllowOrigin := corsAllowOriginFromEnv(production)
-	if err := validateRuntimeConfig(production, corsAllowOrigin); err != nil {
-		log.Fatalf("invalid runtime configuration: %v", err)
+	if command == "" {
+		if err := validateRuntimeConfig(production, corsAllowOrigin); err != nil {
+			log.Fatalf("invalid runtime configuration: %v", err)
+		}
 	}
 
 	db, err := sql.Open("mysql", dsn)
@@ -46,17 +55,31 @@ func main() {
 	if err := store.EnsureSchema(context.Background()); err != nil {
 		log.Fatalf("ensure schema: %v", err)
 	}
+	if command == "bootstrap-admin" {
+		user, err := store.BootstrapAdmin(context.Background(), os.Getenv("BOOTSTRAP_ADMIN_PHONE"))
+		if err != nil {
+			log.Fatalf("bootstrap admin: %v", err)
+		}
+		log.Printf("administrator bootstrapped: %s", user.ID)
+		return
+	}
 	if err := store.SeedIfEmpty(context.Background(), !production); err != nil {
 		log.Fatalf("seed: %v", err)
 	}
+	if production {
+		if err := store.ValidateProductionData(context.Background()); err != nil {
+			log.Fatalf("production data validation: %v", err)
+		}
+	}
 
 	server := app.NewServerWithOptions(store, app.ServerOptions{
-		ResetEnabled:            getenvBool("ENABLE_RESET_ENDPOINT", !production),
-		SnapshotWriteEnabled:    getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", !production),
+		ResetEnabled:            !production && getenvBool("ENABLE_RESET_ENDPOINT", true),
+		SnapshotWriteEnabled:    !production && getenvBool("ENABLE_SNAPSHOT_WRITE_ENDPOINT", true),
 		CORSAllowOrigin:         corsAllowOrigin,
 		RequirePaidPayment:      production,
 		RequireProviderReceipts: production,
 		Production:              production,
+		ObjectStorageHosts:      os.Getenv("OBJECT_STORAGE_ALLOWED_HOSTS"),
 	})
 	httpServer := &http.Server{
 		Addr:              ":" + port,
@@ -162,8 +185,11 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	if err := app.ValidateSMSProviderEnv(true); err != nil {
 		return err
 	}
-	if strings.TrimSpace(os.Getenv("SMS_CODE_PEPPER")) == "" {
-		return errors.New("生产环境必须设置 SMS_CODE_PEPPER")
+	if len(strings.TrimSpace(os.Getenv("SMS_CODE_PEPPER"))) < 32 {
+		return errors.New("生产环境 SMS_CODE_PEPPER 至少需要 32 个字符")
+	}
+	if _, err := app.ParseObjectStorageAllowedHosts(os.Getenv("OBJECT_STORAGE_ALLOWED_HOSTS")); err != nil {
+		return err
 	}
 	if err := app.ValidateProviderBridgeEnv(true); err != nil {
 		return err

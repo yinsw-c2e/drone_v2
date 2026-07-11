@@ -192,6 +192,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { LedgerStatus, LedgerType, Role } from '@/models';
 import type { LedgerEntry } from '@/models';
 import { ensureRole } from '@/services/auth-guard';
@@ -328,6 +329,7 @@ const WALLET_COPY = {
 } as const;
 
 const userStore = useUserStore();
+const productionRuntime = isProductionBackendRequired();
 const localeStore = useLocaleStore();
 const copy = computed(() => WALLET_COPY[localeStore.locale]);
 
@@ -442,6 +444,10 @@ function toLedgerRow(item: LedgerEntry): LedgerViewRow {
 }
 
 function release() {
+  if (productionRuntime) {
+    uni.showToast({ title: '结算释放服务尚未接入', icon: 'none' });
+    return;
+  }
   if (pendingCent.value <= 0) {
     uni.showToast({ title: copy.value.noPendingAmount, icon: 'none' });
     return;
@@ -451,6 +457,10 @@ function release() {
 }
 
 function openWithdraw() {
+  if (productionRuntime) {
+    uni.showToast({ title: '提现服务尚未接入生产后端', icon: 'none' });
+    return;
+  }
   withdrawMessage.value = '';
   if (balanceCent.value <= 0) {
     uni.showToast({ title: copy.value.noWithdrawableBalance, icon: 'none' });

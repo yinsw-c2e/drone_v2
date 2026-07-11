@@ -7,7 +7,34 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestPaymentPrepayIdempotencyHelpers(t *testing.T) {
+	state := DBShape{}
+	firstKey := paymentIdempotencyKey(&state, "o_1", "cap_1")
+	if firstKey == "" || firstKey != paymentIdempotencyKey(&state, "o_1", "cap_1") {
+		t.Fatalf("expected stable first-attempt key, got %q", firstKey)
+	}
+	state.PaymentOrders = append(state.PaymentOrders, PaymentOrder{
+		ID: "pay_failed", OrderID: "o_1", CapacityID: "cap_1", AmountCent: 1000, Mode: "escrow", Status: PaymentFailed,
+	})
+	if retryKey := paymentIdempotencyKey(&state, "o_1", "cap_1"); retryKey == firstKey {
+		t.Fatalf("expected retry key to change after a recorded failed attempt")
+	}
+	if payment := reusablePaymentForPrepay(&state, "o_1", "cap_1", 1000, "escrow"); payment != nil {
+		t.Fatalf("failed payment must not be reused: %#v", payment)
+	}
+	state.PaymentOrders = append(state.PaymentOrders, PaymentOrder{
+		ID: "pay_pending", OrderID: "o_1", CapacityID: "cap_1", AmountCent: 1000, Mode: "escrow", Status: PaymentPending,
+	})
+	if payment := reusablePaymentForPrepay(&state, "o_1", "cap_1", 1000, "escrow"); payment == nil || payment.ID != "pay_pending" {
+		t.Fatalf("expected latest pending payment reuse, got %#v", payment)
+	}
+	if payment := reusablePaymentForPrepay(&state, "o_1", "cap_other", 1000, "escrow"); payment != nil {
+		t.Fatalf("payment bound to another capacity must not be reused: %#v", payment)
+	}
+}
 
 func TestPaymentNotifySignatureMarksPaid(t *testing.T) {
 	state := buildSeed()
@@ -76,6 +103,10 @@ func TestPaymentNotifyRejectsMismatchedTradeNumber(t *testing.T) {
 
 func TestProductionPrepayUsesServerCandidateQuote(t *testing.T) {
 	state := buildSeed()
+	state.Credits = append(state.Credits,
+		CreditScore{UserID: "u_p1", Role: RolePilot, Total: 860, Provider: "credit", ProviderTraceID: "p1_trace", AuthorizedAt: nowISO(), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339Nano)},
+		CreditScore{UserID: "u_o1", Role: RoleOwner, Total: 840, Provider: "credit", ProviderTraceID: "o1_trace", AuthorizedAt: nowISO(), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339Nano)},
+	)
 	order, err := submitOrderWithOptions(&state, submitOrderRequest{
 		ClientID: "u_c1", CargoType: CargoNormal, WeightKg: 5, ValueCent: 100000, BudgetCent: 200000,
 		From: GeoPoint{Lng: 116.4, Lat: 39.91}, To: GeoPoint{Lng: 116.42, Lat: 39.92},
@@ -124,9 +155,9 @@ func TestProviderBridgeAdaptersDecodeEnvelopeResponses(t *testing.T) {
 		case "/airspace":
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"requestId": "uom_1", "status": "submitted", "provider": "uom"}})
 		case "/insurance":
-			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"quoteId": "q_1", "policyNo": "P20260628001", "premiumCent": 3000, "insuredAmountCent": 600000, "provider": "insurer"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"quoteId": "q_1", "policyNo": "P20260628001", "premiumCent": 3000, "insuredAmountCent": 600000, "provider": "insurer", "activatedAt": "2026-07-11T12:00:00Z"}})
 		case "/credit":
-			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"userId": "u_c1", "score": 820, "providerTraceId": "cr_1", "provider": "credit"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"userId": "u_c1", "score": 820, "providerTraceId": "cr_1", "provider": "credit", "authorizedAt": "2026-07-11T12:00:00Z", "expiresAt": "2030-07-11T12:00:00Z"}})
 		case "/drone":
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": map[string]any{"droneId": "d1", "ready": true, "provider": "drone-sdk", "deviceSn": "SN-D1"}})
 		default:
@@ -160,5 +191,27 @@ func TestProviderBridgeAdaptersDecodeEnvelopeResponses(t *testing.T) {
 	}
 	if drone, err := bridge.DroneArm(context.Background(), ProviderDroneArmRequest{DroneID: "d1"}); err != nil || !drone.Ready {
 		t.Fatalf("drone adapter failed: %#v / %v", drone, err)
+	}
+}
+
+func TestProviderBridgeRejectsMismatchedProductionSubjects(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/credit":
+			_ = json.NewEncoder(w).Encode(map[string]any{"userId": "u_other", "score": 800, "providerTraceId": "trace_1"})
+		case "/drone":
+			_ = json.NewEncoder(w).Encode(map[string]any{"droneId": "d_other", "ready": true, "deviceSn": "SN-OTHER"})
+		}
+	}))
+	defer server.Close()
+	bridge := &ProviderBridge{
+		client: server.Client(), production: true,
+		endpoints: providerEndpoints{CreditScore: server.URL + "/credit", DroneArm: server.URL + "/drone"},
+	}
+	if _, err := bridge.CreditScore(context.Background(), ProviderCreditScoreRequest{UserID: "u_expected"}); err == nil || !strings.Contains(err.Error(), "用户") {
+		t.Fatalf("expected credit subject mismatch, got %v", err)
+	}
+	if _, err := bridge.DroneArm(context.Background(), ProviderDroneArmRequest{DroneID: "d_expected"}); err == nil || !strings.Contains(err.Error(), "无人机") {
+		t.Fatalf("expected drone subject mismatch, got %v", err)
 	}
 }

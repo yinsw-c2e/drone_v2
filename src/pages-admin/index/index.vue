@@ -64,7 +64,7 @@
 
       <view class="section-block">
         <view class="section-title">系统工具</view>
-        <view class="tool-card" hover-class="tap-press" @click="runFlow">
+        <view v-if="!productionRuntime" class="tool-card" hover-class="tap-press" @click="runFlow">
           <view class="tool-left">
             <view class="tool-icon">
               <StitchIcon name="route" size="55rpx" />
@@ -165,13 +165,15 @@ import { computed, onMounted, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
 import { AuditStatus, CapacityStatus, OrderStatus, Role } from '@/models';
 import type { Order } from '@/models';
-import { fetchCertificationsRemote } from '@/api/backend';
+import { fetchCertificationsRemote, isProductionBackendRequired } from '@/api/backend';
 import { adminRunFlowAction } from '@/services/action-plans';
 import { ensureRole } from '@/services/auth-guard';
 import { dashboardMetrics } from '@/services/app-flow';
 import { orderStatusLabel, roleLabel } from '@/services/display-labels';
 import { useOrderStore } from '@/stores/order';
 import { repo } from '@/utils/repo';
+
+const productionRuntime = isProductionBackendRequired();
 
 interface KpiCard {
   label: string;

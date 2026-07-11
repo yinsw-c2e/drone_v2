@@ -100,9 +100,9 @@
             <view class="metric-row">
               <text class="metric-name">{{ copy.batteryLevel }}</text>
               <view class="battery-cell">
-                <text :class="['metric-value', card.batteryTone]">{{ card.battery }}%</text>
+                <text :class="['metric-value', card.batteryTone]">{{ card.battery === undefined ? '—' : `${card.battery}%` }}</text>
                 <view class="battery-track">
-                  <view :class="['battery-fill', card.batteryTone]" :style="{ width: `${card.battery}%` }" />
+                  <view :class="['battery-fill', card.batteryTone]" :style="{ width: `${card.battery ?? 0}%` }" />
                 </view>
               </view>
             </view>
@@ -183,6 +183,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import StitchIcon from '@/components/StitchIcon.vue';
+import { isProductionBackendRequired } from '@/api/backend';
 import { CapacityStatus, OrderStatus, Role } from '@/models';
 import type { CapacityUnit, Order } from '@/models';
 import { ensureRole } from '@/services/auth-guard';
@@ -209,7 +210,7 @@ interface DispatchCard {
   name: string;
   code: string;
   unitIcon: string;
-  battery: number;
+  battery?: number;
   batteryTone: 'cyan' | 'warning' | 'critical';
   metrics: DispatchMetric[];
   missionStage?: string;
@@ -227,6 +228,7 @@ interface DispatchCard {
 
 const userStore = useUserStore();
 const localeStore = useLocaleStore();
+const productionRuntime = isProductionBackendRequired();
 
 ensureRole(Role.Owner);
 
@@ -376,7 +378,7 @@ const dispatchCards = computed<DispatchCard[]>(() => {
   });
   if (batterySort.value) {
     units = units.slice().sort((a, b) => {
-      const delta = demoBatteryPct(a.droneId) - demoBatteryPct(b.droneId);
+      const delta = (demoBatteryPct(a.droneId) ?? -1) - (demoBatteryPct(b.droneId) ?? -1);
       return batterySort.value === 'asc' ? delta : -delta;
     });
   }
@@ -404,7 +406,7 @@ function toDispatchCard(unit: CapacityUnit): DispatchCard {
   const name = drone ? droneDisplayName(drone) : unit.droneId;
   const code = drone?.sn ?? unit.id;
   const battery = demoBatteryPct(unit.droneId);
-  const batteryTone: DispatchCard['batteryTone'] = battery <= 20 ? 'critical' : battery <= 45 ? 'warning' : 'cyan';
+  const batteryTone: DispatchCard['batteryTone'] = battery !== undefined && battery <= 20 ? 'critical' : battery !== undefined && battery <= 45 ? 'warning' : 'cyan';
   const locationText = capacityLocationText(unit);
 
   if (unit.status === CapacityStatus.Busy) {
@@ -556,6 +558,10 @@ function capacityLocationText(unit: CapacityUnit) {
 }
 
 function setOnline(id: string) {
+  if (productionRuntime) {
+    error.value = '运力投放服务尚未接入生产后端';
+    return;
+  }
   try {
     error.value = '';
     feedback.value = '';
@@ -567,6 +573,10 @@ function setOnline(id: string) {
 }
 
 function setOffline(id: string) {
+  if (productionRuntime) {
+    error.value = '运力撤回服务尚未接入生产后端';
+    return;
+  }
   error.value = '';
   feedback.value = '';
   setCapacityOffline(user.value.id, id);

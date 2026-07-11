@@ -153,16 +153,17 @@ jobs:
           DEPLOYMENT_STARTED=false
           CONFIG_BACKED_UP=false
           FRONTEND_BACKED_UP=false
+          CANDIDATE_CONTAINER=""
 
           env_value() {
             sed -n "s/^$1=//p" "$ENV_FILE" | tail -n 1
           }
 
           validate_server_env() {
-            local sms_provider sms_endpoint sms_code_pepper integration_mode key value
+            local sms_provider sms_endpoint sms_code_pepper object_storage_hosts integration_mode key value
             sms_code_pepper="$(env_value SMS_CODE_PEPPER)"
-            if [ -z "$sms_code_pepper" ]; then
-              echo "::error::Server .env is missing SMS_CODE_PEPPER."
+            if [ "${#sms_code_pepper}" -lt 32 ]; then
+              echo "::error::Server .env SMS_CODE_PEPPER must contain at least 32 characters."
               return 1
             fi
             sms_provider="$(env_value SMS_PROVIDER | tr '[:upper:]' '[:lower:]')"
@@ -188,6 +189,12 @@ jobs:
               return 1
             fi
 
+            object_storage_hosts="$(env_value OBJECT_STORAGE_ALLOWED_HOSTS)"
+            if [ -z "$object_storage_hosts" ]; then
+              echo "::error::Server .env is missing OBJECT_STORAGE_ALLOWED_HOSTS."
+              return 1
+            fi
+
             integration_mode="$(env_value INTEGRATION_MODE | tr '[:upper:]' '[:lower:]')"
             case "$integration_mode" in
               sandbox)
@@ -206,6 +213,11 @@ jobs:
                     return 1
                   fi
                 done
+                value="$(env_value PROVIDER_PAYMENT_NOTIFY_SECRET)"
+                if [ "${#value}" -lt 32 ]; then
+                  echo "::error::Server .env PROVIDER_PAYMENT_NOTIFY_SECRET must contain at least 32 characters."
+                  return 1
+                fi
                 ;;
               *)
                 echo "::error::Server .env must explicitly set INTEGRATION_MODE=sandbox or live."
@@ -243,7 +255,14 @@ jobs:
             echo "::endgroup::"
           }
 
-          trap 'status=$?; if [ "$status" -ne 0 ]; then rollback; dump_deploy_state; fi' EXIT
+          cleanup_candidate() {
+            if [ -n "$CANDIDATE_CONTAINER" ]; then
+              docker rm -f "$CANDIDATE_CONTAINER" >/dev/null 2>&1 || true
+              CANDIDATE_CONTAINER=""
+            fi
+          }
+
+          trap 'status=$?; cleanup_candidate; if [ "$status" -ne 0 ]; then rollback; dump_deploy_state; fi' EXIT
 
           test -f "$ARCHIVE"
           test -f "$ENV_FILE"
@@ -267,6 +286,26 @@ jobs:
           test -s "$DATABASE_BACKUP"
 
           docker build -t "drone-v2-api:$RELEASE_SHA" "$RELEASE_DIR/backend"
+
+          CANDIDATE_COMPOSE_FILE="$RELEASE_DIR/backend/docker-compose.prod.yml"
+          CANDIDATE_CONTAINER="$(API_IMAGE_TAG="$RELEASE_SHA" docker compose --env-file "$ENV_FILE" -f "$CANDIDATE_COMPOSE_FILE" run -d --no-deps -e PORT=18088 api)"
+          CANDIDATE_READY=false
+          for attempt in $(seq 1 15); do
+            if docker exec "$CANDIDATE_CONTAINER" wget -q -O - http://127.0.0.1:18088/api/v1/ready >/dev/null 2>&1; then
+              CANDIDATE_READY=true
+              break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' "$CANDIDATE_CONTAINER" 2>/dev/null || true)" != true ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$CANDIDATE_READY" != true ]; then
+            echo "::error::Candidate API failed production readiness before deployment mutation."
+            docker logs "$CANDIDATE_CONTAINER" 2>&1 || true
+            exit 1
+          fi
+          cleanup_candidate
 
           mkdir -p "$BACKUP_BACKEND_DIR" "$FRONTEND_DIR" "$BACKUP_FRONTEND_DIR"
           install -m 0644 "$BACKEND_DIR/Caddyfile" "$BACKUP_BACKEND_DIR/Caddyfile"

@@ -1,6 +1,6 @@
 import { AuditAction, AuditStatus, CapacityStatus, CargoType, DispatchStrategy, NotificationType, OrderStatus, PaymentMode, Role, RoleProfileStatus } from '@/models';
 import type { AirspaceRequest, AuditLog, CertificationApplication, Claim, GeoPoint, InsurancePolicy, MatchCandidate, Order, Review, TelemetrySnapshot, User } from '@/models';
-import { saveBackendSnapshotNow } from '@/api/backend';
+import { isProductionBackendRequired, saveBackendSnapshotNow } from '@/api/backend';
 import { createCapacity, createOrder } from '@/models/factory';
 import { validateOrder } from '@/models/validate';
 import { orderRequiresPilotQualification, ownerQualificationIssue, pilotQualificationIssue } from '@/services/compliance';
@@ -27,6 +27,7 @@ const demoCapacityOffsets: Array<Pick<GeoPoint, 'lng' | 'lat'>> = [
 ];
 
 export function ensureDemoCredit() {
+  if (isProductionBackendRequired()) return;
   repo.pilots.all().forEach((p) => computeCredit(p.userId, Role.Pilot));
   repo.owners.all().forEach((o) => computeCredit(o.userId, Role.Owner));
   repo.clients.all().forEach((c) => computeCredit(c.userId, Role.Client));
@@ -58,11 +59,12 @@ function latestAssignedUser(role: Role) {
   return undefined;
 }
 
-export function defaultUserForRole(role: Role) {
+export function defaultUserForRole(role: Role): User | undefined {
   const assigned = latestAssignedUser(role);
   if (assigned) return assigned;
   const user = repo.users.where((u) => u.roles.includes(role))[0];
   if (user) return user;
+  if (isProductionBackendRequired()) return undefined;
   return role === Role.Admin
     ? repo.users.insert({ id: 'u_admin', phone: 'admin', nickname: '运营管理员', roles: [Role.Admin], currentRole: Role.Admin, realNameVerified: true })
     : repo.users.all()[0];
@@ -106,8 +108,10 @@ export function activeOwnerMissionForDrone(ownerId: string, droneId: string): Or
 }
 
 export function ensureActiveOrder(): Order {
-  const active = latestOrderFrom(repo.orders.where(isActiveOrder));
-  return active ?? submitDemoOrder();
+	const active = latestOrderFrom(repo.orders.where(isActiveOrder));
+	if (active) return active;
+	if (isProductionBackendRequired()) throw new Error('当前没有可操作订单，请返回业务列表刷新');
+	return submitDemoOrder();
 }
 
 function isActiveOrder(order: Order) {
@@ -117,8 +121,10 @@ function isActiveOrder(order: Order) {
 }
 
 export function submitDemoOrder(): Order {
-  ensureDemoCredit();
-  const client = defaultUserForRole(Role.Client);
+	if (isProductionBackendRequired()) throw new Error('生产环境不提供演示订单');
+	ensureDemoCredit();
+	const client = defaultUserForRole(Role.Client);
+	if (!client) throw new Error('演示业主不存在');
   return submitOrderDraft({
     clientId: client.id,
     cargoType: CargoType.Valuable,
@@ -132,6 +138,7 @@ export function submitDemoOrder(): Order {
 }
 
 export async function runAdminDemoFlow(strategy: DispatchStrategy = DispatchStrategy.Nearest): Promise<Order> {
+	if (isProductionBackendRequired()) throw new Error('生产环境不提供流程演练');
   ensureDemoCredit();
   const client = ensureAdminDemoClient();
   const order = submitOrderDraft({

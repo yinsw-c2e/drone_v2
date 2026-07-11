@@ -35,11 +35,12 @@ type providerEndpoints struct {
 }
 
 type ProviderPaymentPrepayRequest struct {
-	OrderID    string `json:"orderId"`
-	CapacityID string `json:"capacityId,omitempty"`
-	AmountCent int    `json:"amountCent"`
-	Mode       string `json:"mode"`
-	NotifyURL  string `json:"notifyUrl,omitempty"`
+	OrderID        string `json:"orderId"`
+	CapacityID     string `json:"capacityId,omitempty"`
+	AmountCent     int    `json:"amountCent"`
+	Mode           string `json:"mode"`
+	NotifyURL      string `json:"notifyUrl,omitempty"`
+	IdempotencyKey string `json:"idempotencyKey"`
 }
 
 type ProviderPaymentPrepayResult struct {
@@ -142,9 +143,8 @@ func NewProviderBridgeFromEnv(production bool) *ProviderBridge {
 	if headerName == "" {
 		headerName = "Authorization"
 	}
-	timeout := 8 * time.Second
 	return &ProviderBridge{
-		client:     &http.Client{Timeout: timeout},
+		client:     newOutboundHTTPClient(8 * time.Second),
 		production: production,
 		endpoints: providerEndpoints{
 			PaymentPrepay:  firstEnv("PROVIDER_PAYMENT_PREPAY_URL"),
@@ -188,6 +188,9 @@ func ValidateProviderBridgeEnv(production bool) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("生产 provider bridge 配置缺失: %s", strings.Join(missing, ", "))
 	}
+	if len(required["PROVIDER_PAYMENT_NOTIFY_SECRET"]) < 32 {
+		return errors.New("PROVIDER_PAYMENT_NOTIFY_SECRET 至少需要 32 个字符")
+	}
 	for key, value := range map[string]string{
 		"PROVIDER_PAYMENT_PREPAY_URL":  required["PROVIDER_PAYMENT_PREPAY_URL"],
 		"PROVIDER_AIRSPACE_APPLY_URL":  required["PROVIDER_AIRSPACE_APPLY_URL"],
@@ -196,7 +199,7 @@ func ValidateProviderBridgeEnv(production bool) error {
 		"PROVIDER_DRONE_ARM_URL":       required["PROVIDER_DRONE_ARM_URL"],
 	} {
 		parsed, err := url.Parse(value)
-		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
 			return fmt.Errorf("%s 必须是无内嵌凭证的 HTTPS URL", key)
 		}
 	}
@@ -239,11 +242,20 @@ func (b *ProviderBridge) PaymentPrepay(ctx context.Context, req ProviderPaymentP
 	if err := b.postJSON(ctx, "payment prepay", b.endpoints.PaymentPrepay, req, &out); err != nil {
 		return nil, err
 	}
-	if out.PaidCent == 0 {
+	if out.PaidCent == 0 && !b.production {
 		out.PaidCent = req.AmountCent
+	}
+	if out.PaidCent <= 0 {
+		return nil, errors.New("payment provider 未返回有效支付金额")
+	}
+	if out.PaidCent != req.AmountCent {
+		return nil, errors.New("payment provider 返回金额与服务端订单金额不一致")
 	}
 	if out.Mode == "" {
 		out.Mode = req.Mode
+	}
+	if out.Mode != req.Mode {
+		return nil, errors.New("payment provider 返回支付模式与请求不一致")
 	}
 	if out.Provider == "" {
 		out.Provider = "provider-bridge"
@@ -282,6 +294,14 @@ func (b *ProviderBridge) AirspaceApply(ctx context.Context, req ProviderAirspace
 	if out.Status == "" {
 		out.Status = "submitted"
 	}
+	switch strings.ToLower(strings.TrimSpace(out.Status)) {
+	case "submitted", "pending", "processing", "approved", "rejected":
+	default:
+		return nil, errors.New("airspace provider 返回未知状态")
+	}
+	if strings.EqualFold(out.Status, "approved") && strings.TrimSpace(out.ApprovalNo) == "" {
+		return nil, errors.New("airspace provider 已批准但未返回批准编号")
+	}
 	return &out, nil
 }
 
@@ -312,10 +332,16 @@ func (b *ProviderBridge) InsuranceQuote(ctx context.Context, req ProviderInsuran
 		return nil, errors.New("insurance provider 未返回有效保费")
 	}
 	if out.InsuredAmountCent <= 0 {
-		out.InsuredAmountCent = req.ValueCent
+		return nil, errors.New("insurance provider 未返回有效保额")
+	}
+	if out.InsuredAmountCent < req.ValueCent {
+		return nil, errors.New("insurance provider 返回保额低于货值")
 	}
 	if b.production && out.PolicyNo == "" {
 		return nil, errors.New("insurance provider 未返回保单号")
+	}
+	if b.production && out.ActivatedAt == "" {
+		return nil, errors.New("insurance provider 未返回保单激活时间")
 	}
 	return &out, nil
 }
@@ -336,17 +362,27 @@ func (b *ProviderBridge) CreditScore(ctx context.Context, req ProviderCreditScor
 	if err := b.postJSON(ctx, "credit score", b.endpoints.CreditScore, req, &out); err != nil {
 		return nil, err
 	}
-	if out.UserID == "" {
+	if out.UserID == "" && !b.production {
 		out.UserID = req.UserID
+	}
+	if out.UserID != req.UserID {
+		return nil, errors.New("credit provider 返回用户与请求不一致")
 	}
 	if out.Provider == "" {
 		out.Provider = "provider-bridge"
 	}
-	if out.Score <= 0 {
+	if out.Score <= 0 || out.Score > 1000 {
 		return nil, errors.New("credit provider 未返回有效分数")
 	}
 	if b.production && out.ProviderTraceID == "" {
 		return nil, errors.New("credit provider 未返回供应商流水号")
+	}
+	if b.production {
+		authorizedAt, authorizedOK := parseTime(out.AuthorizedAt)
+		expiresAt, expiresOK := parseTime(out.ExpiresAt)
+		if !authorizedOK || !expiresOK || !expiresAt.After(authorizedAt) || !expiresAt.After(time.Now()) {
+			return nil, errors.New("credit provider 未返回有效授权期限")
+		}
 	}
 	return &out, nil
 }
@@ -364,11 +400,17 @@ func (b *ProviderBridge) DroneArm(ctx context.Context, req ProviderDroneArmReque
 	if err := b.postJSON(ctx, "drone arm", b.endpoints.DroneArm, req, &out); err != nil {
 		return nil, err
 	}
-	if out.DroneID == "" {
+	if out.DroneID == "" && !b.production {
 		out.DroneID = req.DroneID
+	}
+	if out.DroneID != req.DroneID {
+		return nil, errors.New("drone provider 返回无人机与请求不一致")
 	}
 	if out.Provider == "" {
 		out.Provider = "provider-bridge"
+	}
+	if b.production && out.Ready && strings.TrimSpace(out.DeviceSN) == "" {
+		return nil, errors.New("drone provider 已就绪但未返回设备序列号")
 	}
 	return &out, nil
 }
@@ -391,7 +433,7 @@ func (b *ProviderBridge) postJSON(ctx context.Context, name string, endpoint str
 	}
 	client := b.client
 	if client == nil {
-		client = &http.Client{Timeout: 8 * time.Second}
+		client = newOutboundHTTPClient(8 * time.Second)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -406,6 +448,15 @@ func (b *ProviderBridge) postJSON(ctx context.Context, name string, endpoint str
 		return &upstreamError{Service: name + " provider", Err: err}
 	}
 	return nil
+}
+
+func newOutboundHTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 }
 
 func decodeProviderResponse(body []byte, out any) error {

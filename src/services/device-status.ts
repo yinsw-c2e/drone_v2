@@ -1,4 +1,8 @@
 import { mulberry32 } from '@/mock/rng';
+import { repo } from '@/utils/repo';
+
+const runtimeEnv = ((import.meta as ImportMeta & { env?: Record<string, string | boolean | undefined> }).env ?? {});
+const productionRuntime = runtimeEnv.PROD === true || runtimeEnv.MODE === 'production' || runtimeEnv.VITE_APP_ENV === 'production';
 
 // 设备无真实电池/信号上报，演示环境用 id 派生确定性数值，保证各页面展示一致且可复现
 function hashSeed(id: string): number {
@@ -7,7 +11,14 @@ function hashSeed(id: string): number {
   return h;
 }
 
-export function demoBatteryPct(id: string): number {
+export function demoBatteryPct(id: string): number | undefined {
+  if (productionRuntime) {
+    const frames = repo.orders
+      .where((order) => order.droneId === id)
+      .flatMap((order) => repo.telemetry.where((item) => item.orderId === order.id))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return frames[0]?.frame.batteryPct;
+  }
   const rand = mulberry32(hashSeed(id))();
   return 35 + Math.round(rand * 64); // 35-99
 }

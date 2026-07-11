@@ -1,6 +1,10 @@
 package app
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"time"
+)
 
 func TestAirspaceRequiresAdminDecisionBeforePreparing(t *testing.T) {
 	state := buildSeed()
@@ -172,6 +176,35 @@ func TestConfirmOrderBlocksFailedOrCancelledPayment(t *testing.T) {
 	}
 }
 
+func TestConfirmOrderRejectsPaymentBoundToAnotherCapacity(t *testing.T) {
+	state := buildSeed()
+	order, err := submitOrder(&state, submitOrderRequest{
+		ClientID:   "u_c1",
+		CargoType:  CargoNormal,
+		WeightKg:   8,
+		ValueCent:  300000,
+		BudgetCent: 300000,
+		ShockProof: true,
+		From:       GeoPoint{Lng: 113.125213, Lat: 23.020498},
+		To:         GeoPoint{Lng: 113.13288, Lat: 23.02296},
+	})
+	if err != nil {
+		t.Fatalf("submitOrder failed: %v", err)
+	}
+	candidates, err := candidatesForOrder(&state, order.ID, "global")
+	if err != nil || len(candidates) == 0 {
+		t.Fatalf("expected candidates, got %d / %v", len(candidates), err)
+	}
+	candidate := candidates[0]
+	state.PaymentOrders = append(state.PaymentOrders, PaymentOrder{
+		ID: "pay_wrong_capacity", OrderID: order.ID, CapacityID: "cap_other", AmountCent: candidate.QuoteCent, Mode: "escrow",
+		Status: PaymentPaid, Provider: "wxpay", ProviderTradeNo: "wx_trade_other", CreatedAt: nowISO(), UpdatedAt: nowISO(),
+	})
+	if _, err := confirmOrderWithPayment(&state, order.ID, candidate.CapacityID, "pay_wrong_capacity", true, false); err == nil || err.Error() != "支付单绑定的运力与当前选择不一致" {
+		t.Fatalf("expected capacity binding rejection, got %v", err)
+	}
+}
+
 func TestConfirmOrderRequiresProviderInsuranceReceiptWhenEnabled(t *testing.T) {
 	state := buildSeed()
 	order, err := submitOrder(&state, submitOrderRequest{
@@ -238,6 +271,43 @@ func TestProductionMatchingDoesNotCreateDemoCapacity(t *testing.T) {
 	}
 }
 
+func TestProductionOrderRejectsImplicitDemoOrigin(t *testing.T) {
+	state := buildSeed()
+	_, err := submitOrderWithOptions(&state, submitOrderRequest{
+		ClientID: "u_c1", CargoType: CargoNormal, WeightKg: 5, ValueCent: 100000, BudgetCent: 200000,
+		To: GeoPoint{Lng: 116.42, Lat: 39.92},
+	}, false)
+	if err == nil || !strings.Contains(err.Error(), "起点") {
+		t.Fatalf("expected explicit production origin, got %v", err)
+	}
+}
+
+func TestProductionMatchingRequiresCurrentProviderCredit(t *testing.T) {
+	state := buildSeed()
+	order, err := submitOrderWithOptions(&state, submitOrderRequest{
+		ClientID: "u_c1", CargoType: CargoNormal, WeightKg: 5, ValueCent: 100000, BudgetCent: 300000,
+		From: GeoPoint{Lng: 116.4, Lat: 39.91}, To: GeoPoint{Lng: 116.42, Lat: 39.92},
+	}, false)
+	if err != nil {
+		t.Fatalf("submit order: %v", err)
+	}
+	items, err := candidatesForOrderWithOptions(&state, order.ID, "global", false)
+	if err != nil || len(items) != 0 {
+		t.Fatalf("production must reject candidates without provider credit: %#v / %v", items, err)
+	}
+	state.Credits = append(state.Credits,
+		CreditScore{UserID: "u_p1", Role: RolePilot, Total: 860, Provider: "credit", ProviderTraceID: "p1", AuthorizedAt: nowISO(), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339Nano)},
+		CreditScore{UserID: "u_o1", Role: RoleOwner, Total: 840, Provider: "credit", ProviderTraceID: "o1", AuthorizedAt: nowISO(), ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339Nano)},
+	)
+	items, err = candidatesForOrderWithOptions(&state, order.ID, "global", false)
+	if err != nil || len(items) == 0 {
+		t.Fatalf("expected credited production candidate: %#v / %v", items, err)
+	}
+	if items[0].CreditScore != 840 {
+		t.Fatalf("expected conservative pilot/owner credit, got %d", items[0].CreditScore)
+	}
+}
+
 func TestUnloadingRequiresDestinationTelemetry(t *testing.T) {
 	state := buildSeed()
 	order, err := submitOrder(&state, submitOrderRequest{
@@ -293,6 +363,18 @@ func TestUnloadingRequiresDestinationTelemetry(t *testing.T) {
 	}
 	if order.Status != StatusUnloading {
 		t.Fatalf("expected unloading, got %s", order.Status)
+	}
+}
+
+func TestProductionDeliveryRejectsDroneArmSnapshot(t *testing.T) {
+	state := buildSeed()
+	order := &Order{ID: "o_arm_only", To: GeoPoint{Lng: 116.42, Lat: 39.92}}
+	state.Orders = append(state.Orders, *order)
+	snapshot := upsertTelemetry(&state, order.ID, Telemetry{TS: nowISO(), Pos: order.To, BatteryPct: 80}, "device-arm")
+	snapshot.Provider = "drone-provider"
+	snapshot.DeviceSN = "SN-1"
+	if err := ensureDestinationReached(&state, order, true); err == nil {
+		t.Fatal("drone arm snapshot must not be accepted as delivery telemetry")
 	}
 }
 

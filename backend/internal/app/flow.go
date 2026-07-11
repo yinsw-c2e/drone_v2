@@ -30,7 +30,7 @@ var demoCapacityOffsets = []GeoPoint{
 func genID(prefix string) string {
 	var b [9]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return prefix + "_" + time.Now().Format("150405000")
+		panic("secure random source unavailable")
 	}
 	return prefix + "_" + base64.RawURLEncoding.EncodeToString(b[:])
 }
@@ -41,6 +41,9 @@ func submitOrder(state *DBShape, input submitOrderRequest) (*Order, error) {
 
 func submitOrderWithOptions(state *DBShape, input submitOrderRequest, allowDemoCapacity bool) (*Order, error) {
 	if input.ClientID == "" {
+		if !allowDemoCapacity {
+			return nil, errors.New("业主不能为空")
+		}
 		input.ClientID = "u_c1"
 	}
 	client := findUser(state, input.ClientID)
@@ -54,16 +57,22 @@ func submitOrderWithOptions(state *DBShape, input submitOrderRequest, allowDemoC
 		return nil, errors.New("当前业主处于风控黑名单，暂不可发单")
 	}
 	if input.From.Lng == 0 && input.From.Lat == 0 {
+		if !allowDemoCapacity {
+			return nil, errors.New("必须选择起点")
+		}
 		input.From = GeoPoint{Lng: 113.125213, Lat: 23.020498, Address: "普君新城华府2期 · 同济东路41号"}
 	}
-	if input.To.Lng == 0 && input.To.Lat == 0 {
-		return nil, errors.New("必须选择目的地")
+	if input.CargoType == "" && allowDemoCapacity {
+		input.CargoType = CargoNormal
 	}
-	if input.WeightKg <= 0 {
-		return nil, errors.New("货物重量必须大于 0")
+	if input.TimeMode == "" {
+		input.TimeMode = "instant"
 	}
-	if input.BudgetCent <= 0 {
-		return nil, errors.New("预算必须大于 0")
+	if input.PaymentMode == "" {
+		input.PaymentMode = "escrow"
+	}
+	if err := validateSubmitOrderInput(input); err != nil {
+		return nil, err
 	}
 	photos := input.Photos
 	if len(photos) == 0 && allowDemoCapacity {
@@ -76,12 +85,12 @@ func submitOrderWithOptions(state *DBShape, input submitOrderRequest, allowDemoC
 		Cargo:           Cargo{Type: input.CargoType, WeightKg: input.WeightKg, Volume: input.Volume, ValueCent: input.ValueCent, Photos: photos, Remark: input.Remark},
 		From:            input.From,
 		To:              input.To,
-		TimeMode:        fallback(input.TimeMode, "instant"),
+		TimeMode:        input.TimeMode,
 		ScheduledAt:     input.ScheduledAt,
 		TimeRequirement: input.TimeRequirement,
 		Needs:           Needs{Insurance: input.Insured, ShockProof: input.ShockProof, TempControl: input.TempControl, Special: input.Special},
 		BudgetCent:      input.BudgetCent,
-		PaymentMode:     fallback(input.PaymentMode, "escrow"),
+		PaymentMode:     input.PaymentMode,
 		InvoiceTitle:    input.InvoiceTitle,
 		Status:          StatusCreated,
 		CreatedAt:       now,
@@ -97,6 +106,62 @@ func submitOrderWithOptions(state *DBShape, input submitOrderRequest, allowDemoC
 		notify(state, p.UserID, NotifyDispatch, "新吊运任务", "业主发布了吊运订单", order.ID)
 	}
 	return findOrder(state, order.ID), nil
+}
+
+func validateSubmitOrderInput(input submitOrderRequest) error {
+	switch input.CargoType {
+	case CargoNormal, CargoValuable, CargoDangerous, CargoAgricultural:
+	default:
+		return errors.New("货物类型无效")
+	}
+	if !validGeoPoint(input.From) || (input.From.Lng == 0 && input.From.Lat == 0) {
+		return errors.New("起点坐标无效")
+	}
+	if !validGeoPoint(input.To) || (input.To.Lng == 0 && input.To.Lat == 0) {
+		return errors.New("目的地坐标无效")
+	}
+	if distanceKm(input.From, input.To) < 0.01 {
+		return errors.New("起点和目的地不能相同")
+	}
+	if input.WeightKg <= 0 || input.WeightKg > 1000 {
+		return errors.New("货物重量必须在 0-1000kg 范围内")
+	}
+	if input.ValueCent < 0 || input.ValueCent > 1_000_000_000 {
+		return errors.New("货值超出允许范围")
+	}
+	if input.BudgetCent <= 0 || input.BudgetCent > 1_000_000_000 {
+		return errors.New("预算超出允许范围")
+	}
+	if input.TimeMode != "instant" && input.TimeMode != "scheduled" {
+		return errors.New("用机时间模式无效")
+	}
+	if input.TimeMode == "scheduled" {
+		scheduled, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(input.ScheduledAt))
+		if err != nil || !scheduled.After(time.Now()) {
+			return errors.New("预约时间必须是未来的 RFC3339 时间")
+		}
+	}
+	switch input.PaymentMode {
+	case "prepay", "escrow", "credit", "installment":
+	default:
+		return errors.New("支付模式无效")
+	}
+	if len(input.Photos) > 9 {
+		return errors.New("货物图片最多 9 张")
+	}
+	for _, photo := range input.Photos {
+		if len(photo) > 2048 {
+			return errors.New("货物图片地址过长")
+		}
+	}
+	if len(input.From.Address) > 300 || len(input.To.Address) > 300 || len(input.Volume) > 64 || len(input.Special) > 300 || len(input.Remark) > 1000 || len(input.InvoiceTitle) > 300 {
+		return errors.New("订单文本字段过长")
+	}
+	return nil
+}
+
+func validGeoPoint(point GeoPoint) bool {
+	return !math.IsNaN(point.Lng) && !math.IsInf(point.Lng, 0) && !math.IsNaN(point.Lat) && !math.IsInf(point.Lat, 0) && point.Lng >= -180 && point.Lng <= 180 && point.Lat >= -90 && point.Lat <= 90
 }
 
 func candidatesForOrder(state *DBShape, orderID string, strategy string) ([]MatchCandidate, error) {
@@ -133,7 +198,10 @@ func candidatesForOrderWithOptions(state *DBShape, orderID string, strategy stri
 		if price.TotalCent > order.BudgetCent {
 			continue
 		}
-		credit := 973
+		credit, ok := candidateCreditScore(state, unit.PilotID, unit.OwnerID, allowDemoCapacity)
+		if !ok {
+			continue
+		}
 		out = append(out, MatchCandidate{
 			PilotID: unit.PilotID, DroneID: unit.DroneID, CapacityID: unit.ID, DistanceKm: round(dist, 4), EtaMin: eta,
 			CreditScore: credit, QuoteCent: price.TotalCent, PriceBreakdown: price,
@@ -156,6 +224,11 @@ func candidatesForOrderWithOptions(state *DBShape, orderID string, strategy stri
 		dS := 1 - out[i].DistanceKm/maxD
 		eS := 1 - float64(out[i].EtaMin)/float64(maxEta)
 		cS := float64(out[i].CreditScore) / 1000
+		pilot := findPilot(state, out[i].PilotID)
+		rating := 0.0
+		if pilot != nil && pilot.Stats.AvgStar > 0 && pilot.Stats.AvgStar <= 5 {
+			rating = pilot.Stats.AvgStar
+		}
 		switch strategy {
 		case "maxProfit":
 			out[i].Score = round(float64(out[i].QuoteCent)/float64(maxQ), 4)
@@ -164,11 +237,40 @@ func candidatesForOrderWithOptions(state *DBShape, orderID string, strategy stri
 		case "chain":
 			out[i].Score = round(.75*eS+.25*cS, 4)
 		default:
-			out[i].Score = round(.6*dS+.25*cS+.15*(4.7/5), 4)
+			out[i].Score = round(.6*dS+.25*cS+.15*(rating/5), 4)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Score > out[j].Score })
 	return out, nil
+}
+
+func candidateCreditScore(state *DBShape, pilotID string, ownerID string, allowDemo bool) (int, bool) {
+	if allowDemo {
+		return 973, true
+	}
+	pilotScore, pilotOK := validProviderCreditScore(state, pilotID, RolePilot)
+	ownerScore, ownerOK := validProviderCreditScore(state, ownerID, RoleOwner)
+	if !pilotOK || !ownerOK {
+		return 0, false
+	}
+	if ownerScore < pilotScore {
+		return ownerScore, true
+	}
+	return pilotScore, true
+}
+
+func validProviderCreditScore(state *DBShape, userID string, role Role) (int, bool) {
+	for _, credit := range state.Credits {
+		if credit.UserID != userID || credit.Role != role || credit.Total <= 0 || credit.Total > 1000 || credit.Provider == "" || credit.ProviderTraceID == "" || credit.AuthorizedAt == "" {
+			continue
+		}
+		expiresAt, ok := parseTime(credit.ExpiresAt)
+		if !ok || !expiresAt.After(time.Now()) {
+			continue
+		}
+		return credit.Total, true
+	}
+	return 0, false
 }
 
 func ensureDemoCapacityNearOrder(state *DBShape, order *Order) {
@@ -280,6 +382,9 @@ func assertPaymentAllowsConfirm(state *DBShape, order *Order, candidate MatchCan
 	payment := findPaymentOrder(state, paymentID)
 	if payment == nil || payment.OrderID != order.ID {
 		return nil, errors.New("支付单不存在或不属于当前订单")
+	}
+	if payment.CapacityID != "" && payment.CapacityID != candidate.CapacityID {
+		return nil, errors.New("支付单绑定的运力与当前选择不一致")
 	}
 	if payment.AmountCent < candidate.QuoteCent {
 		return nil, errors.New("支付金额不足，不能确认运力")

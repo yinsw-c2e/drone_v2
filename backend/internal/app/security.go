@@ -347,6 +347,12 @@ func authorizeRoute(state *DBShape, user *User, r *http.Request) error {
 	if strings.HasPrefix(path, "/api/v1/auth/") {
 		return nil
 	}
+	if path == "/api/v1/snapshot" {
+		return nil
+	}
+	if path == "/api/v1/reset" {
+		return requireActiveRole(state, user, RoleAdmin)
+	}
 	if path == "/api/v1/orders" {
 		return requireActiveRole(state, user, RoleClient)
 	}
@@ -366,9 +372,21 @@ func authorizeRoute(state *DBShape, user *User, r *http.Request) error {
 		return requireActiveRole(state, user, RoleAdmin)
 	}
 	if strings.HasPrefix(path, "/api/v1/provider/") {
-		return nil
+		switch path {
+		case "/api/v1/provider/payment/prepay", "/api/v1/provider/insurance/quote":
+			return requireRoleOrAdmin(state, user, RoleClient)
+		case "/api/v1/provider/airspace/apply", "/api/v1/provider/drone/arm":
+			return requireRoleOrAdmin(state, user, RolePilot)
+		case "/api/v1/provider/credit/bureau-score":
+			if hasActiveRole(state, user, RoleAdmin) || hasActiveRole(state, user, user.CurrentRole) {
+				return nil
+			}
+			return forbidden("当前业务身份尚未激活")
+		default:
+			return notFound("接口不存在")
+		}
 	}
-	return nil
+	return notFound("接口不存在")
 }
 
 func authorizeOrderRoute(state *DBShape, user *User, r *http.Request) error {
@@ -449,6 +467,13 @@ func requireActiveRole(state *DBShape, user *User, role Role) error {
 		return nil
 	}
 	return forbidden("当前账号没有所需业务权限")
+}
+
+func requireRoleOrAdmin(state *DBShape, user *User, role Role) error {
+	if hasActiveRole(state, user, RoleAdmin) {
+		return nil
+	}
+	return requireActiveRole(state, user, role)
 }
 
 func hasActiveRole(state *DBShape, user *User, role Role) bool {

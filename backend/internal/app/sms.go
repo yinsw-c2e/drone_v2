@@ -96,7 +96,7 @@ func (p httpSMSProvider) SendCode(phone string, code string) error {
 	}
 	client := p.client
 	if client == nil {
-		client = &http.Client{Timeout: 8 * time.Second}
+		client = newOutboundHTTPClient(8 * time.Second)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -173,7 +173,7 @@ func validateSMSProviderEnv(provider string, production bool) error {
 		}
 		if production {
 			parsed, err := url.Parse(endpoint)
-			if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil {
+			if err != nil || parsed.Scheme != "https" || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
 				return fmt.Errorf("%s短信发送接口必须是无内嵌凭证的 HTTPS URL", provider)
 			}
 		}

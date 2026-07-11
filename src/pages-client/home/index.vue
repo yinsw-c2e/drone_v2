@@ -174,7 +174,6 @@ import { orderStatusLabel } from '@/services/display-labels';
 import { useLocaleStore } from '@/stores/locale';
 import { useOrderStore } from '@/stores/order';
 import { useUserStore } from '@/stores/user';
-import { computeCredit } from '@/utils/credit';
 import { distanceKm } from '@/utils/geo';
 import { etaMinutes } from '@/utils/price';
 import { repo } from '@/utils/repo';
@@ -263,7 +262,7 @@ const HOME_COPY = {
 const copy = computed(() => HOME_COPY[localeStore.locale]);
 
 const user = computed(() => userStore.user);
-const credit = computed(() => repo.credits.find(user.value.id) ?? computeCredit(user.value.id, Role.Client));
+const credit = computed(() => repo.credits.find(user.value.id));
 const creditScore = computed(() => credit.value?.total ?? '—');
 const onlineCapacityText = computed(() => String(repo.capacity.where((c) => c.status === CapacityStatus.Online).length).padStart(2, '0'));
 const wallet = computed(() => repo.wallets.find(user.value.id));
