@@ -19,7 +19,6 @@ jobs:
     env:
       VITE_BACKEND_URL: https://swvictory.com
       VITE_DISABLE_LOCAL_DB_PERSIST: "1"
-      VITE_PROVIDER_MODE: backend
       VITE_AMAP_WEB_KEY: ${{ secrets.VITE_AMAP_WEB_KEY }}
       VITE_AMAP_SECURITY_CODE: ${{ secrets.VITE_AMAP_SECURITY_CODE }}
       VITE_AMAP_WEB_SERVICE_KEY: ${{ secrets.VITE_AMAP_WEB_SERVICE_KEY }}
@@ -65,6 +64,8 @@ jobs:
         run: pnpm backend:test
 
       - name: Release preflight and H5 build
+        env:
+          VITE_PROVIDER_MODE: backend
         run: pnpm build:h5:release
 
       - name: Package release
