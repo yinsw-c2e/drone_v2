@@ -11,7 +11,7 @@
 - 前端不再携带供应商共享密钥，只调用后端鉴权业务 API。`INTEGRATION_MODE=sandbox|live` 明确区分内测与真实供应商。
 - `/api/v1/ready` 同时检查数据库、生产短信和供应商配置；CORS 使用精确 HTTPS 白名单。
 - 发布流水线执行前后端测试、lint、release preflight 和 H5 构建；镜像以 commit SHA 标记，失败恢复上一前端目录和 API 镜像。
-- 候选 API 会在任何线上替换前连接生产库执行 `/ready`；历史 demo 数据、管理员缺失、对象存储或供应商配置缺项都会在零变更阶段阻断发布。
+- 候选 API 会在任何线上替换前连接生产库执行 `/ready`；默认情况下，历史 demo 数据、管理员缺失、对象存储或供应商配置缺项都会在零变更阶段阻断发布。闭环演示可显式设置 `ALLOW_PRODUCTION_DEMO_DATA=true` 临时放宽前两项，但仅允许配合 `INTEGRATION_MODE=sandbox`。
 - 生产前端本地业务仓库只读；未服务端化的操作明确失败，不再把浏览器内存变化伪装成成功。
 
 ## 正式开放前的外部阻塞项

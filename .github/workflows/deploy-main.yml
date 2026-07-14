@@ -160,7 +160,7 @@ jobs:
           }
 
           validate_server_env() {
-            local sms_provider sms_endpoint sms_code_pepper aliyun_access_key_id aliyun_access_key_secret object_storage_hosts integration_mode key value
+            local sms_provider sms_endpoint sms_code_pepper aliyun_access_key_id aliyun_access_key_secret object_storage_hosts integration_mode allow_production_demo_data key value
             sms_code_pepper="$(env_value SMS_CODE_PEPPER)"
             if [ "${#sms_code_pepper}" -lt 32 ]; then
               echo "::error::Server .env SMS_CODE_PEPPER must contain at least 32 characters."
@@ -238,6 +238,23 @@ jobs:
                 ;;
               *)
                 echo "::error::Server .env must explicitly set INTEGRATION_MODE=sandbox or live."
+                return 1
+                ;;
+            esac
+
+            allow_production_demo_data="$(env_value ALLOW_PRODUCTION_DEMO_DATA | tr '[:upper:]' '[:lower:]')"
+            case "$allow_production_demo_data" in
+              ""|0|false|no|off)
+                ;;
+              1|true|yes|on)
+                if [ "$integration_mode" != "sandbox" ]; then
+                  echo "::error::ALLOW_PRODUCTION_DEMO_DATA is only permitted with INTEGRATION_MODE=sandbox."
+                  return 1
+                fi
+                echo "::warning::Production is running in explicit closed-beta demo-data mode."
+                ;;
+              *)
+                echo "::error::Server .env ALLOW_PRODUCTION_DEMO_DATA must be a boolean value."
                 return 1
                 ;;
             esac

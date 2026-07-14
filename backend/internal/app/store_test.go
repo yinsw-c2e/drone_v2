@@ -29,6 +29,18 @@ func TestValidateProductionStateRejectsDemoSeed(t *testing.T) {
 	}
 }
 
+func TestReadyDataAllowsDemoSeedOnlyWithExplicitClosedBetaOption(t *testing.T) {
+	state := buildSeed()
+	strict := &Server{production: true}
+	if err := strict.validateReadyData(&state); err == nil {
+		t.Fatal("expected strict production readiness to reject demo seed")
+	}
+	demo := &Server{production: true, allowProductionDemoData: true}
+	if err := demo.validateReadyData(&state); err != nil {
+		t.Fatalf("explicit closed-beta mode should allow demo seed: %v", err)
+	}
+}
+
 func TestBootstrapAdminStateCreatesExplicitAdministrator(t *testing.T) {
 	state := DBShape{}
 	user, err := bootstrapAdminState(&state, "13800138000")

@@ -91,11 +91,24 @@ func TestValidateRuntimeConfigAllowsExplicitSandboxForClosedBeta(t *testing.T) {
 	t.Setenv("SMS_PROVIDER", "http")
 	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
 	t.Setenv("INTEGRATION_MODE", "sandbox")
+	t.Setenv("ALLOW_PRODUCTION_DEMO_DATA", "true")
 	t.Setenv("SMS_CODE_PEPPER", "test-sms-code-pepper-with-32-chars")
 	t.Setenv("OBJECT_STORAGE_ALLOWED_HOSTS", "private.example.test")
 
 	if err := validateRuntimeConfig(true, "https://h5.example.test"); err != nil {
 		t.Fatalf("explicit closed-beta sandbox should pass: %v", err)
+	}
+}
+
+func TestValidateRuntimeConfigBlocksDemoDataModeWithLiveProviders(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "http")
+	t.Setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")
+	t.Setenv("ALLOW_PRODUCTION_DEMO_DATA", "true")
+	setProviderBridgeEnv(t)
+
+	err := validateRuntimeConfig(true, "https://h5.example.test")
+	if err == nil || !strings.Contains(err.Error(), "INTEGRATION_MODE=sandbox") {
+		t.Fatalf("expected live demo-data mode rejection, got %v", err)
 	}
 }
 

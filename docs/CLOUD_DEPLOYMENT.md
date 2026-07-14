@@ -133,6 +133,14 @@ OBJECT_STORAGE_ALLOWED_HOSTS=<private-bucket-host>
 INTEGRATION_MODE=sandbox
 ```
 
+若生产地址暂时需要保留现有演示账号和演示订单做闭环测试，可显式增加：
+
+```text
+ALLOW_PRODUCTION_DEMO_DATA=true
+```
+
+该开关只允许与 `INTEGRATION_MODE=sandbox` 同时使用，会临时跳过“清除演示种子数据”和“必须已有活动管理员”两项数据门禁；短信、CORS、对象存储白名单及其他运行时校验仍然生效。正式交易开放前必须删除该配置并完成数据清理和管理员初始化。
+
 阿里云号码认证短信可直接复用 v1 的签名、模板和 RAM AccessKey，无需另建 HTTP 网关：
 
 ```text

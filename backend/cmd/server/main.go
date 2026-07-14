@@ -22,6 +22,7 @@ func main() {
 	dsn := getenv("MYSQL_DSN", "drone:drone@tcp(127.0.0.1:3308)/drone_v2?parseTime=true&charset=utf8mb4&loc=Local&multiStatements=true")
 	port := getenv("PORT", "8088")
 	production := isProductionRuntime()
+	allowProductionDemoData := production && getenvBool("ALLOW_PRODUCTION_DEMO_DATA", false)
 	command := ""
 	if len(os.Args) > 1 {
 		command = strings.TrimSpace(os.Args[1])
@@ -66,10 +67,12 @@ func main() {
 	if err := store.SeedIfEmpty(context.Background(), !production); err != nil {
 		log.Fatalf("seed: %v", err)
 	}
-	if production {
+	if production && !allowProductionDemoData {
 		if err := store.ValidateProductionData(context.Background()); err != nil {
 			log.Fatalf("production data validation: %v", err)
 		}
+	} else if allowProductionDemoData {
+		log.Printf("WARNING: ALLOW_PRODUCTION_DEMO_DATA is enabled; demo data and missing production administrator are temporarily allowed")
 	}
 
 	server := app.NewServerWithOptions(store, app.ServerOptions{
@@ -79,6 +82,7 @@ func main() {
 		RequirePaidPayment:      production,
 		RequireProviderReceipts: production,
 		Production:              production,
+		AllowProductionDemoData: allowProductionDemoData,
 		ObjectStorageHosts:      os.Getenv("OBJECT_STORAGE_ALLOWED_HOSTS"),
 	})
 	httpServer := &http.Server{
@@ -193,6 +197,9 @@ func validateRuntimeConfig(production bool, corsAllowOrigin string) error {
 	}
 	if err := app.ValidateProviderBridgeEnv(true); err != nil {
 		return err
+	}
+	if getenvBool("ALLOW_PRODUCTION_DEMO_DATA", false) && strings.TrimSpace(strings.ToLower(os.Getenv("INTEGRATION_MODE"))) != "sandbox" {
+		return errors.New("ALLOW_PRODUCTION_DEMO_DATA 只允许与 INTEGRATION_MODE=sandbox 一起使用")
 	}
 	return nil
 }

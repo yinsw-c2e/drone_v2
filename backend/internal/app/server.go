@@ -28,6 +28,7 @@ type Server struct {
 	requirePaidPayment      bool
 	requireProviderReceipts bool
 	production              bool
+	allowProductionDemoData bool
 	objectStorageHosts      map[string]bool
 	mutationMu              sync.Mutex
 	smsRateMu               sync.Mutex
@@ -43,6 +44,7 @@ type ServerOptions struct {
 	RequirePaidPayment      bool
 	RequireProviderReceipts bool
 	Production              bool
+	AllowProductionDemoData bool
 	ObjectStorageHosts      string
 }
 
@@ -78,6 +80,7 @@ func NewServerWithOptions(store *Store, options ServerOptions) *Server {
 		requirePaidPayment:      options.RequirePaidPayment,
 		requireProviderReceipts: options.RequireProviderReceipts,
 		production:              options.Production,
+		allowProductionDemoData: options.AllowProductionDemoData,
 		objectStorageHosts:      objectStorageHosts,
 		smsIPAttempts:           map[string][]time.Time{},
 	}
@@ -122,7 +125,7 @@ func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.production {
-		if err := validateProductionState(state); err != nil {
+		if err := s.validateReadyData(state); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, envelope{OK: false, Error: "production data is not ready"})
 			return
 		}
@@ -140,6 +143,13 @@ func (s *Server) ready(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "data": map[string]string{"status": "ready"}})
+}
+
+func (s *Server) validateReadyData(state *DBShape) error {
+	if !s.production || s.allowProductionDemoData {
+		return nil
+	}
+	return validateProductionState(state)
 }
 
 func (s *Server) snapshot(w http.ResponseWriter, r *http.Request) {
