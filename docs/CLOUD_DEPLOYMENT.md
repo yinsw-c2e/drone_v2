@@ -133,6 +133,18 @@ OBJECT_STORAGE_ALLOWED_HOSTS=<private-bucket-host>
 INTEGRATION_MODE=sandbox
 ```
 
+阿里云号码认证短信可直接复用 v1 的签名、模板和 RAM AccessKey，无需另建 HTTP 网关：
+
+```text
+SMS_PROVIDER=aliyun
+ALIYUN_SMS_ACCESS_KEY_ID=<ram-access-key-id>
+ALIYUN_SMS_ACCESS_KEY_SECRET=<ram-access-key-secret>
+ALIYUN_SMS_SIGN_NAME=<approved-system-sign-name>
+ALIYUN_SMS_TEMPLATE_CODE=<approved-system-template-code>
+```
+
+后端会把本地生成的 6 位验证码作为 `TemplateParam.code` 交给阿里云发送，验证码本身仍只以哈希形式保存在本项目数据库中。若不配置直连 AccessKey，`aliyun` 仍兼容原有 `ALIYUN_SMS_HTTP_ENDPOINT` 网关模式。
+
 如果还没有域名，只想先验证云服务器能跑，把 `API_DOMAIN` 临时改为：
 
 ```text

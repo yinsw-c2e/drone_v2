@@ -160,7 +160,7 @@ jobs:
           }
 
           validate_server_env() {
-            local sms_provider sms_endpoint sms_code_pepper object_storage_hosts integration_mode key value
+            local sms_provider sms_endpoint sms_code_pepper aliyun_access_key_id aliyun_access_key_secret object_storage_hosts integration_mode key value
             sms_code_pepper="$(env_value SMS_CODE_PEPPER)"
             if [ "${#sms_code_pepper}" -lt 32 ]; then
               echo "::error::Server .env SMS_CODE_PEPPER must contain at least 32 characters."
@@ -172,8 +172,25 @@ jobs:
                 sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
                 ;;
               aliyun)
-                sms_endpoint="$(env_value ALIYUN_SMS_HTTP_ENDPOINT)"
-                [ -n "$sms_endpoint" ] || sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
+                aliyun_access_key_id="$(env_value ALIYUN_SMS_ACCESS_KEY_ID)"
+                aliyun_access_key_secret="$(env_value ALIYUN_SMS_ACCESS_KEY_SECRET)"
+                if [ -n "$aliyun_access_key_id" ] || [ -n "$aliyun_access_key_secret" ]; then
+                  for key in \
+                    ALIYUN_SMS_ACCESS_KEY_ID \
+                    ALIYUN_SMS_ACCESS_KEY_SECRET \
+                    ALIYUN_SMS_SIGN_NAME \
+                    ALIYUN_SMS_TEMPLATE_CODE; do
+                    value="$(env_value "$key")"
+                    if [ -z "$value" ]; then
+                      echo "::error::Server .env is missing $key for direct Aliyun SMS."
+                      return 1
+                    fi
+                  done
+                  sms_endpoint="direct"
+                else
+                  sms_endpoint="$(env_value ALIYUN_SMS_HTTP_ENDPOINT)"
+                  [ -n "$sms_endpoint" ] || sms_endpoint="$(env_value SMS_HTTP_ENDPOINT)"
+                fi
                 ;;
               tencent)
                 sms_endpoint="$(env_value TENCENT_SMS_HTTP_ENDPOINT)"
@@ -185,7 +202,7 @@ jobs:
                 ;;
             esac
             if [ -z "$sms_endpoint" ]; then
-              echo "::error::Server .env is missing the configured SMS HTTP endpoint."
+              echo "::error::Server .env is missing the configured SMS HTTP endpoint or complete Aliyun direct credentials."
               return 1
             fi
 

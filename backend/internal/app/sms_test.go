@@ -2,11 +2,27 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	dypnsapi "github.com/alibabacloud-go/dypnsapi-20170525/v3/client"
+	"github.com/alibabacloud-go/tea/dara"
+	"github.com/alibabacloud-go/tea/tea"
 )
+
+type fakeAliyunSMSClient struct {
+	request  *dypnsapi.SendSmsVerifyCodeRequest
+	response *dypnsapi.SendSmsVerifyCodeResponse
+	err      error
+}
+
+func (f *fakeAliyunSMSClient) SendSmsVerifyCodeWithOptions(request *dypnsapi.SendSmsVerifyCodeRequest, _ *dara.RuntimeOptions) (*dypnsapi.SendSmsVerifyCodeResponse, error) {
+	f.request = request
+	return f.response, f.err
+}
 
 func TestMockSMSProviderExposesCode(t *testing.T) {
 	provider := mockSMSProvider{}
@@ -15,6 +31,84 @@ func TestMockSMSProviderExposesCode(t *testing.T) {
 	}
 	if err := provider.SendCode("13800138000", "123456"); err != nil {
 		t.Fatalf("mock send failed: %v", err)
+	}
+}
+
+func TestAliyunDirectProviderDispatchesLocalCode(t *testing.T) {
+	fake := &fakeAliyunSMSClient{response: &dypnsapi.SendSmsVerifyCodeResponse{
+		Body: &dypnsapi.SendSmsVerifyCodeResponseBody{Code: tea.String("OK")},
+	}}
+	provider := aliyunSMSProvider{
+		signName:     "测试签名",
+		templateCode: "100001",
+		client:       fake,
+	}
+	if provider.ExposeCode() {
+		t.Fatal("aliyun provider must not expose code")
+	}
+	if err := provider.SendCode("13800138000", "654321"); err != nil {
+		t.Fatalf("aliyun send failed: %v", err)
+	}
+	if fake.request == nil {
+		t.Fatal("expected aliyun request")
+	}
+	if got := tea.StringValue(fake.request.PhoneNumber); got != "13800138000" {
+		t.Fatalf("unexpected phone: %s", got)
+	}
+	if got := tea.StringValue(fake.request.SignName); got != "测试签名" {
+		t.Fatalf("unexpected sign name: %s", got)
+	}
+	if got := tea.StringValue(fake.request.TemplateCode); got != "100001" {
+		t.Fatalf("unexpected template code: %s", got)
+	}
+	var templateParam map[string]string
+	if err := json.Unmarshal([]byte(tea.StringValue(fake.request.TemplateParam)), &templateParam); err != nil {
+		t.Fatalf("decode template param: %v", err)
+	}
+	if templateParam["code"] != "654321" || templateParam["min"] != "5" {
+		t.Fatalf("unexpected template params: %+v", templateParam)
+	}
+}
+
+func TestAliyunDirectProviderReturnsSanitizedError(t *testing.T) {
+	provider := aliyunSMSProvider{client: &fakeAliyunSMSClient{err: errors.New("secret-bearing raw upstream failure")}}
+	err := provider.SendCode("13800138000", "123456")
+	if err == nil {
+		t.Fatal("expected aliyun error")
+	}
+	if strings.Contains(err.Error(), "secret-bearing") {
+		t.Fatalf("raw upstream error must not be exposed: %v", err)
+	}
+}
+
+func TestAliyunDirectConfigDoesNotRequireHTTPGateway(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "aliyun")
+	t.Setenv("ALIYUN_SMS_ACCESS_KEY_ID", "test-access-key-id")
+	t.Setenv("ALIYUN_SMS_ACCESS_KEY_SECRET", "test-access-key-secret")
+	t.Setenv("ALIYUN_SMS_SIGN_NAME", "测试签名")
+	t.Setenv("ALIYUN_SMS_TEMPLATE_CODE", "100001")
+	t.Setenv("ALIYUN_SMS_HTTP_ENDPOINT", "")
+	t.Setenv("SMS_HTTP_ENDPOINT", "")
+
+	if err := ValidateSMSProviderEnv(true); err != nil {
+		t.Fatalf("expected direct aliyun config to pass: %v", err)
+	}
+	if _, ok := newSMSProviderFromEnv().(aliyunSMSProvider); !ok {
+		t.Fatalf("expected direct aliyun provider, got %T", newSMSProviderFromEnv())
+	}
+}
+
+func TestAliyunDirectConfigMustBeComplete(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "aliyun")
+	t.Setenv("ALIYUN_SMS_ACCESS_KEY_ID", "test-access-key-id")
+	t.Setenv("ALIYUN_SMS_ACCESS_KEY_SECRET", "")
+	t.Setenv("ALIBABA_CLOUD_ACCESS_KEY_SECRET", "")
+	t.Setenv("ALIYUN_SMS_SIGN_NAME", "测试签名")
+	t.Setenv("ALIYUN_SMS_TEMPLATE_CODE", "100001")
+
+	err := ValidateSMSProviderEnv(true)
+	if err == nil || !strings.Contains(err.Error(), "ALIYUN_SMS_ACCESS_KEY_SECRET") {
+		t.Fatalf("expected missing secret error, got %v", err)
 	}
 }
 

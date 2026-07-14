@@ -33,7 +33,7 @@ Live 模式后端必需配置：
 
 ## SMS and authentication
 
-本地可使用 `SMS_PROVIDER=mock`。生产必须配置 `SMS_PROVIDER=http|aliyun|tencent` 及真实网关；mock code 不会在非 mock 模式返回。验证码和 access/refresh token 均只保存哈希，access token 15 分钟过期，refresh token 每次使用都轮换；短信同时按手机号和来源 IP 限流。
+本地可使用 `SMS_PROVIDER=mock`。生产必须配置 `SMS_PROVIDER=http|aliyun|tencent`；`http`/`tencent` 使用真实 HTTPS 网关，`aliyun` 可使用网关，也可配置 `ALIYUN_SMS_ACCESS_KEY_ID`、`ALIYUN_SMS_ACCESS_KEY_SECRET`、`ALIYUN_SMS_SIGN_NAME`、`ALIYUN_SMS_TEMPLATE_CODE` 直接调用号码认证服务。mock code 不会在非 mock 模式返回。验证码和 access/refresh token 均只保存哈希，access token 15 分钟过期，refresh token 每次使用都轮换；短信同时按手机号和来源 IP 限流。
 
 ## Release builds
 
