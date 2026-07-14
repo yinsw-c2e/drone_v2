@@ -327,7 +327,7 @@ jobs:
 
           DATABASE_BACKUP="$DATABASE_BACKUPS_DIR/drone_v2-before-$RELEASE_SHA.sql.gz"
           docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T mysql \
-            sh -lc 'exec mysqldump --single-transaction --no-tablespaces --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+            sh -lc 'exec mysqldump --single-transaction --no-tablespaces --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' </dev/null \
             | gzip -9 > "$DATABASE_BACKUP"
           test -s "$DATABASE_BACKUP"
 
