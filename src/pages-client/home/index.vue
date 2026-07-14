@@ -31,7 +31,7 @@
         </view>
       </view>
 
-      <view class="scan-card">
+      <view v-if="activeOrder" class="scan-card">
         <view class="radar">
           <view class="radar-ring r1" />
           <view class="radar-ring r2" />
@@ -80,6 +80,27 @@
           <view class="cta-copy">
             <StitchIcon name="verified" size="38rpx" />
             <text>{{ ctaText }}</text>
+          </view>
+          <StitchIcon name="arrow_forward" size="40rpx" />
+        </view>
+      </view>
+
+      <view v-else class="scan-card empty-order-card">
+        <view class="radar empty-radar">
+          <view class="radar-ring r1" />
+          <view class="radar-ring r2" />
+          <view class="radar-ring r3" />
+          <view class="radar-sweep" />
+        </view>
+        <view class="empty-order-content">
+          <view class="empty-order-icon"><StitchIcon name="route" size="48rpx" /></view>
+          <text class="empty-order-title">{{ copy.emptyOrderTitle }}</text>
+          <text class="empty-order-description">{{ copy.emptyOrderDescription }}</text>
+        </view>
+        <view class="primary-cta" hover-class="tap-press" @click="goOrder()">
+          <view class="cta-copy">
+            <StitchIcon name="add_circle" size="38rpx" />
+            <text>{{ copy.startOrder }}</text>
           </view>
           <StitchIcon name="arrow_forward" size="40rpx" />
         </view>
@@ -196,8 +217,8 @@ const HOME_COPY = {
     airspacePending: 'Airspace Pending',
     originLabel: 'ORIGIN',
     destLabel: 'DEST',
-    originName: 'Qianhai Logistics Hub A',
-    destName: 'Baoan Airport Cargo C',
+    emptyOrderTitle: 'No active transport tasks',
+    emptyOrderDescription: 'Create an order to view pickup, destination, ETA, and transport status here.',
     etaLabel: 'ETA',
     completedTimeLabel: 'Completed',
     minUnit: 'MIN',
@@ -206,7 +227,7 @@ const HOME_COPY = {
     nextStep: 'Next: Confirm Route Plan',
     reviewCta: 'View Settlement Review',
     completeCta: 'Generate Settlement Review',
-    commonRoutes: 'Common Routes & Budget',
+    commonRoutes: 'Suggested Route Templates & Budget',
     basePrice: 'Reference',
     recentOrders: 'Recent Orders',
     noOrders: 'No orders yet. Launch your first lift.',
@@ -233,8 +254,8 @@ const HOME_COPY = {
     airspacePending: '空域待确认',
     originLabel: '起吊点 ORIGIN',
     destLabel: '降落点 DEST',
-    originName: '前海深港物流枢纽 A区',
-    destName: '宝安国际机场 货运C站',
+    emptyOrderTitle: '暂无进行中的运输任务',
+    emptyOrderDescription: '创建订单后，可在这里查看起降点、预计到达时间和运输状态。',
     etaLabel: '预计到达 (ETA)',
     completedTimeLabel: '完成时间',
     minUnit: 'MIN',
@@ -243,7 +264,7 @@ const HOME_COPY = {
     nextStep: '下一步：确认航线方案',
     reviewCta: '查看结算评价',
     completeCta: '生成结算评价',
-    commonRoutes: '常用航线与预算',
+    commonRoutes: '推荐线路模板与参考预算',
     basePrice: '参考价',
     recentOrders: '最近订单',
     noOrders: '还没有订单，先去发起首单吧。',
@@ -275,9 +296,9 @@ const commonRoutes = computed(() => commonRoutePresets().map((route) => ({
 
 const activeOrder = computed(() => orderStore.activeOrder);
 const activeOrderCode = computed(() => activeOrder.value ? activeOrder.value.id.toUpperCase() : '—');
-const activeStatusText = computed(() => activeOrder.value ? orderStatusLabel(activeOrder.value.status, localeStore.locale) : orderStatusLabel(OrderStatus.Created, localeStore.locale));
-const originName = computed(() => activeOrder.value?.from.address || copy.value.originName);
-const destName = computed(() => activeOrder.value?.to.address || copy.value.destName);
+const activeStatusText = computed(() => activeOrder.value ? orderStatusLabel(activeOrder.value.status, localeStore.locale) : '');
+const originName = computed(() => activeOrder.value?.from.address ?? '');
+const destName = computed(() => activeOrder.value?.to.address ?? '');
 const isTerminalOrder = computed(() => {
   const status = activeOrder.value?.status;
   return status === OrderStatus.Completed || status === OrderStatus.Settled;
@@ -588,6 +609,54 @@ function toggleLocale() {
   border: 2rpx solid #3a494b;
   background: #1e2433;
   box-shadow: 0 16rpx 62rpx rgba(0, 0, 0, .5);
+}
+
+.empty-order-card {
+  min-height: 492rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.empty-radar {
+  opacity: .18;
+}
+
+.empty-order-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 15rpx 0 54rpx;
+}
+
+.empty-order-icon {
+  width: 92rpx;
+  height: 92rpx;
+  border-radius: 50%;
+  border: 2rpx solid rgba(0, 242, 255, .28);
+  background: rgba(0, 242, 255, .08);
+  color: #00f2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-order-title {
+  margin-top: 31rpx;
+  color: #dfe2f0;
+  font-size: 31rpx;
+  line-height: 42rpx;
+  font-weight: 700;
+}
+
+.empty-order-description {
+  max-width: 560rpx;
+  margin-top: 12rpx;
+  color: #b9cacb;
+  font-size: 23rpx;
+  line-height: 38rpx;
 }
 
 .radar {

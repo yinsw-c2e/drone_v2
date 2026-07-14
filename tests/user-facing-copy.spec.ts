@@ -54,3 +54,14 @@ it('uses action-oriented copy for common user-visible failures', () => {
     expect(sources).not.toMatch(pattern);
   }
 });
+
+it('keeps the new client home honest when there is no active order', () => {
+  const source = readFileSync('src/pages-client/home/index.vue', 'utf8');
+
+  expect(source).toContain('<view v-if="activeOrder" class="scan-card">');
+  expect(source).toContain('<view v-else class="scan-card empty-order-card">');
+  expect(source).toContain('暂无进行中的运输任务');
+  expect(source).toContain('推荐线路模板与参考预算');
+  expect(source).not.toContain('前海深港物流枢纽 A区');
+  expect(source).not.toContain('宝安国际机场 货运C站');
+});
