@@ -296,7 +296,19 @@ jobs:
             fi
           }
 
-          trap 'status=$?; cleanup_candidate; if [ "$status" -ne 0 ]; then rollback; dump_deploy_state; fi' EXIT
+          on_exit() {
+            local status=$?
+            trap - EXIT
+            set +e
+            cleanup_candidate
+            if [ "$status" -ne 0 ]; then
+              rollback
+              dump_deploy_state
+            fi
+            exit "$status"
+          }
+
+          trap on_exit EXIT
 
           test -f "$ARCHIVE"
           test -f "$ENV_FILE"
@@ -315,7 +327,7 @@ jobs:
 
           DATABASE_BACKUP="$DATABASE_BACKUPS_DIR/drone_v2-before-$RELEASE_SHA.sql.gz"
           docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" exec -T mysql \
-            sh -lc 'exec mysqldump --single-transaction --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+            sh -lc 'exec mysqldump --single-transaction --no-tablespaces --default-character-set=utf8mb4 -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
             | gzip -9 > "$DATABASE_BACKUP"
           test -s "$DATABASE_BACKUP"
 
