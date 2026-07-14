@@ -14,19 +14,19 @@
         </view>
         <view :class="['env-pill', demoEnabled ? 'demo' : 'secure']">
           <view class="env-dot" />
-          <text>{{ demoEnabled ? '开发演示' : '账号登录' }}</text>
+          <text>{{ demoEnabled ? '开发演示' : '安全登录' }}</text>
         </view>
       </view>
 
       <view class="hero-section">
         <text class="hero-title">手机号验证码登录</text>
-        <text class="hero-desc">一个账号可管理业主、飞手、机主等多重业务身份；运营账号需后台开通。</text>
+        <text class="hero-desc">一个手机号可使用多个已开通身份，登录后可随时切换。运营人员账号由平台统一开通。</text>
       </view>
 
       <view class="auth-card">
         <view class="mode-row">
           <view :class="['mode-tab', mode === 'login' ? 'active' : '']" @click="mode = 'login'">登录</view>
-          <view :class="['mode-tab', mode === 'register' ? 'active' : '']" @click="mode = 'register'">注册补全</view>
+          <view :class="['mode-tab', mode === 'register' ? 'active' : '']" @click="mode = 'register'">注册账号</view>
         </view>
 
         <view class="field">
@@ -49,7 +49,7 @@
             <text class="field-label">昵称</text>
             <input v-model="nickname" class="field-input" placeholder="用于个人中心展示" />
           </view>
-          <text class="section-label">初始身份</text>
+          <text class="section-label">主要用途</text>
           <view class="role-grid">
             <view
               v-for="item in registerRoles"
@@ -72,7 +72,7 @@
         </view>
 
         <view :class="['primary-btn', submitting ? 'disabled' : '']" hover-class="tap-press" @click="submit">
-          <text>{{ mode === 'register' ? '完成注册并进入系统' : '登录' }}</text>
+          <text>{{ mode === 'register' ? '注册并开始使用' : '登录' }}</text>
           <StitchIcon name="login" size="31rpx" />
         </view>
       </view>
@@ -80,7 +80,7 @@
       <view v-if="demoEnabled" class="demo-block">
         <view class="demo-head">
           <StitchIcon name="developer_mode" size="28rpx" />
-          <text>演示直进，仅开发或 VITE_DEMO_LOGIN=1 可见</text>
+          <text>开发演示入口</text>
         </view>
         <view class="demo-grid">
           <view v-for="item in demoRoles" :key="item.role" :class="['demo-card', item.key]" hover-class="tap-press" @click="demoLogin(item.role)">
@@ -92,7 +92,7 @@
 
       <view class="login-foot">
         <StitchIcon name="lock" size="26rpx" />
-        <text>验证码、token、角色权限与认证审核已接入账号体系</text>
+        <text>验证码仅用于本次登录，请勿转发给他人</text>
       </view>
     </view>
   </view>
@@ -162,7 +162,7 @@ async function sendCode() {
     const result = await userStore.sendCode(phone.value);
     if (result.mockCode) {
       code.value = result.mockCode;
-      showFeedback(`Mock 验证码：${result.mockCode}`, 'warning');
+      showFeedback(`演示验证码：${result.mockCode}`, 'warning');
     } else {
       showFeedback('验证码已发送', 'success');
     }
@@ -192,7 +192,7 @@ async function submit() {
     const message = e instanceof Error ? e.message : '登录失败';
     if (mode.value === 'login' && message.includes('未注册')) {
       mode.value = 'register';
-      showFeedback('该手机号未注册，请补充昵称并选择初始身份', 'warning');
+      showFeedback('该手机号尚未注册，请填写昵称并选择主要用途', 'warning');
     } else {
       showFeedback(message, 'danger');
     }

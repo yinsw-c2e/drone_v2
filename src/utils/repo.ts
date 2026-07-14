@@ -5,7 +5,7 @@ export function allowsLocalBusinessMutation(env: Record<string, string | boolean
   return !(env.PROD === true || env.MODE === 'production' || env.VITE_APP_ENV === 'production');
 }
 export function assertLocalBusinessMutationAllowed() {
-  if (!allowsLocalBusinessMutation()) throw new Error('生产环境禁止本地业务数据变更，请使用对应的服务端接口');
+  if (!allowsLocalBusinessMutation()) throw new Error('当前操作暂不可用，请稍后重试');
 }
 function makeRepo<T extends object>(coll: keyof DBShape, key: keyof T = 'id' as keyof T) {
   const arr = () => db[coll] as unknown as T[];

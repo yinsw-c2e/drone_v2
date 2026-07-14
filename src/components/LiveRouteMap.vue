@@ -104,8 +104,8 @@ const gpsBadgeText = computed(() => {
 });
 const distanceText = computed(() => `${routeDistance.value.toFixed(1)} km`);
 const mapKeyHint = computed(() => props.locale === 'en'
-  ? 'Configure VITE_AMAP_WEB_KEY or VITE_QQ_MAP_KEY to load the native H5 map.'
-  : '请配置 VITE_AMAP_WEB_KEY 或 VITE_QQ_MAP_KEY 后加载 H5 原生地图。');
+  ? 'The map is temporarily unavailable. Please try again later.'
+  : '地图暂时无法加载，请稍后重试。');
 const showMapKeyHint = computed(() => isH5Runtime() && !mapProviderReady.value);
 
 const mapCenter = computed(() => {

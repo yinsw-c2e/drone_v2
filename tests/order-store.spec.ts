@@ -113,7 +113,7 @@ it('预支付缺少平台 SDK 参数时不确认运力', async () => {
     provider: 'wxpay',
   });
 
-  await expect(store.confirmSelected()).rejects.toThrow('支付SDK参数缺失');
+  await expect(store.confirmSelected()).rejects.toThrow('支付信息获取失败');
   expect(repo.orders.find(order.id)?.status).toBe(OrderStatus.Matching);
 });
 
@@ -170,7 +170,7 @@ it('平台支付 SDK 成功但回调未落库时不确认运力', async () => {
   const futureNow = Date.now() + 2_000;
   const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(futureNow);
   try {
-    await expect(store.confirmSelected()).rejects.toThrow('支付回调尚未确认');
+    await expect(store.confirmSelected()).rejects.toThrow('支付结果确认中');
   } finally {
     nowSpy.mockRestore();
   }

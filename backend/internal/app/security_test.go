@@ -223,6 +223,20 @@ func TestProductionUpstreamErrorsAreSanitized(t *testing.T) {
 	}
 }
 
+func TestPublicErrorsHideImplementationTerms(t *testing.T) {
+	for _, test := range []struct {
+		input string
+		want  string
+	}{
+		{input: "缺少登录 token", want: "登录状态无效，请重新登录"},
+		{input: "payment provider 未返回 SDK 参数", want: "外部服务返回异常，请稍后重试"},
+	} {
+		if got := publicErrorMessage(errors.New(test.input)); got != test.want {
+			t.Fatalf("publicErrorMessage(%q) = %q, want %q", test.input, got, test.want)
+		}
+	}
+}
+
 func TestRequestSafetyRecoversPanicsAndAddsRequestID(t *testing.T) {
 	handler := requestSafety(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") }))
 	recorder := httptest.NewRecorder()

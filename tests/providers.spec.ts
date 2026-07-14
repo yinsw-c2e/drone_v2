@@ -18,7 +18,7 @@ it('uses authenticated backend providers by default in production', () => {
 });
 
 it('blocks explicit mock provider selection in production', () => {
-  expect(() => selectProviderMode(prodEnv({ VITE_PROVIDER_MODE: 'mock' }))).toThrow('生产模式禁止使用 mock provider');
+  expect(() => selectProviderMode(prodEnv({ VITE_PROVIDER_MODE: 'mock' }))).toThrow('服务配置异常');
 });
 
 it('selects authenticated backend providers in production without a client secret', () => {

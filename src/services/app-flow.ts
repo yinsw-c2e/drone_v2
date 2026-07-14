@@ -121,7 +121,7 @@ function isActiveOrder(order: Order) {
 }
 
 export function submitDemoOrder(): Order {
-	if (isProductionBackendRequired()) throw new Error('生产环境不提供演示订单');
+	if (isProductionBackendRequired()) throw new Error('当前版本不支持创建演示订单');
 	ensureDemoCredit();
 	const client = defaultUserForRole(Role.Client);
 	if (!client) throw new Error('演示业主不存在');
@@ -138,7 +138,7 @@ export function submitDemoOrder(): Order {
 }
 
 export async function runAdminDemoFlow(strategy: DispatchStrategy = DispatchStrategy.Nearest): Promise<Order> {
-	if (isProductionBackendRequired()) throw new Error('生产环境不提供流程演练');
+	if (isProductionBackendRequired()) throw new Error('当前版本不支持流程演练');
   ensureDemoCredit();
   const client = ensureAdminDemoClient();
   const order = submitOrderDraft({

@@ -559,7 +559,7 @@ function capacityLocationText(unit: CapacityUnit) {
 
 function setOnline(id: string) {
   if (productionRuntime) {
-    error.value = '运力投放服务尚未接入生产后端';
+    error.value = '暂时无法投放运力，请稍后重试';
     return;
   }
   try {
@@ -574,7 +574,7 @@ function setOnline(id: string) {
 
 function setOffline(id: string) {
   if (productionRuntime) {
-    error.value = '运力撤回服务尚未接入生产后端';
+    error.value = '暂时无法撤回运力，请稍后重试';
     return;
   }
   error.value = '';

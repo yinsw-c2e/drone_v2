@@ -44,7 +44,7 @@
     <view class="pop-head">
       <text class="pop-title">系统设置</text>
       <view class="pop-head-side">
-        <text class="pop-count">{{ productionRuntime ? '生产环境' : '演示环境' }}</text>
+        <text class="pop-count">{{ productionRuntime ? '正式数据' : '演示数据' }}</text>
       </view>
     </view>
     <view class="pop-section">
@@ -57,21 +57,21 @@
       <view class="pop-action" hover-class="tap-press" @click="exportSnapshot">
         <StitchIcon name="download" size="18px" />
         <view class="pop-action-copy">
-          <text class="pop-action-title">导出数据快照</text>
-          <text class="pop-action-desc">下载当前本地演示库 JSON，便于排查与回放</text>
+          <text class="pop-action-title">导出演示数据</text>
+          <text class="pop-action-desc">下载当前演示业务数据，用于留存或问题排查</text>
         </view>
       </view>
       <view class="pop-action danger" hover-class="tap-press" @click="confirmReset">
         <StitchIcon name="restart_alt" size="18px" />
         <view class="pop-action-copy">
           <text class="pop-action-title">重置演示数据</text>
-          <text class="pop-action-desc">清空订单、流水与通知，恢复初始种子</text>
+          <text class="pop-action-desc">清空订单、流水与通知，恢复初始示例</text>
         </view>
       </view>
     </view>
     <view v-if="confirmingReset" class="pop-section reset-confirm">
       <text class="reset-title">确认重置演示数据</text>
-      <text class="reset-desc">将清空本地订单、流水、通知等业务数据并恢复初始种子，此操作不可撤销。</text>
+      <text class="reset-desc">将清空当前演示订单、流水、通知等业务数据并恢复初始示例，此操作不可撤销。</text>
       <view class="reset-actions">
         <view class="pop-button" hover-class="tap-press" @click="confirmingReset = false">取消</view>
         <view class="pop-button danger-button" hover-class="tap-press" @click="resetDemoData">重置</view>
@@ -238,7 +238,7 @@ const noticeGroups = computed<NoticeGroup[]>(() => {
 
 function markGroupRead(group: NoticeGroup) {
   if (productionRuntime) {
-    uni.showToast({ title: '通知已读服务尚未接入', icon: 'none' });
+    uni.showToast({ title: '暂时无法更新通知状态，请稍后重试', icon: 'none' });
     return;
   }
   group.ids.forEach((id) => repo.notifications.update(id, { read: true }));
@@ -247,7 +247,7 @@ function markGroupRead(group: NoticeGroup) {
 
 function markAllRead() {
   if (productionRuntime) {
-    uni.showToast({ title: '通知已读服务尚未接入', icon: 'none' });
+    uni.showToast({ title: '暂时无法更新通知状态，请稍后重试', icon: 'none' });
     return;
   }
   repo.notifications.where((item) => !item.read).forEach((item) => repo.notifications.update(item.id, { read: true }));
@@ -256,7 +256,7 @@ function markAllRead() {
 }
 
 const envRows = computed(() => [
-  { label: '数据存储', value: productionRuntime ? '生产后端授权快照' : '本地演示库 drone_mvp_db_v3' },
+  { label: '数据存储', value: productionRuntime ? '云端安全存储' : '设备内演示数据' },
   { label: '订单', value: `${repo.orders.all().length} 单` },
   { label: '在线运力', value: `${repo.capacity.where((c) => c.status === 'online').length} / ${repo.capacity.all().length}` },
   { label: '审计日志', value: `${repo.auditLogs.all().length} 条` },
@@ -283,7 +283,7 @@ const systemAdvice = computed(() => {
 async function exportSnapshot() {
   const filename = `skylink-db-snapshot-${exportStamp()}.json`;
   const result = await exportTextFile(filename, JSON.stringify(db, null, 2), 'application/json');
-  uni.showToast({ title: result === 'downloaded' ? `已下载 ${filename}` : result === 'copied' ? '快照已复制到剪贴板' : '导出失败', icon: 'none' });
+  uni.showToast({ title: result === 'downloaded' ? `已下载 ${filename}` : result === 'copied' ? '数据备份已复制到剪贴板' : '导出失败', icon: 'none' });
 }
 
 function confirmReset() {
@@ -292,7 +292,7 @@ function confirmReset() {
 
 function resetDemoData() {
   if (productionRuntime) {
-    uni.showToast({ title: '生产环境禁止重置本地数据', icon: 'none' });
+    uni.showToast({ title: '正式数据不能在此重置', icon: 'none' });
     return;
   }
   resetDB();

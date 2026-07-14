@@ -471,7 +471,7 @@ func (s *Server) orders(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := actorFromRequest(r)
 	if actor == nil || actor.User == nil {
-		writeUnauthorized(w, errors.New("缺少登录 token"))
+		writeUnauthorized(w, errors.New("请先登录"))
 		return
 	}
 	req.ClientID = actor.User.ID
@@ -524,7 +524,7 @@ func (s *Server) certifications(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := actorFromRequest(r)
 	if actor == nil || actor.User == nil {
-		writeUnauthorized(w, errors.New("缺少登录 token"))
+		writeUnauthorized(w, errors.New("请先登录"))
 		return
 	}
 	req.UserID = actor.User.ID
@@ -738,7 +738,7 @@ func (s *Server) decideAirspace(w http.ResponseWriter, r *http.Request, orderID 
 		return
 	}
 	if s.requireProviderReceipts {
-		writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "生产环境禁用本地空域审批，请使用空域 provider 回执"})
+		writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "当前不支持手动审批空域申请，请等待审批结果同步"})
 		return
 	}
 	var req airspaceDecisionRequest
@@ -779,7 +779,7 @@ func (s *Server) telemetry(w http.ResponseWriter, r *http.Request, orderID strin
 		return
 	}
 	if s.requireProviderReceipts {
-		writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "生产环境禁用普通遥测写入，请使用设备/provider遥测入口"})
+		writeJSON(w, http.StatusForbidden, envelope{OK: false, Error: "当前不支持手动写入飞行数据，请通过设备端同步"})
 		return
 	}
 	var req telemetryRequest
@@ -887,7 +887,7 @@ func (s *Server) providerPaymentPrepay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if result.PaidCent != req.AmountCent {
-		writeError(w, errors.New("支付供应商预下单金额与服务端报价不一致"))
+		writeError(w, errors.New("支付金额校验失败，请重新发起支付"))
 		return
 	}
 	now := nowISO()
@@ -1102,7 +1102,7 @@ func (s *Server) providerCreditScore(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := actorFromRequest(r)
 	if actor == nil || actor.User == nil {
-		writeUnauthorized(w, errors.New("缺少登录 token"))
+		writeUnauthorized(w, errors.New("请先登录"))
 		return
 	}
 	if !hasActiveRole(state, actor.User, RoleAdmin) {
@@ -1238,7 +1238,7 @@ func ParseObjectStorageAllowedHosts(input string) (map[string]bool, error) {
 func validateProductionCertificationFiles(fields map[string]any, allowedHosts map[string]bool) error {
 	raw, ok := fields["idPhotos"]
 	if !ok {
-		return errors.New("生产认证必须先上传身份证明材料到私有对象存储")
+		return errors.New("请先上传身份证明材料")
 	}
 	items, ok := raw.([]any)
 	if !ok || len(items) == 0 {
@@ -1247,7 +1247,7 @@ func validateProductionCertificationFiles(fields map[string]any, allowedHosts ma
 	for _, item := range items {
 		value, ok := item.(string)
 		if !ok || validateObjectStorageReference(value, allowedHosts) != nil {
-			return errors.New("生产认证材料必须使用 HTTPS 对象存储地址")
+			return errors.New("身份证明材料上传失败，请重新上传")
 		}
 	}
 	return nil
@@ -1256,7 +1256,7 @@ func validateProductionCertificationFiles(fields map[string]any, allowedHosts ma
 func validateProductionOrderFiles(photos []string, allowedHosts map[string]bool) error {
 	for _, value := range photos {
 		if validateObjectStorageReference(value, allowedHosts) != nil {
-			return errors.New("生产货物图片必须先上传到私有对象存储")
+			return errors.New("货物图片上传失败，请重新上传")
 		}
 	}
 	return nil
@@ -1490,11 +1490,31 @@ func writeError(w http.ResponseWriter, err error) {
 			return
 		}
 	}
-	writeJSON(w, http.StatusBadRequest, envelope{OK: false, Error: err.Error()})
+	writeJSON(w, http.StatusBadRequest, envelope{OK: false, Error: publicErrorMessage(err)})
 }
 
 func writeUnauthorized(w http.ResponseWriter, err error) {
-	writeJSON(w, http.StatusUnauthorized, envelope{OK: false, Error: err.Error()})
+	writeJSON(w, http.StatusUnauthorized, envelope{OK: false, Error: publicErrorMessage(err)})
+}
+
+func publicErrorMessage(err error) string {
+	if err == nil {
+		return "请求未完成，请稍后重试"
+	}
+	message := strings.TrimSpace(err.Error())
+	lower := strings.ToLower(message)
+	if strings.Contains(lower, "token") {
+		return "登录状态无效，请重新登录"
+	}
+	for _, keyword := range []string{"provider", "sdk", "endpoint", "tradeno", "requestid", "http "} {
+		if strings.Contains(lower, keyword) {
+			return "外部服务返回异常，请稍后重试"
+		}
+	}
+	if message == "" {
+		return "请求未完成，请稍后重试"
+	}
+	return message
 }
 
 func bearerToken(r *http.Request) string {

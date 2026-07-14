@@ -32,7 +32,7 @@ function hasEnvelopeData<T>(value: BridgeEnvelope<T> | T): value is BridgeEnvelo
 
 function requestBridge<T>(config: BridgeProviderConfig, path: string, payload: Record<string, unknown>): Promise<T> {
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    return Promise.reject(new Error('外部服务配置缺失：当前运行环境不支持 uni.request，无法连接 provider bridge'));
+    return Promise.reject(new Error('相关服务暂不可用，请稍后重试'));
   }
 
   return new Promise<T>((resolve, reject) => {
@@ -44,14 +44,14 @@ function requestBridge<T>(config: BridgeProviderConfig, path: string, payload: R
       success(response) {
         const statusCode = response.statusCode ?? 0;
         if (statusCode < 200 || statusCode >= 300) {
-          reject(new Error(`外部服务调用失败：${path} HTTP ${statusCode}`));
+          reject(new Error('相关服务暂不可用，请稍后重试'));
           return;
         }
 
         const body = response.data as BridgeEnvelope<T> | T;
         if (hasEnvelopeData(body)) {
           if (body.ok === false) {
-            reject(new Error(body.error || `外部服务调用失败：${path}`));
+            reject(new Error(body.error || '相关服务暂不可用，请稍后重试'));
             return;
           }
           if (body.data !== undefined) {
@@ -61,8 +61,8 @@ function requestBridge<T>(config: BridgeProviderConfig, path: string, payload: R
         }
         resolve(body as T);
       },
-      fail(error) {
-        reject(new Error(`外部服务调用失败：${path} ${error.errMsg || ''}`.trim()));
+      fail() {
+        reject(new Error('相关服务暂不可用，请稍后重试'));
       },
     });
   });

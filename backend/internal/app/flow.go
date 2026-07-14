@@ -471,7 +471,7 @@ func ensureDestinationReached(state *DBShape, order *Order, requireDeviceTelemet
 		return errors.New("尚未收到飞行遥测，无法确认卸货")
 	}
 	if requireDeviceTelemetry && (snapshot.Source != "device" || snapshot.Provider == "" || snapshot.DeviceSN == "") {
-		return errors.New("生产环境只接受设备/provider遥测确认卸货")
+		return errors.New("请等待设备飞行数据同步后再确认卸货")
 	}
 	if distanceKm(snapshot.Frame.Pos, order.To) > destinationRadiusKm {
 		return errors.New("尚未到达卸货点，进入200m围栏后才能确认卸货")

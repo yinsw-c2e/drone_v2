@@ -416,7 +416,7 @@ func TestProductionUnloadingRequiresProviderDeviceTelemetry(t *testing.T) {
 		}
 	}
 	upsertTelemetry(&state, order.ID, Telemetry{TS: nowISO(), Pos: order.To, AltM: 5, SpeedMS: 1, BatteryPct: 42, Heading: 0, SwingDeg: 2}, "pilot")
-	if _, err := advanceOrderWithOptions(&state, order.ID, true); err == nil || err.Error() != "生产环境只接受设备/provider遥测确认卸货" {
+	if _, err := advanceOrderWithOptions(&state, order.ID, true); err == nil || err.Error() != "请等待设备飞行数据同步后再确认卸货" {
 		t.Fatalf("expected production telemetry source rejection, got %v", err)
 	}
 	snapshot := upsertTelemetry(&state, order.ID, Telemetry{TS: nowISO(), Pos: order.To, AltM: 5, SpeedMS: 1, BatteryPct: 42, Heading: 0, SwingDeg: 2}, "device")

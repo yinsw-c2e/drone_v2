@@ -215,7 +215,7 @@ func refreshAuthSession(state *DBShape, refreshToken string) (*authPayload, erro
 
 func authUserByAccessToken(state *DBShape, accessToken string) (*User, *AuthSession, error) {
 	if strings.TrimSpace(accessToken) == "" {
-		return nil, nil, errors.New("缺少登录 token")
+		return nil, nil, errors.New("请先登录")
 	}
 	session := findSessionByAccessToken(state, strings.TrimSpace(accessToken))
 	if session == nil {

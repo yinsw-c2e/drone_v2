@@ -59,11 +59,11 @@ export function selectProviderMode(env: ProviderRuntimeEnv = runtimeEnv()): Prov
   }
 
   if (configuredMode !== 'mock' && configuredMode !== 'backend') {
-    throw new Error(`provider配置无效：VITE_PROVIDER_MODE=${configuredMode}，只允许 mock 或 backend`);
+    throw new Error('服务配置异常，请联系平台客服');
   }
 
   if (production && configuredMode === 'mock') {
-    throw new Error('provider配置缺失：生产模式禁止使用 mock provider');
+    throw new Error('服务配置异常，请联系平台客服');
   }
 
   return configuredMode;

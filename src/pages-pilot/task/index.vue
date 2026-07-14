@@ -706,7 +706,7 @@ function formatRemainingDistance(km: number) {
 
 function lowBattery() {
   if (productionRuntime) {
-    feedback.value = '生产环境禁止注入模拟遥测';
+    feedback.value = '当前不支持手动模拟飞行数据';
     return;
   }
   error.value = '';
@@ -719,7 +719,7 @@ function lowBattery() {
 
 function recordFlightCommand(type: 'return' | 'land') {
   if (productionRuntime) {
-    feedback.value = '返航/降落指令服务尚未接入生产后端';
+    feedback.value = '暂时无法下发返航或降落指令，请联系调度人员';
     return;
   }
   const current = order.value;
@@ -754,7 +754,7 @@ function handleEmergencySelect(event: { item: { key: string; disabled?: boolean 
 
 function exception() {
   if (productionRuntime) {
-    feedback.value = '异常上报服务尚未接入生产后端';
+    feedback.value = '暂时无法提交异常，请联系调度人员';
     return;
   }
   const current = order.value;

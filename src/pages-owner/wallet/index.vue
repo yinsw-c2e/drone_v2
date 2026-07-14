@@ -274,7 +274,7 @@ function openLedgerRow(row: LedgerViewRow) {
 
 function openWithdraw() {
   if (productionRuntime) {
-    showFeedback('提现服务尚未接入生产后端');
+    showFeedback('提现功能正在准备中，暂时无法使用');
     return;
   }
   if (balanceCent.value <= 0) {
@@ -320,7 +320,7 @@ function loadMore() {
 
 function release() {
   if (productionRuntime) {
-    showFeedback('结算释放由服务端任务执行，当前尚未接入');
+    showFeedback('结算将在到期后自动处理，无需手动操作');
     return;
   }
   if (pendingCent.value <= 0) {
@@ -336,7 +336,7 @@ function closeRelease() {
 
 function confirmRelease() {
   if (productionRuntime) {
-    showFeedback('生产环境禁止本地释放结算');
+    showFeedback('当前不支持手动释放结算');
     return;
   }
   releasePending(user.value.id);

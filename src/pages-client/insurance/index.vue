@@ -605,7 +605,7 @@ function formatDateTime(value: string) {
 
 function startClaim() {
   if (productionRuntime) {
-    message.value = '理赔报案服务尚未接入生产后端';
+    message.value = '暂时无法提交报案，请稍后重试';
     return;
   }
   const current = order.value;
@@ -655,7 +655,7 @@ function closeSupplementPanel() {
 
 function submitSupplementMaterials() {
   if (productionRuntime) {
-    message.value = '理赔材料服务尚未接入生产后端';
+    message.value = '暂时无法更新理赔材料，请稍后重试';
     return;
   }
   const claim = primaryClaim.value ?? claims.value[0];
@@ -736,7 +736,7 @@ function goProfile() {
 
 function arbitrateCurrentClaim() {
   if (productionRuntime) {
-    message.value = '理赔仲裁服务尚未接入生产后端';
+    message.value = '暂时无法申请仲裁，请稍后重试';
     return;
   }
   const claim = claims.value[0];

@@ -601,7 +601,7 @@ async function runFlow() {
 
 async function rejectQueue(item: QueueRow) {
 	if (productionRuntime && item.kind !== 'application') {
-		showToast('该审核类型尚未接入生产后端', 'warning');
+		showToast('该审核暂不支持在线处理', 'warning');
 		return;
 	}
   if (item.kind === 'application' && item.sourceId) {
@@ -616,7 +616,7 @@ async function rejectQueue(item: QueueRow) {
 
 async function reviewQueue(item: QueueRow) {
 	if (productionRuntime && item.kind !== 'application') {
-		showToast('该审核类型尚未接入生产后端', 'warning');
+		showToast('该审核暂不支持在线处理', 'warning');
 		return;
 	}
   if (item.kind === 'application' && item.sourceId) {
@@ -670,7 +670,7 @@ function handleRiskAction(item: RiskRow) {
 	const claim = repo.claims.find(item.sourceId);
 	if (!claim) return;
 	if (productionRuntime) {
-		showToast('理赔处置服务尚未接入生产后端', 'warning');
+		showToast('理赔处置暂不支持在线处理', 'warning');
 		return;
 	}
   if (claim.status !== 'paid') {

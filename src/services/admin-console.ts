@@ -190,7 +190,7 @@ export async function advanceAdminOrder(orderId: string): Promise<Order> {
   if (!order) throw new Error('订单不存在');
   if (order.status === OrderStatus.Matching) {
     if (isProductionBackendRequired()) {
-      throw new Error('生产订单必须由业主在客户端完成保险、支付与运力确认');
+      throw new Error('请由业主完成保险、支付和运力确认后再继续');
     }
     const remoteCandidates = await fetchCandidatesRemote(order.id, 'global');
     const candidate = remoteCandidates?.[0] ?? candidatesForOrder(order.id)[0];

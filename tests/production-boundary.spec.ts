@@ -25,7 +25,7 @@ it('server snapshots never receive demo wallets or certification queues', () => 
 
 it('production network failure is surfaced instead of falling back to local business data', async () => {
   const { handleUnavailableBackend } = await import('@/api/backend');
-  expect(() => handleUnavailableBackend({ PROD: true })).toThrow('生产服务暂不可用');
+  expect(() => handleUnavailableBackend({ PROD: true })).toThrow('服务暂不可用');
   expect(handleUnavailableBackend({ MODE: 'development' })).toBeUndefined();
 });
 

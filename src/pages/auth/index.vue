@@ -379,7 +379,7 @@ const AUTH_COPY = {
     latestStatusPrefix: '最近申请：',
     rejectedHint: '请补充认证材料后重新提交审核',
     uploadReady: '上传入口已准备：',
-    agreementToast: '授权书将在生产环境打开',
+    agreementToast: '授权书暂未开放，请稍后查看',
     helpToast: '请按提示补齐认证材料',
     rolePilot: '飞手',
     roleOwner: '机主',

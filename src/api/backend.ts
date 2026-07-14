@@ -82,7 +82,7 @@ export function isProductionBackendRequired(runtime: BackendRuntimeEnv = env) {
 }
 
 export function handleUnavailableBackend(runtime: BackendRuntimeEnv = env): undefined {
-  if (isProductionBackendRequired(runtime)) throw new Error('生产服务暂不可用，请检查网络后重试');
+  if (isProductionBackendRequired(runtime)) throw new Error('服务暂不可用，请检查网络后重试');
   return undefined;
 }
 
@@ -138,7 +138,7 @@ async function requestBackend<T>(path: string, method: HttpMethod = 'GET', data?
   if (status >= 200 && status < 300 && body?.ok) {
     return body.data;
   }
-  const message = body?.error || `后端请求失败 (${status})`;
+  const message = body?.error || `服务请求失败（${status}）`;
   if (status === 401 && retryAuth) {
     const refresh = await refreshStoredToken();
     if (refresh === 'refreshed') return requestBackend<T>(path, method, data, false);

@@ -22,10 +22,10 @@ export function paymentSDKRequired(prepay: PaymentPrepayResult) {
 export function assertPaymentSDKReady(prepay: PaymentPrepayResult) {
   if (!paymentSDKRequired(prepay)) return;
   if (!sdkParamsReady(prepay.sdkParams)) {
-    throw new Error('支付SDK参数缺失，不能确认订单');
+    throw new Error('支付信息获取失败，请重新发起支付');
   }
   if (typeof uni === 'undefined' || typeof uni.requestPayment !== 'function') {
-    throw new Error(isProductionRuntime() ? '当前生产运行环境不支持平台支付SDK，不能确认订单' : '当前运行环境不支持平台支付SDK');
+    throw new Error('当前设备暂不支持在线支付，请更换设备后重试');
   }
 }
 
@@ -49,7 +49,7 @@ export async function requestPlatformPayment(prepay: PaymentPrepayResult) {
           reject(new Error('支付已取消，订单未确认'));
           return;
         }
-        reject(new Error(message ? `支付失败，订单未确认：${message}` : '支付失败，订单未确认'));
+        reject(new Error('支付未完成，请稍后重试'));
       },
     });
   });
@@ -80,7 +80,7 @@ export async function waitForPaymentPaid(
       await delay(intervalMs);
     }
   }
-  throw new Error(lastStatus === 'pending' ? '支付回调尚未确认，订单未确认' : '支付状态未确认，订单未确认');
+  throw new Error(lastStatus === 'pending' ? '支付结果确认中，请稍后查看订单状态' : '暂未确认支付结果，请稍后重试');
 }
 
 function paymentProvider(value: string | undefined): 'wxpay' | 'alipay' | 'baidu' | 'appleiap' {

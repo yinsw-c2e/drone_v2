@@ -445,7 +445,7 @@ function toLedgerRow(item: LedgerEntry): LedgerViewRow {
 
 function release() {
   if (productionRuntime) {
-    uni.showToast({ title: '结算释放服务尚未接入', icon: 'none' });
+    uni.showToast({ title: '结算将在到期后自动处理', icon: 'none' });
     return;
   }
   if (pendingCent.value <= 0) {
@@ -458,7 +458,7 @@ function release() {
 
 function openWithdraw() {
   if (productionRuntime) {
-    uni.showToast({ title: '提现服务尚未接入生产后端', icon: 'none' });
+    uni.showToast({ title: '提现功能正在准备中，暂时无法使用', icon: 'none' });
     return;
   }
   withdrawMessage.value = '';
